@@ -1,3 +1,36 @@
+# Local configuration and secrets
 .env
 .env.*
 !.env.example
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+build/
+dist/
+
+# Test and coverage artifacts
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+
+# Local data and generated models
+data/
+models/
+mlruns/
+
+# Power BI binary workbooks remain local
+*.pbix
+
+# Local operating-system and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
