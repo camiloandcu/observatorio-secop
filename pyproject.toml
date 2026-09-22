@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "observatorio-secop"
+version = "0.1.0"
+description = "Base local reproducible del Observatorio de contratación pública de Antioquia"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+authors = [{ name = "Observatorio SECOP contributors" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<9",
+  "pyyaml>=6,<7",
+  "ruff>=0.11,<0.12",
+]
+data = [
+  "pandera[pandas]>=0.23,<0.24",
+  "pyspark>=3.5,<3.6",
+]
+orchestration = [
+  "apache-airflow>=2.10,<2.11",
+]
+ml = [
+  "mlflow>=3.4,<3.5",
+  "scikit-learn>=1.6,<1.7",
+]
+api = [
+  "fastapi>=0.115,<0.116",
+  "uvicorn[standard]>=0.34,<0.35",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/observatorio_secop"]
+
+[tool.uv]
+required-version = ">=0.12,<0.13"
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

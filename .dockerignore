@@ -1,0 +1,14 @@
+.git
+.github
+.ai
+.codex
+.project
+.env
+.venv
+data
+models
+mlruns
+*.pbix
+__pycache__
+.pytest_cache
+.ruff_cache
