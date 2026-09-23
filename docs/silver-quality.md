@@ -1,10 +1,10 @@
-# Transformación y calidad Silver
+# Transformación y calidad - Silver
 
-Silver convierte únicamente corridas Bronze comprometidas en contratos tipificados, normalizados y deduplicados. Cada versión contiene datos válidos, rechazados, métricas y resultados de controles. Una falla crítica conserva evidencia, pero no cambia la versión publicada.
+Silver convierte Bronze a contratos tipificados, normalizados y deduplicados. Cada versión contiene datos válidos, rechazados, métricas y resultados de controles. Una falla crítica conserva evidencia, pero no cambia la versión publicada.
 
 ## Ejecutar e inspeccionar
 
-Instala las dependencias y procesa todas las corridas Bronze comprometidas:
+Instala las dependencias y procesa todas las runs Bronze publicadas:
 
 ```bash
 make install
@@ -29,7 +29,7 @@ El esquema completo está definido en `src/observatorio_secop/processing/silver/
 - territorio: valores crudos, claves normalizadas, nombres canónicos y banderas de Medellín y Valle de Aburrá;
 - fechas: valores crudos, fechas de firma/inicio/fin y actualización fuente;
 - valor: `contract_value_raw` y `contract_value_cop` como `decimal(20,2)`;
-- trazabilidad: hash del payload, corrida, página, carril, secuencia, ordinal y fecha de observación Bronze;
+- trazabilidad: hash del payload, run, página, lane, secuencia, ordinal y fecha de observación Bronze;
 - calidad: advertencias y `signing_year` como partición.
 
 Las fechas aceptan exactamente `yyyy-MM-dd'T'HH:mm:ss.SSS`. Las fechas de negocio deben representar medianoche antes de convertirse a `date`. La fuente no declara zona horaria para `ultima_actualizacion`: se usa UTC como contexto reproducible de cálculo, pero el valor crudo y esa limitación permanecen en el manifiesto.
