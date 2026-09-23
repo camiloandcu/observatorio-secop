@@ -1,0 +1,32 @@
+ingestion:
+  page_size: 100
+  max_page_size: 250
+  max_rows: 1000
+  overlap_days: 7
+  timeout_seconds: 20
+  max_retries: 3
+  backoff_base_seconds: 0.5
+  jitter_seconds: 0.25
+  max_retry_after_seconds: 30
+  max_response_bytes: 2097152
+  bronze_root: data/bronze/secop_contracts
+  contract_path: contracts/secop_source.yaml
+  fallback_event_field: fecha_de_firma
+  projection:
+    - id_contrato
+    - referencia_del_contrato
+    - proceso_de_compra
+    - nombre_entidad
+    - departamento
+    - ciudad
+    - estado_contrato
+    - codigo_de_categoria_principal
+    - descripcion_del_proceso
+    - tipo_de_contrato
+    - modalidad_de_contratacion
+    - fecha_de_firma
+    - fecha_de_inicio_del_contrato
+    - fecha_de_fin_del_contrato
+    - valor_del_contrato
+    - ultima_actualizacion
+    - urlproceso
