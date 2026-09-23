@@ -7,7 +7,8 @@ Este documento resume una observación controlada del conjunto público `SECOP I
 - Fecha UTC: `2026-09-23T02:26:45+00:00`.
 - Filtro: `departamento='Antioquia'`.
 - Registros reportados para Antioquia: 576,332.
-- Muestra de perfilado: 100 registros.
+- Muestra de perfilado: 100 registros (límite 100).
+- Presupuesto usado: 17 de 20 solicitudes; máximo 250 filas por respuesta.
 
 ## Decisiones verificadas
 
@@ -36,7 +37,7 @@ La comparación territorial normaliza mayúsculas, tildes y espacios para detect
 
 ## Perfil de columnas
 
-Las métricas siguientes pertenecen únicamente a la muestra.
+Las métricas siguientes pertenecen a la muestra acotada. La cardinalidad no representa todo el dataset salvo cuando se indica una agregación específica.
 
 | Campo API | Etiqueta | Tipo declarado | Tipos observados | Nulos | Cardinalidad |
 |---|---|---|---|---:|---:|
