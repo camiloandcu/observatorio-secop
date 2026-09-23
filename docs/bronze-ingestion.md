@@ -1,6 +1,6 @@
 # Ingesta incremental Bronze
 
-Esta guía explica cómo extraer contratos SECOP II de Antioquia hacia almacenamiento local. La ingesta conserva las páginas JSON proyectadas tal como las entrega Socrata y mantiene los metadatos técnicos por separado. No limpia ni interpreta campos de negocio.
+Esta guía explica cómo extraer contratos SECOP II de Antioquia hacia local. La ingesta conserva las páginas tal como las entrega Socrata y mantiene los metadatos por separado. No limpia ni interpreta campos de negocio.
 
 ## Ejecución limitada
 
@@ -15,13 +15,13 @@ make ingest-bronze \
   BRONZE_PAGE_SIZE=50
 ```
 
-Cada solicitud incluye un límite. El máximo de filas se comparte entre el carril incremental y el carril de respaldo. Si se alcanza antes de agotar el rango, la corrida queda marcada como truncada y no avanza el checkpoint.
+Cada solicitud incluye un límite. El máximo de filas se comparte entre el carril incremental y el de respaldo. Si se alcanza antes de agotar el rango, la corrida queda marcada como truncada y no avanza el checkpoint.
 
-El token de aplicación de Socrata es opcional. Si necesitas usarlo, exporta `SOCRATA_APP_TOKEN` únicamente en la sesión de terminal. El valor se envía como cabecera y no se guarda en URLs, manifiestos ni logs.
+El token de aplicación de Socrata es opcional. Si necesitas usarlo, pon `SOCRATA_APP_TOKEN` en un .env.
 
 ## Estructura local
 
-Los datos quedan bajo `data/bronze/secop_contracts/`, una ruta excluida de Git:
+Los datos quedan bajo `data/bronze/secop_contracts/`:
 
 ```text
 staging/<run_id>/
@@ -45,7 +45,7 @@ No edites `ingestion.sqlite`, `page-state.json` ni los manifiestos manualmente.
 
 El carril principal pagina por `ultima_actualizacion` e `id_contrato`, con una ventana de solapamiento de siete días por defecto. Una corrida completa puede avanzar el checkpoint hasta el límite superior solicitado, incluso cuando el rango no contiene filas.
 
-Los argumentos, manifiestos y checkpoints usan UTC con zona explícita. Al construir SoQL, la ingesta quita únicamente el sufijo de zona del literal porque Socrata declara `calendar_date` y publica los valores sin zona; no modifica los valores recibidos en Bronze.
+Los argumentos, manifiestos y checkpoints usan UTC con zona explícita. Al construir SoQL, la ingesta quita únicamente el sufijo de zona  porque Socrata publica los valores sin zona.
 
 Los registros con `ultima_actualizacion` nulo se consultan por separado mediante un rango explícito de `fecha_de_firma` y se ordenan por `id_contrato`. Este carril declara `captures_updates: false`: recupera registros dentro del rango de firma, pero no garantiza detectar modificaciones posteriores. Los registros sin ambas fechas tampoco se consideran cubiertos.
 
@@ -98,4 +98,4 @@ La suite automatizada no usa red:
 make quality
 ```
 
-La comprobación contra Socrata debe ser manual, con un rango reciente y límites pequeños. Si la cuota pública rechaza persistentemente esas solicitudes, configura un token local siguiendo el procedimiento de acceso del proyecto; nunca publiques el valor en tickets, commits o documentación.
+La comprobación contra Socrata debe ser manual, con un rango reciente y límites pequeños. Si la cuota pública rechaza persistentemente esas solicitudes, configura un token como variable de entorno.  
