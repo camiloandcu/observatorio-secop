@@ -36,6 +36,32 @@ uv run --locked --extra dev python scripts/check_tracked_files.py
 
 No es necesario activar `.venv`. GitHub Actions instala `uv`, sincroniza el mismo lockfile y ejecuta `make quality` sin secretos, AWS, datos reales, Airflow ni MLflow.
 
+## Contrato de la fuente SECOP II
+
+La validación habitual es completamente offline y utiliza una fixture pequeña:
+
+```bash
+make validate-source
+make test
+```
+
+La observación de la fuente es una operación manual separada de CI:
+
+```bash
+make check-source-live  # verifica columnas críticas con una muestra de 10 filas
+make profile-source     # vuelve a generar contrato, fixture y reporte para revisión
+```
+
+`make profile-source` consulta únicamente metadatos, agregaciones y muestras con límites configurados en `config/secop_source.yaml`. No necesita token, no descarga el histórico nacional y conserva los artefactos vigentes si la fuente falla o la evidencia no permite resolver territorio, llave o watermark.
+
+Después de regenerar, revisa juntos:
+
+- `contracts/secop_source.yaml`, consumible por código;
+- `tests/fixtures/secop_contracts.json`, con una fila segura por municipio del Valle de Aburrá;
+- `docs/data-source-profile.md`, resumen de la evidencia y sus limitaciones.
+
+Los cambios de llave, watermark, campos críticos o mapeos territoriales requieren revisión deliberada antes del commit.
+
 ## Estructura del repositorio
 
 ```text

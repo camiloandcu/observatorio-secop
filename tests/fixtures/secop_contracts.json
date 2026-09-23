@@ -1,0 +1,102 @@
+[
+  {
+    "ciudad": "Medellín",
+    "departamento": "Antioquia",
+    "estado_contrato": "terminado",
+    "fecha_de_firma": "2019-06-18T00:00:00.000",
+    "id_contrato": "CO1.PCCNTR.1001001",
+    "referencia_del_contrato": "89-7-20071-19",
+    "ultima_actualizacion": "2020-09-08T00:00:00.000",
+    "valor_del_contrato": "15000000"
+  },
+  {
+    "ciudad": "Barbosa",
+    "departamento": "Antioquia",
+    "estado_contrato": "Modificado",
+    "fecha_de_firma": "2021-04-18T00:00:00.000",
+    "id_contrato": "CO1.PCCNTR.2432123",
+    "referencia_del_contrato": "CO1.PCCNTR.2432123",
+    "ultima_actualizacion": "2021-05-21T00:00:00.000",
+    "valor_del_contrato": "200615932"
+  },
+  {
+    "ciudad": "Bello",
+    "departamento": "Antioquia",
+    "estado_contrato": "Cerrado",
+    "fecha_de_firma": "2019-09-25T00:00:00.000",
+    "id_contrato": "CO1.PCCNTR.1001101",
+    "referencia_del_contrato": "CO1.PCCNTR.1001101",
+    "ultima_actualizacion": "2023-06-20T00:00:00.000",
+    "valor_del_contrato": "59226600"
+  },
+  {
+    "ciudad": "Caldas",
+    "departamento": "Antioquia",
+    "estado_contrato": "terminado",
+    "fecha_de_firma": "2020-01-20T00:00:00.000",
+    "id_contrato": "CO1.PCCNTR.1290377",
+    "referencia_del_contrato": "CO1.PCCNTR.1290377",
+    "ultima_actualizacion": "2020-12-30T00:00:00.000",
+    "valor_del_contrato": "39650133"
+  },
+  {
+    "ciudad": "Copacabana",
+    "departamento": "Antioquia",
+    "estado_contrato": "terminado",
+    "fecha_de_firma": "2021-04-29T00:00:00.000",
+    "id_contrato": "CO1.PCCNTR.2417410",
+    "referencia_del_contrato": "CD-209-2021",
+    "ultima_actualizacion": "2022-07-12T00:00:00.000",
+    "valor_del_contrato": "24400000"
+  },
+  {
+    "ciudad": "Envigado",
+    "departamento": "Antioquia",
+    "estado_contrato": "Modificado",
+    "fecha_de_firma": "2019-06-20T00:00:00.000",
+    "id_contrato": "CO1.PCCNTR.1002943",
+    "referencia_del_contrato": "ENV-08-32-0642-19",
+    "ultima_actualizacion": "2019-06-28T00:00:00.000",
+    "valor_del_contrato": "12943630"
+  },
+  {
+    "ciudad": "Girardota",
+    "departamento": "Antioquia",
+    "estado_contrato": "Modificado",
+    "fecha_de_firma": "2021-04-19T00:00:00.000",
+    "id_contrato": "CO1.PCCNTR.2422951",
+    "referencia_del_contrato": "CI015-2021",
+    "ultima_actualizacion": "2021-12-30T00:00:00.000",
+    "valor_del_contrato": "224062250"
+  },
+  {
+    "ciudad": "Itagui",
+    "departamento": "Antioquia",
+    "estado_contrato": "Modificado",
+    "fecha_de_firma": "2019-07-31T00:00:00.000",
+    "id_contrato": "CO1.PCCNTR.1043520",
+    "referencia_del_contrato": "CONTRATO No. 022 DE 2019",
+    "ultima_actualizacion": "2019-09-11T00:00:00.000",
+    "valor_del_contrato": "2490000"
+  },
+  {
+    "ciudad": "La Estrella",
+    "departamento": "Antioquia",
+    "estado_contrato": "Cerrado",
+    "fecha_de_firma": "2021-04-06T00:00:00.000",
+    "id_contrato": "CO1.PCCNTR.2408169",
+    "referencia_del_contrato": "3632021",
+    "ultima_actualizacion": "2022-04-11T00:00:00.000",
+    "valor_del_contrato": "21252000"
+  },
+  {
+    "ciudad": "Sabaneta",
+    "departamento": "Antioquia",
+    "estado_contrato": "Cerrado",
+    "fecha_de_firma": "2020-12-22T00:00:00.000",
+    "id_contrato": "CO1.PCCNTR.1830879",
+    "referencia_del_contrato": "Suministro 1704 del 21 de septiembre de 2020",
+    "ultima_actualizacion": "2025-02-04T00:00:00.000",
+    "valor_del_contrato": "300000000"
+  }
+]
