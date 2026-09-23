@@ -1,5 +1,5 @@
 UV ?= uv
-UV_RUN := $(UV) run --locked --extra dev
+UV_RUN := $(UV) run --locked --extra dev --extra data
 
 BRONZE_FROM ?= 2026-09-01T00:00:00Z
 BRONZE_TO ?= 2026-09-02T00:00:00Z
@@ -8,11 +8,12 @@ BRONZE_PAGE_SIZE ?= 50
 
 .PHONY: install format format-check lint test check-tracked quality profile-source \
 	validate-source check-source-live ingest-bronze inspect-bronze clean-bronze-staging \
+	build-silver inspect-silver clean-silver-staging \
 	check-path validate-env compose-config preflight up up-airflow up-mlflow health ps logs \
 	down clean
 
 install:
-	$(UV) sync --locked --python 3.12 --extra dev
+	$(UV) sync --locked --python 3.12 --extra dev --extra data
 
 format:
 	$(UV_RUN) ruff format .
@@ -49,6 +50,15 @@ inspect-bronze:
 
 clean-bronze-staging:
 	$(UV_RUN) secop-ingest clean-staging
+
+build-silver:
+	$(UV_RUN) secop-silver run $(SILVER_ARGS)
+
+inspect-silver:
+	$(UV_RUN) secop-silver inspect
+
+clean-silver-staging:
+	$(UV_RUN) secop-silver clean-staging
 
 check-path:
 	./scripts/local.sh check-path
