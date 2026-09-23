@@ -15,6 +15,7 @@ dependencies = [
 
 [project.scripts]
 secop-source-profile = "observatorio_secop.source_profile.cli:main"
+secop-ingest = "observatorio_secop.ingestion.cli:main"
 
 [project.optional-dependencies]
 dev = [

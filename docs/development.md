@@ -34,7 +34,7 @@ uv run --locked --extra dev pytest
 uv run --locked --extra dev python scripts/check_tracked_files.py
 ```
 
-No es necesario activar `.venv`. GitHub Actions instala `uv`, sincroniza el mismo lockfile y ejecuta `make quality` sin secretos, AWS, datos reales, Airflow ni MLflow.
+No es necesario activar `.venv`. GitHub Actions instala `uv`, sincroniza el mismo lockfile y ejecuta `make quality` sin necesidad de tener la arquitectura montada. 
 
 ## Contrato de la fuente SECOP II
 
@@ -52,15 +52,13 @@ make check-source-live  # verifica columnas críticas con una muestra de 10 fila
 make profile-source     # vuelve a generar contrato, fixture y reporte para revisión
 ```
 
-`make profile-source` consulta únicamente metadatos, agregaciones y muestras con límites configurados en `config/secop_source.yaml`. No necesita token, no descarga el histórico nacional y conserva los artefactos vigentes si la fuente falla o la evidencia no permite resolver territorio, llave o watermark.
+`make profile-source` consulta únicamente metadatos, agregaciones y muestras con límites configurados en `config/secop_source.yaml`. No necesita token, no descarga el histórico nacional y conserva los artefactos vigentes si la fuente falla.
 
 Después de regenerar, revisa juntos:
 
 - `contracts/secop_source.yaml`, consumible por código;
 - `tests/fixtures/secop_contracts.json`, con una fila segura por municipio del Valle de Aburrá;
 - `docs/data-source-profile.md`, resumen de la evidencia y sus limitaciones.
-
-Los cambios de llave, watermark, campos críticos o mapeos territoriales requieren revisión deliberada antes del commit.
 
 ## Estructura del repositorio
 
@@ -96,18 +94,3 @@ git check-ignore -v .env data/example.parquet models/example.bin mlruns/example 
 ```
 
 Los controles automatizados también cubren formato inválido, lint inválido, una prueba fallida, Docker no disponible, variables obligatorias ausentes y archivos prohibidos ya rastreados.
-
-## Dependencias y licencias
-
-Las capacidades futuras están separadas en los extras `data`, `orchestration`, `ml` y `api`; no se instalan en el flujo mínimo de CI.
-
-| Componente ejecutado en US-00 | Licencia upstream revisada |
-|---|---|
-| uv | MIT o Apache License 2.0 |
-| Hatchling, pytest, PyYAML y Ruff | MIT |
-| PostgreSQL | PostgreSQL License |
-| Apache Airflow | Apache License 2.0 |
-| MLflow | Apache License 2.0 |
-| psycopg2-binary | LGPL con excepciones documentadas por el proyecto |
-
-Cada componente conserva su licencia upstream; el proyecto no incorpora su código fuente ni decide todavía la licencia final del producto.

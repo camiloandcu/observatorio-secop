@@ -8,6 +8,36 @@ La información contractual está disponible, pero su volumen, variabilidad y di
 
 Esa dificultad limita el seguimiento ciudadano y obliga a invertir demasiado tiempo en reunir, limpiar y reconciliar datos antes de poder analizarlos.
 
+El flujo de datos planteado es el siguiente: 
+
+
+```mermaid
+flowchart TD
+    A["<b>Problema de negocio</b><br/>'Hay demasiados contratos para revisar manualmente'"]
+    B["<b>SECOP II</b><br/>Datos públicos disponibles en Socrata"]
+    C["<b>Ingesta incremental</b><br/>Obtener únicamente los datos que sean nuevos o hayan sido modificados"]
+    D["<b>BRONZE</b><br/>Copia cruda y trazable que sirve como evidencia"]
+    E["<b>PySpark</b><br/>Limpiar, tipificar, validar y deduplicar"]
+    F["<b>SILVER</b><br/>Datos limpios, tipificados, validados y deduplicados"]
+    G["<b>dbt + PostgreSQL</b><br/>Modelo de negocio"]
+    H["<b>Modelo de anomalías</b><br/>Prioriza contratos distintos a los demás"]
+    I["<b>GOLD</b><br/>Indicadores, hechos y dimensiones"]
+    J["<b>Power BI</b><br/>Análisis visual de los datos"]
+    K["<b>FastAPI</b><br/>Consulta técnica de los datos"]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    F --> H
+    G --> I
+    H --> I
+    I --> J
+    I --> K
+```
+
 ## La solución
 
 El proyecto construye una ruta reproducible que transforma datos de SECOP II en:
@@ -18,7 +48,7 @@ El proyecto construye una ruta reproducible que transforma datos de SECOP II en:
 - señales explicables que ayuden a priorizar contratos para revisión humana;
 - medios de consulta mediante productos analíticos y una API documentada.
 
-La priorización es una ayuda para ordenar la revisión. Una señal alta no demuestra fraude, corrupción, incumplimiento ni responsabilidad legal.
+La priorización es una ayuda para ordenar la revisión. Una señal alta NO demuestra fraude, corrupción, incumplimiento ni responsabilidad legal.
 
 ## Alcance actual
 
@@ -40,6 +70,5 @@ La [página de documentación](docs/README.md) organiza las guías según la nec
 - [Primeros pasos](docs/getting-started.md) para preparar y levantar el entorno local.
 - [Guía de desarrollo](docs/development.md) para calidad, CI y estructura del repositorio.
 - [Guía de operación](docs/operations.md) para salud, logs, recuperación y limpieza.
-- [Evidencia de aceptación de la base local](docs/us00-acceptance.md).
 
 Las historias y su avance se consultan en [GitHub Issues](https://github.com/camiloandcu/observatorio-secop/issues) y en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).
