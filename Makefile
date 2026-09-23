@@ -1,8 +1,9 @@
 UV ?= uv
 UV_RUN := $(UV) run --locked --extra dev
 
-.PHONY: install format format-check lint test check-tracked quality check-path validate-env \
-	compose-config preflight up up-airflow up-mlflow health ps logs down clean
+.PHONY: install format format-check lint test check-tracked quality profile-source \
+	validate-source check-source-live check-path validate-env compose-config preflight up \
+	up-airflow up-mlflow health ps logs down clean
 
 install:
 	$(UV) sync --locked --python 3.12 --extra dev
@@ -23,6 +24,15 @@ check-tracked:
 	$(UV_RUN) python scripts/check_tracked_files.py
 
 quality: format-check lint test check-tracked
+
+profile-source:
+	$(UV_RUN) secop-source-profile live --write
+
+validate-source:
+	$(UV_RUN) secop-source-profile validate
+
+check-source-live:
+	$(UV_RUN) secop-source-profile check-live
 
 check-path:
 	./scripts/local.sh check-path

@@ -1,0 +1,34 @@
+source:
+  dataset_id: jbjy-vk9h
+  api_base_url: https://www.datos.gov.co
+limits:
+  sample_rows: 100
+  max_query_rows: 250
+  max_requests: 20
+  max_response_bytes: 2097152
+  timeout_seconds: 20
+  retries: 2
+fixture:
+  max_rows: 20
+  allowed_fields:
+    - id_contrato
+    - referencia_del_contrato
+    - departamento
+    - ciudad
+    - estado_contrato
+    - fecha_de_firma
+    - ultima_actualizacion
+    - valor_del_contrato
+territory:
+  department: Antioquia
+  valle_de_aburra:
+    - Medellín
+    - Barbosa
+    - Bello
+    - Caldas
+    - Copacabana
+    - Envigado
+    - Girardota
+    - Itagüí
+    - La Estrella
+    - Sabaneta
