@@ -15,6 +15,13 @@ __pycache__/
 build/
 dist/
 
+# dbt local profiles, logs, packages, and compiled artifacts
+.dbt/
+dbt/profiles.yml
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+
 # Test and coverage artifacts
 .coverage
 coverage.xml

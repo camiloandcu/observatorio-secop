@@ -1,0 +1,6 @@
+warehouse:
+  silver_root: data/silver
+  schema: silver
+  contract_table: contract_current
+  audit_table: load_audit
+  advisory_lock_id: 7404001
