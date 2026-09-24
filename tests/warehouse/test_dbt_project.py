@@ -47,3 +47,8 @@ def test_profile_example_uses_environment_variables() -> None:
     assert "env_var('POSTGRES_PASSWORD')" in profile
     assert "local_only_change_me" not in profile
     assert not (DBT_ROOT / "profiles.yml").exists()
+
+
+def test_full_parser_is_used_to_preserve_full_refresh_dependencies() -> None:
+    project = yaml.safe_load((DBT_ROOT / "dbt_project.yml").read_text(encoding="utf-8"))
+    assert project["flags"]["static_parser"] is False
