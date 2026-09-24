@@ -1,0 +1,60 @@
+version: 2
+
+sources:
+  - name: silver
+    description: Snapshot relacional verificado de la versión Silver publicada.
+    schema: silver
+    meta:
+      owner: analytics-engineering
+      trust_boundary: verified-silver-bundle
+    config:
+      loaded_at_field: loaded_at
+      freshness:
+        warn_after: {count: 7, period: day}
+    tables:
+      - name: contract_current
+        description: Una fila vigente por contract_key, sincronizada transaccionalmente desde Silver.
+        columns:
+          - {name: silver_version_id, description: Identificador inmutable del bundle Silver de origen.}
+          - {name: contract_key, description: Llave natural determinística del contrato definida por Silver.}
+          - {name: source_dataset_id, description: Identificador Socrata del dataset fuente.}
+          - {name: source_contract_id, description: Identificador del contrato tal como lo publicó la fuente.}
+          - {name: contract_reference, description: Referencia pública opcional del contrato.}
+          - {name: procurement_process_id, description: Identificador opcional del proceso de compra.}
+          - {name: entity_name, description: Nombre publicado de la entidad contratante.}
+          - {name: department_raw, description: Departamento crudo conservado por Silver.}
+          - {name: department_name, description: Departamento canónico validado por Silver.}
+          - {name: department_key, description: Clave territorial canónica del departamento.}
+          - {name: municipality_raw, description: Municipio crudo conservado por Silver.}
+          - {name: municipality_name, description: Nombre canónico del municipio cuando fue reconocido.}
+          - {name: municipality_key, description: Clave territorial del municipio reconocido.}
+          - {name: municipality_status, description: Estado KNOWN o UNKNOWN asignado por Silver.}
+          - {name: is_medellin, description: Indica si el municipio reconocido es Medellín.}
+          - {name: is_valle_de_aburra, description: Indica pertenencia reconocida al Valle de Aburrá.}
+          - {name: contract_status, description: Estado del contrato publicado por la fuente.}
+          - {name: main_category_code, description: Código publicado de la categoría principal.}
+          - {name: process_description, description: Descripción pública del proceso.}
+          - {name: contract_type, description: Tipo de contrato publicado.}
+          - {name: procurement_method, description: Modalidad de contratación publicada.}
+          - {name: signing_date_raw, description: Valor fuente de la fecha de firma.}
+          - {name: signing_date, description: Fecha de firma tipada por Silver.}
+          - {name: start_date_raw, description: Valor fuente de la fecha de inicio.}
+          - {name: start_date, description: Fecha de inicio tipada por Silver.}
+          - {name: end_date_raw, description: Valor fuente de la fecha de terminación.}
+          - {name: end_date, description: Fecha de terminación tipada por Silver.}
+          - {name: contract_value_raw, description: Valor monetario crudo conservado por Silver.}
+          - {name: contract_value_cop, description: Valor del contrato en COP como numeric(20,2).}
+          - {name: source_updated_at_raw, description: Timestamp de actualización crudo de la fuente.}
+          - {name: source_updated_at, description: Timestamp de actualización fuente tipado por Silver.}
+          - {name: source_url, description: URL pública opcional del contrato o proceso.}
+          - {name: quality_warning_codes, description: Advertencias no críticas asociadas al contrato.}
+          - {name: payload_sha256, description: Hash canónico del payload aprobado.}
+          - {name: bronze_run_id, description: Run Bronze de la observación elegida.}
+          - {name: bronze_page_path, description: Página Bronze de la observación elegida.}
+          - {name: bronze_lane, description: Lane Bronze de la observación elegida.}
+          - {name: bronze_page_sequence, description: Secuencia de página Bronze.}
+          - {name: bronze_row_ordinal, description: Posición de la observación dentro de la página Bronze.}
+          - {name: bronze_fetched_at_utc, description: Timestamp UTC de observación en Bronze.}
+          - {name: signing_year, description: Año de firma usado como partición Silver o unknown.}
+          - {name: silver_manifest_sha256, description: Hash del manifiesto Silver verificado al cargar.}
+          - {name: loaded_at, description: Timestamp estable finished_at_utc del manifiesto Silver.}

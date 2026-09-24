@@ -30,7 +30,7 @@ htmlcov/
 
 # Local data and generated models
 data/
-models/
+/models/
 mlruns/
 
 # Power BI binary workbooks remain local
