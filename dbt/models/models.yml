@@ -1,0 +1,202 @@
+version: 2
+
+models:
+  - name: stg_silver_contract
+    description: Proyección tipada y renombrada, sin reglas dimensionales duplicadas, del snapshot Silver.
+    columns:
+      - {name: silver_version_id, description: Versión Silver de la fila.}
+      - {name: silver_manifest_sha256, description: Hash del manifiesto Silver verificado.}
+      - {name: loaded_at, description: Timestamp estable del manifiesto Silver.}
+      - {name: contract_key, description: Llave natural Silver del contrato.}
+      - {name: source_dataset_id, description: Dataset fuente del contrato.}
+      - {name: contract_id, description: Identificador fuente conservado.}
+      - {name: contract_reference, description: Referencia opcional del contrato.}
+      - {name: process_id, description: Identificador opcional del proceso de compra.}
+      - {name: entity_name, description: Nombre publicado de la entidad.}
+      - {name: municipality_name, description: Nombre canónico opcional del municipio.}
+      - {name: municipality_key, description: Clave canónica opcional del municipio.}
+      - {name: municipality_status, description: Estado de reconocimiento territorial.}
+      - {name: procurement_method, description: Modalidad publicada.}
+      - {name: signing_date, description: Fecha opcional de firma.}
+      - {name: start_date, description: Fecha opcional de inicio.}
+      - {name: end_date, description: Fecha opcional de terminación.}
+      - {name: contract_value_cop, description: Valor del contrato en COP.}
+      - {name: status, description: Estado fuente del contrato.}
+      - {name: source_url, description: URL fuente opcional.}
+      - {name: source_updated_at, description: Timestamp fuente opcional.}
+      - {name: bronze_fetched_at_utc, description: Timestamp de observación Bronze.}
+      - {name: payload_sha256, description: Hash del payload aprobado.}
+
+  - name: int_contract_enriched
+    description: Contratos con identidad dimensional, claves de fecha y duración calculadas una sola vez.
+    columns:
+      - {name: contract_key, description: Granularidad única del contrato vigente.}
+      - {name: entity_natural_key, description: Dataset y nombre de entidad normalizado o __UNKNOWN__.}
+      - {name: supplier_natural_key, description: __UNKNOWN__ mientras Silver no exponga proveedor.}
+      - {name: municipality_natural_key, description: Clave municipal Silver o __UNKNOWN__.}
+      - {name: modality_natural_key, description: Modalidad normalizada o __UNKNOWN__.}
+      - {name: signing_date_sk, description: Fecha de firma YYYYMMDD o cero.}
+      - {name: start_date_sk, description: Fecha de inicio YYYYMMDD o cero.}
+      - {name: end_date_sk, description: Fecha de terminación YYYYMMDD o cero.}
+      - {name: duration_days, description: Diferencia en días entre fin e inicio.}
+
+  - name: dim_entity
+    description: Una fila por entidad provisional identificada por dataset y nombre normalizado, más desconocida.
+    columns:
+      - name: entity_sk
+        description: Llave sustituta estable con namespace entity.
+        data_tests: [unique, not_null]
+      - name: entity_natural_key
+        description: Llave natural provisional o __UNKNOWN__.
+        data_tests: [unique, not_null]
+      - {name: source_dataset_id, description: Dataset de origen; nulo para desconocida.}
+      - {name: entity_name, description: Nombre fuente; nulo para desconocida.}
+      - name: member_status
+        description: KNOWN para entidad identificada o UNKNOWN para ausencia explícita.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments: {values: [KNOWN, UNKNOWN]}
+
+  - name: dim_supplier
+    description: Dimensión reservada de proveedor; solo contiene desconocido porque Silver no aporta proveedor.
+    columns:
+      - name: supplier_sk
+        description: Llave sustituta estable con namespace supplier.
+        data_tests: [unique, not_null]
+      - name: supplier_natural_key
+        description: Llave natural __UNKNOWN__.
+        data_tests: [unique, not_null]
+      - {name: supplier_name, description: Nulo hasta que un contrato Silver aprobado exponga proveedor.}
+      - name: member_status
+        description: Estado UNKNOWN del único miembro.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments: {values: [KNOWN, UNKNOWN]}
+
+  - name: dim_municipality
+    description: Una fila por clave municipal canónica usada, más el miembro desconocido.
+    columns:
+      - name: municipality_sk
+        description: Llave sustituta estable con namespace municipality.
+        data_tests: [unique, not_null]
+      - name: municipality_natural_key
+        description: Clave municipal Silver o __UNKNOWN__.
+        data_tests: [unique, not_null]
+      - {name: municipality_name, description: Nombre canónico o nulo para desconocida.}
+      - name: member_status
+        description: KNOWN o UNKNOWN según reconocimiento Silver.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments: {values: [KNOWN, UNKNOWN]}
+
+  - name: dim_modality
+    description: Una fila por modalidad normalizada usada, más el miembro desconocido.
+    columns:
+      - name: modality_sk
+        description: Llave sustituta estable con namespace modality.
+        data_tests: [unique, not_null]
+      - name: modality_natural_key
+        description: Modalidad normalizada o __UNKNOWN__.
+        data_tests: [unique, not_null]
+      - {name: modality_name, description: Modalidad publicada o nulo para desconocida.}
+      - name: member_status
+        description: KNOWN o UNKNOWN según presencia fuente.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments: {values: [KNOWN, UNKNOWN]}
+
+  - name: dim_date
+    description: Un día por fila dentro del rango vigente, más date_sk cero para fecha desconocida.
+    columns:
+      - name: date_sk
+        description: Fecha YYYYMMDD o cero para desconocida.
+        data_tests: [unique, not_null]
+      - name: calendar_date
+        description: Fecha calendario; nula únicamente para desconocida.
+        data_tests: [unique]
+      - {name: year, description: Año calendario.}
+      - {name: quarter, description: Trimestre calendario de 1 a 4.}
+      - {name: month, description: Mes calendario de 1 a 12.}
+      - {name: month_name, description: Nombre de mes producido por PostgreSQL.}
+      - {name: day_of_month, description: Día del mes.}
+      - {name: day_of_week, description: Día ISO de semana de 1 a 7.}
+      - {name: day_name, description: Nombre de día producido por PostgreSQL.}
+      - name: member_status
+        description: KNOWN para días reales o UNKNOWN para date_sk cero.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments: {values: [KNOWN, UNKNOWN]}
+
+  - name: fact_contract
+    description: Una fila por contrato vigente de Silver con trazabilidad y relaciones dimensionales.
+    columns:
+      - name: contract_sk
+        description: Llave sustituta estable con namespace contract.
+        data_tests: [unique, not_null]
+      - name: contract_key
+        description: Llave natural Silver y granularidad del hecho.
+        data_tests: [unique, not_null]
+      - name: contract_id
+        description: Identificador fuente del contrato.
+        data_tests: [unique, not_null]
+      - {name: process_id, description: Identificador opcional del proceso de compra.}
+      - name: entity_sk
+        description: Relación con dim_entity.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_entity')", field: entity_sk}
+      - name: supplier_sk
+        description: Relación con dim_supplier; actualmente miembro desconocido.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_supplier')", field: supplier_sk}
+      - name: municipality_sk
+        description: Relación con dim_municipality.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_municipality')", field: municipality_sk}
+      - name: modality_sk
+        description: Relación con dim_modality.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_modality')", field: modality_sk}
+      - name: signing_date_sk
+        description: Relación con dim_date para firma; cero si ausente.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_date')", field: date_sk}
+      - name: start_date_sk
+        description: Relación con dim_date para inicio; cero si ausente.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_date')", field: date_sk}
+      - name: end_date_sk
+        description: Relación con dim_date para terminación; cero si ausente.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_date')", field: date_sk}
+      - {name: signing_date, description: Fecha de firma conservada.}
+      - {name: start_date, description: Fecha de inicio conservada.}
+      - {name: end_date, description: Fecha de terminación conservada.}
+      - {name: contract_value_cop, description: Valor del contrato en COP numeric(20,2).}
+      - {name: duration_days, description: Diferencia en días entre terminación e inicio.}
+      - {name: status, description: Estado abierto publicado por la fuente.}
+      - {name: source_url, description: URL fuente opcional conservada sin sustitución.}
+      - {name: source_updated_at, description: Timestamp fuente opcional conservado.}
+      - {name: bronze_fetched_at_utc, description: Timestamp de observación Bronze.}
+      - {name: silver_version_id, description: Versión Silver que originó la fila.}
+      - {name: silver_manifest_sha256, description: Hash del manifiesto Silver verificado.}
+      - {name: payload_sha256, description: Hash del payload aprobado.}
+      - {name: loaded_at, description: Timestamp determinístico finished_at_utc del manifiesto.}

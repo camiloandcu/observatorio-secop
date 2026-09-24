@@ -2,7 +2,7 @@
 
 ## Entorno Python reproducible
 
-`uv` 0.12.x es la única herramienta soportada para administrar Python y dependencias. `uv.lock` fija la resolución; los extras `dev` y `data` instalan las herramientas de calidad, PySpark, Pandera y sus dependencias reproducibles.
+`uv` 0.12.x es la única herramienta soportada para administrar Python y dependencias. `uv.lock` fija la resolución; los extras `dev`, `data` y `warehouse` instalan las herramientas de calidad, PySpark, Pandera, dbt y el cliente PostgreSQL con sus dependencias reproducibles.
 
 ```bash
 make install
@@ -11,7 +11,7 @@ make install
 `make install` equivale a:
 
 ```bash
-uv sync --locked --python 3.12 --extra dev --extra data
+uv sync --locked --python 3.12 --extra dev --extra data --extra warehouse
 ```
 
 ## Calidad local
@@ -20,6 +20,7 @@ uv sync --locked --python 3.12 --extra dev --extra data
 make format          # aplica formato
 make format-check    # comprueba formato sin editar
 make lint
+make typecheck
 make test
 make check-tracked   # falla si Git rastrea rutas prohibidas
 make quality         # reproduce los controles de CI
@@ -28,10 +29,11 @@ make quality         # reproduce los controles de CI
 Los equivalentes sin Make son:
 
 ```bash
-uv run --locked --extra dev --extra data ruff format --check .
-uv run --locked --extra dev --extra data ruff check .
-uv run --locked --extra dev --extra data pytest
-uv run --locked --extra dev --extra data python scripts/check_tracked_files.py
+uv run --locked --extra dev --extra data --extra warehouse ruff format --check .
+uv run --locked --extra dev --extra data --extra warehouse ruff check .
+uv run --locked --extra dev --extra data --extra warehouse mypy src/observatorio_secop/warehouse
+uv run --locked --extra dev --extra data --extra warehouse pytest
+uv run --locked --extra dev --extra data --extra warehouse python scripts/check_tracked_files.py
 ```
 
 No es necesario activar `.venv`. GitHub Actions instala `uv`, sincroniza el mismo lockfile y ejecuta `make quality` sin necesidad de tener la arquitectura montada. 
@@ -65,7 +67,7 @@ Después de regenerar, revisa juntos:
 ```text
 src/observatorio_secop/  límites de ingesta, procesamiento, scoring y API
 dags/                    DAGs de Airflow futuros
-dbt/                     modelos analíticos futuros
+dbt/                     modelo estrella, pruebas y catálogo analítico
 tests/                   pruebas y controles de plataforma
 infra/                   imágenes locales e infraestructura futura
 scripts/                 comandos operativos y de seguridad

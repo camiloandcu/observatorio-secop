@@ -6,7 +6,8 @@ ENV_FILE="${ENV_FILE:-${ROOT_DIR}/.env}"
 COMPOSE=(docker compose --env-file "${ENV_FILE}" --project-directory "${ROOT_DIR}")
 REQUIRED_VARIABLES=(
   COMPOSE_PROJECT_NAME POSTGRES_IMAGE POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB POSTGRES_PORT
-  AIRFLOW_DB MLFLOW_DB AIRFLOW_IMAGE AIRFLOW_UID AIRFLOW_PORT MLFLOW_IMAGE MLFLOW_PORT
+  AIRFLOW_DB MLFLOW_DB DBT_SCHEMA DBT_THREADS SILVER_ROOT
+  AIRFLOW_IMAGE AIRFLOW_UID AIRFLOW_PORT MLFLOW_IMAGE MLFLOW_PORT
   SERVICE_HEALTH_TIMEOUT
 )
 
@@ -47,7 +48,7 @@ preflight() {
     return 1
   }
   docker compose version >/dev/null || {
-    echo "Docker Compose is unavailable. Update Docker Desktop." >&2
+    echo "Docker CLI is unavailable or does not provide Docker Compose. Update Docker Desktop." >&2
     return 1
   }
   docker info >/dev/null 2>&1 || {

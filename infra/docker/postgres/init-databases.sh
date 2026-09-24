@@ -12,3 +12,10 @@ WHERE NOT EXISTS (
 )\gexec
 SQL
 done
+
+psql --set ON_ERROR_STOP=1 \
+  --username "${POSTGRES_USER}" \
+  --dbname "${POSTGRES_DB}" <<'SQL'
+CREATE SCHEMA IF NOT EXISTS silver;
+CREATE SCHEMA IF NOT EXISTS analytics;
+SQL

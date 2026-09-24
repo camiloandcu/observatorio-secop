@@ -1,0 +1,40 @@
+name: observatorio_secop
+version: 1.0.0
+config-version: 2
+
+profile: observatorio_secop
+
+# dbt-core 1.10 can lose ref() dependencies nondeterministically when its
+# static parser recompiles this project for --full-refresh. The full parser is
+# slower but preserves the DAG, which is required for a safe rebuild.
+flags:
+  static_parser: false
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+target-path: target
+clean-targets: ["target", "dbt_packages", "logs"]
+
+models:
+  observatorio_secop:
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+    dimensions:
+      +materialized: incremental
+      +incremental_strategy: delete+insert
+      +on_schema_change: fail
+      +schema: analytics
+    facts:
+      +materialized: incremental
+      +incremental_strategy: delete+insert
+      +on_schema_change: fail
+      +schema: analytics
+
+vars:
+  star_key_version: star_key_v1
