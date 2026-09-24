@@ -1,0 +1,146 @@
+catalog:
+  version: antioquia-municipalities-v1
+  department: Antioquia
+  provenance: DANE DIVIPOLA, nombres municipales de referencia; alias de fuente verificados por el contrato jbjy-vk9h.
+  municipalities:
+    - Abejorral
+    - Abriaquí
+    - Alejandría
+    - Amagá
+    - Amalfi
+    - Andes
+    - Angelópolis
+    - Angostura
+    - Anorí
+    - Anzá
+    - Apartadó
+    - Arboletes
+    - Argelia
+    - Armenia
+    - Barbosa
+    - Bello
+    - Belmira
+    - Betania
+    - Betulia
+    - Briceño
+    - Buriticá
+    - Cáceres
+    - Caicedo
+    - Caldas
+    - Campamento
+    - Cañasgordas
+    - Caracolí
+    - Caramanta
+    - Carepa
+    - Carolina del Príncipe
+    - Caucasia
+    - Chigorodó
+    - Cisneros
+    - Ciudad Bolívar
+    - Cocorná
+    - Concepción
+    - Concordia
+    - Copacabana
+    - Dabeiba
+    - Donmatías
+    - Ebéjico
+    - El Bagre
+    - El Carmen de Viboral
+    - El Peñol
+    - El Retiro
+    - El Santuario
+    - Entrerríos
+    - Envigado
+    - Fredonia
+    - Frontino
+    - Giraldo
+    - Girardota
+    - Gómez Plata
+    - Granada
+    - Guadalupe
+    - Guarne
+    - Guatapé
+    - Heliconia
+    - Hispania
+    - Itagüí
+    - Ituango
+    - Jardín
+    - Jericó
+    - La Ceja
+    - La Estrella
+    - La Pintada
+    - La Unión
+    - Liborina
+    - Maceo
+    - Marinilla
+    - Medellín
+    - Montebello
+    - Murindó
+    - Mutatá
+    - Nariño
+    - Necoclí
+    - Nechí
+    - Olaya
+    - Peque
+    - Pueblorrico
+    - Puerto Berrío
+    - Puerto Nare
+    - Puerto Triunfo
+    - Remedios
+    - Rionegro
+    - Sabanalarga
+    - Sabaneta
+    - Salgar
+    - San Andrés de Cuerquia
+    - San Carlos
+    - San Francisco
+    - San Jerónimo
+    - San José de la Montaña
+    - San Juan de Urabá
+    - San Luis
+    - San Pedro de los Milagros
+    - San Pedro de Urabá
+    - San Rafael
+    - San Roque
+    - San Vicente Ferrer
+    - Santa Bárbara
+    - Santa Fe de Antioquia
+    - Santa Rosa de Osos
+    - Santo Domingo
+    - Segovia
+    - Sonsón
+    - Sopetrán
+    - Támesis
+    - Tarazá
+    - Tarso
+    - Titiribí
+    - Toledo
+    - Turbo
+    - Uramita
+    - Urrao
+    - Valdivia
+    - Valparaíso
+    - Vegachí
+    - Venecia
+    - Vigía del Fuerte
+    - Yalí
+    - Yarumal
+    - Yolombó
+    - Yondó
+    - Zaragoza
+  aliases:
+    Itagui: Itagüí
+    Don Matías: Donmatías
+    Peñol: El Peñol
+    Carmen de Viboral: El Carmen de Viboral
+  valle_de_aburra:
+    - Medellín
+    - Barbosa
+    - Bello
+    - Caldas
+    - Copacabana
+    - Envigado
+    - Girardota
+    - Itagüí
+    - La Estrella
+    - Sabaneta

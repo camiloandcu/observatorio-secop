@@ -12,5 +12,6 @@ Este directorio reúne las guías públicas del Observatorio SECOP. Elige el pun
 
 - [Perfil de la fuente SECOP II](data-source-profile.md): esquema observado, cobertura territorial, llave, watermark y limitaciones verificadas.
 - [Ingesta incremental Bronze](bronze-ingestion.md): extracción limitada, estado, manifiestos, reanudación y diagnóstico.
+- [Transformación y calidad Silver](silver-quality.md): esquema tipado, deduplicación, rechazos, controles y publicación atómica.
 
 La documentación sobre arquitectura analítica, indicadores, modelos, API y dashboard se añadirá con las historias que implementen esas capacidades.

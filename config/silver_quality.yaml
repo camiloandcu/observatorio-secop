@@ -1,0 +1,14 @@
+silver:
+  dataset_id: jbjy-vk9h
+  bronze_root: data/bronze/secop_contracts
+  silver_root: data/silver/secop_contracts
+  contract_path: contracts/secop_source.yaml
+  territory_catalog_path: config/antioquia_municipalities.yaml
+  transformation_version: silver-v1
+  key_rule_version: silver-key-v1
+  source_datetime_format: "yyyy-MM-dd'T'HH:mm:ss.SSS"
+  parquet_codec: snappy
+  max_rejection_rate: 0.02
+  allow_empty_output: false
+  local_threads: 2
+  output_partitions: 1

@@ -2,7 +2,7 @@
 
 ## Entorno Python reproducible
 
-`uv` 0.12.x es la única herramienta soportada para administrar Python y dependencias. `uv.lock` fija la resolución y el extra `dev` instala únicamente las herramientas necesarias para desarrollo y CI.
+`uv` 0.12.x es la única herramienta soportada para administrar Python y dependencias. `uv.lock` fija la resolución; los extras `dev` y `data` instalan las herramientas de calidad, PySpark, Pandera y sus dependencias reproducibles.
 
 ```bash
 make install
@@ -11,7 +11,7 @@ make install
 `make install` equivale a:
 
 ```bash
-uv sync --locked --python 3.12 --extra dev
+uv sync --locked --python 3.12 --extra dev --extra data
 ```
 
 ## Calidad local
@@ -28,10 +28,10 @@ make quality         # reproduce los controles de CI
 Los equivalentes sin Make son:
 
 ```bash
-uv run --locked --extra dev ruff format --check .
-uv run --locked --extra dev ruff check .
-uv run --locked --extra dev pytest
-uv run --locked --extra dev python scripts/check_tracked_files.py
+uv run --locked --extra dev --extra data ruff format --check .
+uv run --locked --extra dev --extra data ruff check .
+uv run --locked --extra dev --extra data pytest
+uv run --locked --extra dev --extra data python scripts/check_tracked_files.py
 ```
 
 No es necesario activar `.venv`. GitHub Actions instala `uv`, sincroniza el mismo lockfile y ejecuta `make quality` sin necesidad de tener la arquitectura montada. 

@@ -52,7 +52,7 @@ La priorización es una ayuda para ordenar la revisión. Una señal alta NO demu
 
 ## Alcance actual
 
-El repositorio cuenta con la base local reproducible del proyecto. Las capacidades de datos, indicadores, priorización, API, dashboard y publicación en nube se incorporan de manera incremental y pueden seguirse en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).
+El repositorio cuenta con una base local reproducible, ingesta Bronze incremental y una capa Silver tipificada, deduplicada y gobernada por controles de calidad. Los indicadores, la priorización, API, dashboard y publicación en nube se incorporan de manera incremental y pueden seguirse en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).
 
 ## Principios
 
@@ -70,5 +70,6 @@ La [página de documentación](docs/README.md) organiza las guías según la nec
 - [Primeros pasos](docs/getting-started.md) para preparar y levantar el entorno local.
 - [Guía de desarrollo](docs/development.md) para calidad, CI y estructura del repositorio.
 - [Guía de operación](docs/operations.md) para salud, logs, recuperación y limpieza.
+- [Transformación y calidad Silver](docs/silver-quality.md) para el esquema, reglas, rechazos y publicación local.
 
 Las historias y su avance se consultan en [GitHub Issues](https://github.com/camiloandcu/observatorio-secop/issues) y en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).

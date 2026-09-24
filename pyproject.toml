@@ -16,6 +16,7 @@ dependencies = [
 [project.scripts]
 secop-source-profile = "observatorio_secop.source_profile.cli:main"
 secop-ingest = "observatorio_secop.ingestion.cli:main"
+secop-silver = "observatorio_secop.processing.silver.cli:main"
 
 [project.optional-dependencies]
 dev = [
@@ -23,8 +24,9 @@ dev = [
   "ruff>=0.11,<0.12",
 ]
 data = [
-  "pandera[pandas]>=0.23,<0.24",
-  "pyspark>=3.5,<3.6",
+  "pandera[pyspark]>=0.23,<0.24",
+  "pyspark[connect]>=3.5,<3.6",
+  "setuptools>=75,<76",
 ]
 orchestration = [
   "apache-airflow>=2.10,<2.11",
