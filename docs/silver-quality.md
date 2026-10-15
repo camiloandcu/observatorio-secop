@@ -20,6 +20,29 @@ make build-silver SILVER_ARGS="--run-id <run_id_1> --run-id <run_id_2>"
 
 La ejecución no consulta la red, no necesita secretos y no modifica páginas, manifiestos ni checkpoints Bronze. Antes de iniciar verifica estado `committed`, dataset, contrato, hashes y conteos de todas las páginas.
 
+## Raíz y configuración compartidas
+
+Silver y el warehouse usan `data/silver/secop_contracts` por defecto. Ejecuta ambos desde la raíz del repositorio. Un `SILVER_ROOT` exportado prevalece sobre `silver_root` del YAML seleccionado; vacío o solo espacios es un error. Sin esa variable se usa el YAML. No se busca automáticamente otra carpeta si falta el puntero.
+
+`--config` selecciona el archivo y se escribe antes del subcomando:
+
+```bash
+uv run --locked --extra data secop-silver --config config/silver_quality.yaml run
+```
+
+Los comandos Python no cargan `.env` automáticamente. Para usarlo, expórtalo en la misma shell antes de construir y cargar:
+
+```bash
+set -a
+source .env
+set +a
+make build-silver
+uv run --locked --extra warehouse secop-warehouse verify
+make load-warehouse
+```
+
+Revisa un `.env` anterior: puede conservar `SILVER_ROOT=data/silver`. Ajusta esa línea a la ubicación elegida o exporta explícitamente la raíz existente para ambas etapas. No copies ni muevas bundles para resolver una diferencia de configuración. La [guía del warehouse](star-schema.md) explica la compatibilidad de versiones publicadas.
+
 ## Esquema y conversiones
 
 El esquema completo está definido en `src/observatorio_secop/processing/silver/schemas.py`. Sus grupos principales son:
@@ -33,6 +56,8 @@ El esquema completo está definido en `src/observatorio_secop/processing/silver/
 - calidad: advertencias y `signing_year` como partición.
 
 Las fechas aceptan exactamente `yyyy-MM-dd'T'HH:mm:ss.SSS`. Las fechas de negocio deben representar medianoche antes de convertirse a `date`. La fuente no declara zona horaria para `ultima_actualizacion`: se usa UTC como contexto reproducible de cálculo, pero el valor crudo y esa limitación permanecen en el manifiesto.
+
+El escritor usa Parquet `TIMESTAMP_MICROS` para datos válidos y rechazados. `source_updated_at` conserva el valor de reloj fuente sin afirmar una zona conocida; `bronze_fetched_at_utc` representa un instante UTC. La anotación UTC que Spark puede incluir en Parquet no cambia esa distinción ni desplaza los valores a hora local.
 
 Los montos no aceptan moneda, separadores de miles, exponentes ni negativos. Los decimales posteriores a la segunda posición solo pueden ser ceros: `18600000.000000` se representa exactamente como `18600000.00` y conserva su valor crudo; `1.001` se rechaza. No hay redondeo, imputación ni sustitución silenciosa.
 
@@ -93,7 +118,11 @@ data/silver/secop_contracts/
 
 El bundle se escribe primero en staging, se relee y verifica. Si pasa, un rename en el mismo filesystem crea la versión inmutable y un reemplazo durable actualiza `current.json`. Los lectores solo deben seguir ese puntero. Si falla, el candidato se mueve a `invalid/` y la versión válida anterior permanece intacta.
 
-Repetir las mismas entradas, contrato y configuración devuelve el mismo `silver_version_id`. Si ya existe un bundle idéntico, la operación es idempotente. Para apuntar a otra versión válida:
+Repetir las mismas entradas, contrato, configuración y perfil del escritor devuelve el mismo `silver_version_id`. Si ya existe un bundle idéntico, la operación es idempotente.
+
+El manifiesto nuevo registra `writer_format_version=silver-parquet-v2`; ese perfil también participa en la identidad de versión. Un cambio de formato genera otra versión incluso con un YAML antiguo sin cambios, sin modificar reglas de negocio, llaves ni archivos previos. Los manifiestos anteriores sin ese campo siguen siendo legibles.
+
+Para apuntar a otra versión válida:
 
 ```bash
 uv run --locked --extra dev --extra data secop-silver rollback --version <silver_version_id>

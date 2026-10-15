@@ -19,6 +19,8 @@ make down            # detiene servicios y conserva volúmenes
 
 Para seleccionar otro archivo de configuración local usa `ENV_FILE=/ruta/archivo`. El script no ejecuta `source` sobre ese archivo y nunca imprime sus valores.
 
+Esa selección es para los servicios locales. Silver y warehouse leen `SILVER_ROOT` exportado o su propio YAML; ninguno importa `.env` automáticamente. Si no encuentran `current.json`, revisa la raíz efectiva en la misma shell; no copies el puntero ni adivines otra carpeta. La [guía de configuración y compatibilidad](star-schema.md#configuración-local) explica la precedencia y el consumo de bundles existentes.
+
 ## Health checks y observabilidad
 
 - PostgreSQL usa `pg_isready` y una consulta confirma las bases de aplicación, Airflow y MLflow.
