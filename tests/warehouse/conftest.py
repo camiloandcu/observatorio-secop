@@ -82,13 +82,18 @@ def write_bundle(
     status: str = "valid",
     critical_passed: bool = True,
     schema: pa.Schema = EXPECTED_SCHEMA,
+    parquet_options: dict[str, Any] | None = None,
 ) -> Path:
     version = root / "versions" / version_id
     data = version / "data"
     data.mkdir(parents=True)
     table = pa.Table.from_pylist(rows, schema=schema)
     pq.write_to_dataset(
-        table, root_path=data, partition_cols=["signing_year"], compression="snappy"
+        table,
+        root_path=data,
+        partition_cols=["signing_year"],
+        compression="snappy",
+        **(parquet_options or {}),
     )
     files = []
     for path in sorted(item for item in version.rglob("*") if item.is_file()):

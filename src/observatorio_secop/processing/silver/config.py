@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import unicodedata
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -51,13 +53,16 @@ class SilverConfig:
     output_partitions: int
 
 
-def load_silver_config(path: Path) -> SilverConfig:
+def load_silver_config(path: Path, *, environment: Mapping[str, str] | None = None) -> SilverConfig:
+    env = os.environ if environment is None else environment
     raw = _load_mapping(path, "silver")
     try:
         config = SilverConfig(
             dataset_id=_text(raw["dataset_id"], "dataset_id"),
             bronze_root=Path(_text(raw["bronze_root"], "bronze_root")),
-            silver_root=Path(_text(raw["silver_root"], "silver_root")),
+            silver_root=Path(_text(env["SILVER_ROOT"], "SILVER_ROOT"))
+            if "SILVER_ROOT" in env
+            else Path(_text(raw["silver_root"], "silver_root")),
             contract_path=Path(_text(raw["contract_path"], "contract_path")),
             territory_catalog_path=Path(
                 _text(raw["territory_catalog_path"], "territory_catalog_path")

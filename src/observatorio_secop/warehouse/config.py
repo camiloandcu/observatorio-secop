@@ -55,7 +55,11 @@ def load_warehouse_config(
     if not isinstance(raw, dict):
         raise WarehouseConfigurationError("warehouse must be a mapping")
 
-    silver_root = Path(env.get("SILVER_ROOT", _text(raw.get("silver_root"), "silver_root")))
+    silver_root = Path(
+        _text(env["SILVER_ROOT"], "SILVER_ROOT")
+        if "SILVER_ROOT" in env
+        else _text(raw.get("silver_root"), "silver_root")
+    )
     schema = _identifier(raw.get("schema"), "schema")
     contract_table = _identifier(raw.get("contract_table"), "contract_table")
     audit_table = _identifier(raw.get("audit_table"), "audit_table")
