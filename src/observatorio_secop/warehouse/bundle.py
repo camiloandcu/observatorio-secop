@@ -11,8 +11,10 @@ from typing import Any, cast
 
 import pyarrow as pa
 import pyarrow.dataset as ds
+import pyarrow.parquet as pq
 
 from observatorio_secop.warehouse.errors import SilverBundleError
+from observatorio_secop.warehouse.timestamps import TIMESTAMP_COLUMNS, normalize_timestamps
 
 EXPECTED_FIELDS: tuple[tuple[str, pa.DataType, bool], ...] = (
     ("silver_version_id", pa.string(), False),
@@ -120,7 +122,33 @@ def _read_table(data_path: Path) -> pa.Table:
         partitioning = ds.partitioning(
             pa.schema([pa.field("signing_year", pa.string())]), flavor="hive"
         )
-        return ds.dataset(data_path, format="parquet", partitioning=partitioning).to_table()
+        dataset = ds.dataset(data_path, format="parquet", partitioning=partitioning)
+        tables = []
+        for fragment in dataset.get_fragments():
+            # Read each physical schema before combining: a dataset-wide target can
+            # silently coerce later fragments to the first fragment's precision.
+            table = ds.dataset(
+                [fragment.path],
+                format="parquet",
+                partitioning=partitioning,
+                partition_base_dir=str(data_path),
+            ).to_table()
+            parquet = pq.ParquetFile(fragment.path)
+            legacy_names = [
+                parquet.schema.column(i).path
+                for i in range(len(parquet.schema))
+                if parquet.schema.column(i).physical_type == "INT96"
+                and parquet.schema.column(i).path in TIMESTAMP_COLUMNS
+            ]
+            reference = (
+                pq.ParquetFile(fragment.path, coerce_int96_timestamp_unit="us").read(
+                    columns=legacy_names
+                )
+                if legacy_names
+                else None
+            )
+            tables.append(normalize_timestamps(table, reference))
+        return pa.concat_tables(tables)
     except (OSError, pa.ArrowException) as error:
         raise SilverBundleError(f"Could not read published Silver Parquet: {error}") from error
 

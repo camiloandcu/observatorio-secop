@@ -1,5 +1,5 @@
 warehouse:
-  silver_root: data/silver
+  silver_root: data/silver/secop_contracts
   schema: silver
   contract_table: contract_current
   audit_table: load_audit

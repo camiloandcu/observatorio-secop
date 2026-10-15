@@ -6,6 +6,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+WRITER_FORMAT_VERSION = "silver-parquet-v2"
+
 
 @dataclass(frozen=True)
 class BronzePage:
@@ -60,6 +62,7 @@ class SilverManifest:
     files: list[dict[str, Any]] = field(default_factory=list)
     limitations: list[str] = field(default_factory=list)
     schema_version: int = 1
+    writer_format_version: str | None = None
 
     @property
     def critical_passed(self) -> bool:

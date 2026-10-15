@@ -38,6 +38,28 @@ uv run --locked --extra dev --extra data --extra warehouse python scripts/check_
 
 No es necesario activar `.venv`. GitHub Actions instala `uv`, sincroniza el mismo lockfile y ejecuta `make quality` sin necesidad de tener la arquitectura montada. 
 
+## Integración Silver real → PostgreSQL
+
+Las pruebas offline incluyen publicación real con Spark y verificación de su Parquet. Las pruebas relacionales requieren `WAREHOUSE_TEST_DSN` y se omiten si no está definido; esa omisión no prueba la carga PostgreSQL.
+
+Usa una base desechable dedicada: algunas pruebas eliminan schemas. Este ejemplo crea un contenedor de pruebas separado, sin volumen ni conexión a la base de trabajo:
+
+```bash
+docker run --detach --rm --name secop-test-postgres \
+  --publish 127.0.0.1:55432:5432 \
+  --env POSTGRES_USER=secop_test --env POSTGRES_PASSWORD=secop_test_only \
+  --env POSTGRES_DB=secop_test postgres:16.4-alpine
+docker exec secop-test-postgres pg_isready -U secop_test -d secop_test
+export WAREHOUSE_TEST_DSN='host=127.0.0.1 port=55432 dbname=secop_test user=secop_test password=secop_test_only'
+uv run --locked --extra dev --extra data --extra warehouse pytest \
+  tests/processing_silver/test_warehouse_boundary.py \
+  tests/warehouse/test_loader_postgres.py tests/warehouse/test_dbt_postgres.py
+unset WAREHOUSE_TEST_DSN
+docker stop secop-test-postgres
+```
+
+Espera a que `pg_isready` indique disponibilidad antes de ejecutar pytest. La integración parte de Bronze sintético, publica con el escritor real, verifica valores/precisión/nulos/linaje y carga dos veces: la segunda es no-op. También comprueba salida Spark INT96 anterior y preservación de evidencia. No necesita Socrata ni AWS. `make quality` con ese DSN ejecuta además el conjunto completo contra esa base de pruebas.
+
 ## Contrato de la fuente SECOP II
 
 La validación habitual es completamente offline y utiliza una fixture pequeña:

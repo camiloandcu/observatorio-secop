@@ -47,6 +47,8 @@ make down
 
 `.env.example` contiene valores exclusivos para desarrollo local. No reutilices esas contraseñas fuera de este checkout ni agregues `.env` a Git.
 
+Para construir Silver y cargar el warehouse, ambos usan `data/silver/secop_contracts` por defecto. Los comandos Python no importan `.env` automáticamente: exporta sus variables en la shell que ejecutará el flujo, como muestra la [guía Silver](silver-quality.md#raíz-y-configuración-compartidas). Si ya tienes `.env`, revisa su `SILVER_ROOT` sin sobrescribir credenciales ni mover datos.
+
 ## Servicios optativos
 
 Airflow y MLflow no arrancan con el servicio base para ahorrar memoria y tiempo en Docker Desktop:

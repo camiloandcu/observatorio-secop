@@ -23,7 +23,7 @@ from observatorio_secop.processing.silver.config import (
     load_territory_catalog,
 )
 from observatorio_secop.processing.silver.errors import PublicationError
-from observatorio_secop.processing.silver.models import SilverManifest
+from observatorio_secop.processing.silver.models import WRITER_FORMAT_VERSION, SilverManifest
 from observatorio_secop.processing.silver.quality import validate_quality
 from observatorio_secop.processing.silver.schemas import BRONZE_FIELDS
 from observatorio_secop.processing.silver.storage import (
@@ -69,6 +69,7 @@ class SilverPipeline:
         existing = self.storage.existing_manifest(version_id)
         if existing is not None:
             expected_identity = {
+                "writer_format_version": WRITER_FORMAT_VERSION,
                 "dataset_id": self.config.dataset_id,
                 "transformation_version": self.config.transformation_version,
                 "key_rule_version": self.config.key_rule_version,
@@ -101,6 +102,7 @@ class SilverPipeline:
                 self.catalog,
             )
             manifest = SilverManifest(
+                writer_format_version=WRITER_FORMAT_VERSION,
                 silver_version_id=version_id,
                 dataset_id=self.config.dataset_id,
                 transformation_version=self.config.transformation_version,
@@ -162,6 +164,7 @@ class SilverPipeline:
 
     def _version_id(self, runs: tuple[Any, ...]) -> str:
         identity = {
+            "writer_format_version": WRITER_FORMAT_VERSION,
             "transformation_version": self.config.transformation_version,
             "dataset_id": self.config.dataset_id,
             "bronze_runs": [
@@ -190,6 +193,7 @@ class SilverPipeline:
 
     def _configure_spark(self, spark: SparkSession) -> None:
         spark.conf.set("spark.sql.session.timeZone", "UTC")
+        spark.conf.set("spark.sql.parquet.outputTimestampType", "TIMESTAMP_MICROS")
         spark.conf.set("spark.sql.legacy.timeParserPolicy", "CORRECTED")
         spark.conf.set("spark.sql.shuffle.partitions", str(self.config.local_threads))
         spark.sparkContext.setLogLevel("ERROR")

@@ -19,12 +19,12 @@ flowchart LR
     F --> G
 ```
 
-`secop-warehouse` acepta únicamente el bundle señalado por `data/silver/current.json`. Antes de conectarse a PostgreSQL comprueba:
+`secop-warehouse` acepta únicamente el bundle señalado por `<SILVER_ROOT>/current.json`, por defecto `data/silver/secop_contracts/current.json`. Antes de conectarse a PostgreSQL comprueba:
 
 - que el puntero resuelva exactamente `versions/<silver_version_id>/manifest.json`;
 - hash del manifiesto, estado `valid` y ausencia de controles críticos fallidos;
 - existencia, tamaño y SHA-256 de cada archivo inventariado;
-- esquema y tipos exactos del Parquet;
+- esquema y tipos exactos tras la normalización temporal sin pérdida descrita abajo;
 - conteo declarado, una fila por `contract_key` e identificadores obligatorios.
 
 Una falla termina antes de modificar la base.
@@ -42,6 +42,8 @@ cp dbt/profiles.yml.example .dbt/profiles.yml
 
 El perfil usa `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DBT_SCHEMA` y `DBT_THREADS`. `POSTGRES_HOST` es opcional y toma `127.0.0.1`. El cargador también usa `SILVER_ROOT`. `.env`, `.dbt/`, `dbt/target/` y `dbt/logs/` están ignorados.
 
+Silver y warehouse comparten la raíz de ejemplo `data/silver/secop_contracts`. El `SILVER_ROOT` exportado prevalece sobre el `silver_root` de cada YAML; un override vacío falla. Sin override se usa el archivo elegido con `--config`, situado antes del subcomando, por ejemplo `secop-warehouse --config config/warehouse.yaml verify`. Las rutas relativas parten del directorio de trabajo; usa la raíz del repositorio. Compose puede leer `.env` sin exportarlo a los comandos Python.
+
 Exporta el archivo solo en la shell que ejecutará el cargador y dbt:
 
 ```bash
@@ -51,6 +53,24 @@ set +a
 ```
 
 No copies credenciales en `profiles.yml.example`, comandos, issues o logs.
+
+## Compatibilidad temporal y bundles anteriores
+
+La salida nueva de Spark usa microsegundos. El lector acepta únicamente las dos columnas temporales `source_updated_at` y `bronze_fetched_at_utc` en microsegundos o nanosegundos, sin zona o con etiqueta literal UTC. Las convierte en memoria a `timestamp[us]` sin zona solo cuando son exactas. El resto del esquema sigue validándose estrictamente.
+
+En PostgreSQL, `source_updated_at` conserva el reloj fuente de zona desconocida y `bronze_fetched_at_utc` almacena UTC por convención en una columna `timestamp`. No se aplica desplazamiento a Bogotá ni a la zona de la shell. Los nulos opcionales se conservan.
+
+Los bundles INT96 anteriores se consumen desde su raíz original sin reescribir Parquet, manifiestos, punteros ni hashes. Se comprueba que la lectura no pierda submicrosegundos ni desborde el rango de nanosegundos del lector legacy; un valor fuera de ese rango se rechaza explícitamente. Los Parquet nuevos de microsegundos no heredan esa restricción. Otras zonas, unidades, tipos o conversiones con pérdida fallan antes de abrir conexión de base de datos.
+
+Para un `.env` previo no se mueve nada automáticamente: comprueba dónde existe `current.json`, exporta esa raíz para ambas etapas y verifica antes de cargar:
+
+```bash
+export SILVER_ROOT=/ruta/a/la/raiz/silver/existente
+uv run --locked --extra warehouse secop-warehouse verify
+make load-warehouse
+```
+
+Si el lector rechaza precisión o rango, conserva la evidencia original y revisa el error; no edites el manifiesto ni fuerces truncamiento. Puedes reconstruir desde Bronze con el escritor nuevo en otra raíz explícita y verificar el resultado antes de cargarlo.
 
 ## Carga Silver → PostgreSQL
 
