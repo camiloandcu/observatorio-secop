@@ -53,12 +53,14 @@ docker exec secop-test-postgres pg_isready -U secop_test -d secop_test
 export WAREHOUSE_TEST_DSN='host=127.0.0.1 port=55432 dbname=secop_test user=secop_test password=secop_test_only'
 uv run --locked --extra dev --extra data --extra warehouse pytest \
   tests/processing_silver/test_warehouse_boundary.py \
-  tests/warehouse/test_loader_postgres.py tests/warehouse/test_dbt_postgres.py
+  tests/warehouse
 unset WAREHOUSE_TEST_DSN
 docker stop secop-test-postgres
 ```
 
 Espera a que `pg_isready` indique disponibilidad antes de ejecutar pytest. La integración parte de Bronze sintético, publica con el escritor real, verifica valores/precisión/nulos/linaje y carga dos veces: la segunda es no-op. También comprueba salida Spark INT96 anterior y preservación de evidencia. No necesita Socrata ni AWS. `make quality` con ese DSN ejecuta además el conjunto completo contra esa base de pruebas.
+
+Las pruebas de warehouse demuestran además restauración A → B → A con comparación exacta y SHA-256 canónico, migración del esquema de auditoría anterior, conflictos históricos, fallos al registrar/restaurar estado y concurrencia observada en `pg_locks`. La guía de recuperación se ejercita con los entry points CLI de Silver y warehouse sobre bundles retenidos; no modifica datos de trabajo.
 
 ## Contrato de la fuente SECOP II
 
