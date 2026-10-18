@@ -23,6 +23,7 @@ from observatorio_secop.processing.silver.models import SilverManifest
 from observatorio_secop.processing.silver.runner import SilverPipeline
 from observatorio_secop.warehouse.bundle import verify_current_bundle
 from observatorio_secop.warehouse.config import WarehouseConfig, load_warehouse_config
+from observatorio_secop.warehouse.inventory import verify_inventory
 from observatorio_secop.warehouse.loader import WarehouseLoader
 
 TEST_DSN = os.environ.get("WAREHOUSE_TEST_DSN")
@@ -83,6 +84,7 @@ def publication(request, tmp_path_factory, spark):
             [
                 row("A", updated="2026-01-02T12:34:56.123", amount="123.450000"),
                 row("B", updated=None, signing=None, amount="0.00"),
+                row("C", signing="2025-06-15T00:00:00.000", amount="67.890000"),
                 row("REJECTED", amount="1.001"),
             ],
             fetched_at="2026-01-03T15:16:17.456Z",
@@ -133,6 +135,9 @@ def test_real_publication_has_microseconds_and_exact_logical_values(publication)
     assert rows[1]["source_updated_at"] is None
     assert rows[1]["signing_year"] == "unknown"
     assert rows[1]["signing_date"] is None
+    assert rows[2]["signing_date"] == date(2025, 6, 15)
+    assert rows[2]["contract_value_cop"] == Decimal("67.89")
+    assert {row["signing_year"] for row in rows} == {"2025", "2026", "unknown"}
     for current, legacy in zip(
         rows,
         sorted(legacy_bundle.table.to_pylist(), key=lambda r: r["source_contract_id"]),
@@ -165,7 +170,7 @@ def test_actual_spark_and_legacy_output_load_and_repeat_without_changes(publicat
         before = hashes(bundle.manifest_path.parent)
         try:
             loader = WarehouseLoader(config)
-            assert loader.load(bundle).inserted_rows == 2
+            assert loader.load(bundle).inserted_rows == 3
             assert loader.load(bundle).status == "noop"
             with psycopg.connect(TEST_DSN) as database:
                 cursor = database.execute(
@@ -185,3 +190,23 @@ def test_actual_spark_and_legacy_output_load_and_repeat_without_changes(publicat
         finally:
             with psycopg.connect(TEST_DSN, autocommit=True) as database:
                 database.execute(sql.SQL("DROP SCHEMA {} CASCADE").format(sql.Identifier(schema)))
+
+
+def test_real_spark_inventory_and_auxiliaries_match_reader_selection(publication) -> None:
+    _, _, current, legacy = publication
+    for bundle in [current, legacy]:
+        directory = bundle.manifest_path.parent
+        manifest = json.loads(bundle.manifest_path.read_text())
+        before = hashes(directory)
+        declared = {item["path"] for item in manifest["files"]}
+        expected = tuple(sorted((directory / "data").rglob("*.parquet")))
+        assert len(expected) == 3
+        assert verify_inventory(directory, manifest["files"]) == expected
+        markers = list((directory / "data").rglob("_SUCCESS"))
+        checksums = list((directory / "data").rglob(".*.crc"))
+        assert markers and checksums
+        assert all(path.relative_to(directory).as_posix() in declared for path in markers)
+        assert all(path.relative_to(directory).as_posix() not in declared for path in checksums)
+        assert any(path.startswith("rejected/") for path in declared)
+        assert "quality/results.json" in declared
+        assert hashes(directory) == before

@@ -24,10 +24,28 @@ flowchart LR
 - que el puntero resuelva exactamente `versions/<silver_version_id>/manifest.json`;
 - hash del manifiesto, estado `valid` y ausencia de controles críticos fallidos;
 - existencia, tamaño y SHA-256 de cada archivo inventariado;
+- igualdad exacta entre los Parquet de `data/` y el inventario verificado, sin omitir archivos ocultos ni particiones;
 - esquema y tipos exactos tras la normalización temporal sin pérdida descrita abajo;
 - conteo declarado, una fila por `contract_key` e identificadores obligatorios.
 
 Una falla termina antes de modificar la base.
+
+## Archivos verificados y auxiliares
+
+La verificación completa y la lectura de Silver terminan antes de abrir conexión a PostgreSQL. El lector recibe una lista explícita y ordenada de Parquet verificados; no vuelve a descubrir archivos desde el directorio. Un Parquet adicional se rechaza aunque tenga esquema, versión, llaves y conteo total coherentes. Los archivos de `rejected/`, calidad y otros directorios no aportan contratos; todo archivo declarado sigue sujeto a tamaño y SHA-256.
+
+Las rutas del inventario deben ser relativas al bundle y canónicas con separadores `/`. Se rechazan rutas absolutas, separadores invertidos, componentes vacíos, `.` o `..`, separadores redundantes, duplicados y archivos ausentes o no regulares. No se admiten enlaces simbólicos en las rutas inventariadas ni dentro de `data/`, incluidos directorios y enlaces rotos. La raíz configurada puede ser un alias del filesystem, pero eso no permite enlaces internos en el bundle.
+
+La política se aplica en cada nivel de `data/`, sin excepciones por nombres ocultos o prefijos `_`:
+
+| Archivo | Regla |
+|---|---|
+| Nombre terminado en `.parquet` | Es dato; debe estar inventariado y verificado, incluso si comienza con `.` o `_` |
+| `_SUCCESS` | Es opcional; si existe debe estar inventariado y verificado; no se interpreta como dato |
+| `.<nombre-del-archivo>.crc` | Puede omitirse del inventario si acompaña un Parquet o `_SUCCESS` inventariado en el mismo directorio; si se declara se verifica; no sustituye SHA-256 ni se interpreta como dato |
+| Cualquier otro archivo | Se rechaza, incluidos `_metadata`, `_common_metadata`, archivos ocultos arbitrarios y sidecars huérfanos |
+
+Debe existir al menos un Parquet de datos. Las particiones Hive reconstruyen `signing_year` como texto, incluido `unknown`; el cambio no altera la compatibilidad temporal. Los archivos publicados deben permanecer inmutables durante verificación y lectura. Los hashes comprueban integridad respecto del manifiesto; no autentican su autor ni protegen contra reescrituras concurrentes hostiles del filesystem.
 
 ## Configuración local
 
@@ -180,6 +198,8 @@ uv run --locked --extra warehouse dbt docs serve \
 ### Silver no verifica
 
 Ejecuta `secop-silver inspect` y revisa el manifiesto publicado. No edites un bundle inmutable. Corrige la causa en Bronze/Silver o vuelve mediante el comando soportado a una versión Silver válida.
+
+Si el error identifica un archivo extra, ausente, alterado, una ruta inválida o un auxiliar no soportado, conserva el bundle y el diagnóstico. No actualices el manifiesto/hash ni borres archivos para forzar aceptación. Selecciona una versión íntegra retenida y sigue la secuencia de verificación/carga descrita abajo, o reconstruye desde Bronze en otra raíz explícita. El rechazo de inventario no abre conexión PostgreSQL y conserva las filas y los metadatos activos; cambiar solo el puntero Silver tampoco los modifica.
 
 ### La carga PostgreSQL falla
 

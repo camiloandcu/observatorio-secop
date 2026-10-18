@@ -62,6 +62,8 @@ Espera a que `pg_isready` indique disponibilidad antes de ejecutar pytest. La in
 
 Las pruebas de warehouse demuestran además restauración A → B → A con comparación exacta y SHA-256 canónico, migración del esquema de auditoría anterior, conflictos históricos, fallos al registrar/restaurar estado y concurrencia observada en `pg_locks`. La guía de recuperación se ejercita con los entry points CLI de Silver y warehouse sobre bundles retenidos; no modifica datos de trabajo.
 
+La cobertura de inventario reproduce un Parquet adicional con conteo total coherente y comprueba su rechazo antes de decodificar/conectar, incluso en particiones nuevas y rutas ocultas. Verifica rutas canónicas, enlaces simbólicos, tamaño/hash, duplicados y las reglas explícitas de `_SUCCESS`/CRC. Observa las rutas que recibe Arrow y las lecturas de referencia INT96 para demostrar que solo se decodifica el conjunto verificado. La variante PostgreSQL compara exactamente filas, registro, historial y estado activo antes/después de cada carga inválida. La salida Spark real incluye años 2025/2026 y `unknown`, marcadores y sidecars, y conserva carga/repetición sin cambios en ambos formatos soportados. Estos casos se incluyen en los comandos anteriores; omitir la base deja sin verificar la preservación relacional.
+
 ## Contrato de la fuente SECOP II
 
 La validación habitual es completamente offline y utiliza una fixture pequeña:
