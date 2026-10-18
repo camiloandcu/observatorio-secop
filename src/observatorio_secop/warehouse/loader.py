@@ -8,6 +8,7 @@ from typing import Any
 import psycopg
 from psycopg import sql
 
+from observatorio_secop.warehouse.activation import ActivationStore
 from observatorio_secop.warehouse.bundle import EXPECTED_SCHEMA, VerifiedSilverBundle
 from observatorio_secop.warehouse.config import WarehouseConfig
 from observatorio_secop.warehouse.errors import WarehouseConflictError, WarehouseLoadError
@@ -32,6 +33,7 @@ class WarehouseLoader:
         self.config = config
 
     def load(self, bundle: VerifiedSilverBundle) -> LoadResult:
+        metadata = ActivationStore(self.config)
         log_event(
             "warehouse_load_started", silver_version_id=bundle.version_id, rows=bundle.row_count
         )
@@ -44,7 +46,7 @@ class WarehouseLoader:
                 password=self.config.password,
                 connect_timeout=10,
             ) as connection:
-                result = self._load(connection, bundle)
+                result = self._load(connection, bundle, metadata)
         except WarehouseConflictError:
             raise
         except psycopg.Error as error:
@@ -55,7 +57,10 @@ class WarehouseLoader:
         return result
 
     def _load(
-        self, connection: psycopg.Connection[Any], bundle: VerifiedSilverBundle
+        self,
+        connection: psycopg.Connection[Any],
+        bundle: VerifiedSilverBundle,
+        metadata: ActivationStore,
     ) -> LoadResult:
         schema = sql.Identifier(self.config.schema)
         current = sql.Identifier(self.config.contract_table)
@@ -70,11 +75,13 @@ class WarehouseLoader:
                 (bundle.version_id,),
             )
             existing = cursor.fetchone()
-            if existing is not None:
-                if existing[0] != bundle.manifest_sha256:
-                    raise WarehouseConflictError(
-                        f"Silver version {bundle.version_id} has conflicting immutable content"
-                    )
+            if existing is not None and existing[0] != bundle.manifest_sha256:
+                raise WarehouseConflictError(
+                    f"Silver version {bundle.version_id} has conflicting immutable content"
+                )
+            active = metadata.ensure(cursor)
+            identity = (bundle.version_id, bundle.manifest_sha256)
+            if active == identity:
                 return LoadResult(bundle.version_id, "noop", bundle.row_count, 0, 0, 0)
 
             copy_columns = [field.name for field in EXPECTED_SCHEMA]
@@ -160,21 +167,32 @@ class WarehouseLoader:
                 ),
                 (bundle.manifest_sha256, bundle.manifest_finished_at),
             )
-            cursor.execute(
-                sql.SQL(
-                    "INSERT INTO {}.{} (silver_version_id, manifest_sha256, manifest_finished_at, "
-                    "source_rows, inserted_rows, updated_rows, deleted_rows, status) "
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s, 'applied')"
-                ).format(schema, audit),
-                (
-                    bundle.version_id,
-                    bundle.manifest_sha256,
-                    bundle.manifest_finished_at,
-                    bundle.row_count,
-                    inserted_rows,
-                    updated_rows,
-                    deleted_rows,
-                ),
+            if existing is None:
+                cursor.execute(
+                    sql.SQL(
+                        "INSERT INTO {}.{} (silver_version_id, manifest_sha256, "
+                        "manifest_finished_at, source_rows, inserted_rows, updated_rows, "
+                        "deleted_rows, status) VALUES (%s, %s, %s, %s, %s, %s, %s, 'applied')"
+                    ).format(schema, audit),
+                    (
+                        bundle.version_id,
+                        bundle.manifest_sha256,
+                        bundle.manifest_finished_at,
+                        bundle.row_count,
+                        inserted_rows,
+                        updated_rows,
+                        deleted_rows,
+                    ),
+                )
+            metadata.activate(
+                cursor,
+                identity,
+                active,
+                "restoration" if existing is not None else "activation",
+                bundle.row_count,
+                inserted_rows,
+                updated_rows,
+                deleted_rows,
             )
         return LoadResult(
             bundle.version_id,

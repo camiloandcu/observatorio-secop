@@ -21,6 +21,8 @@ Para seleccionar otro archivo de configuración local usa `ENV_FILE=/ruta/archiv
 
 Esa selección es para los servicios locales. Silver y warehouse leen `SILVER_ROOT` exportado o su propio YAML; ninguno importa `.env` automáticamente. Si no encuentran `current.json`, revisa la raíz efectiva en la misma shell; no copies el puntero ni adivines otra carpeta. La [guía de configuración y compatibilidad](star-schema.md#configuración-local) explica la precedencia y el consumo de bundles existentes.
 
+Para recuperar un snapshot anterior sigue la [secuencia A → B → A](star-schema.md#volver-a-una-versión-silver-anterior): seleccionar el puntero Silver, verificar el bundle y cargar PostgreSQL son pasos separados. El no-op exige que versión y hash ya estén activos. Antes de actualizar un warehouse existente, revisa la [migración de auditoría](star-schema.md#migrar-una-auditoría-existente), detén escritores anteriores y conserva respaldos.
+
 ## Health checks y observabilidad
 
 - PostgreSQL usa `pg_isready` y una consulta confirma las bases de aplicación, Airflow y MLflow.

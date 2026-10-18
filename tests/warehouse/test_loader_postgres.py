@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import os
-import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
-from pathlib import Path
 
 import psycopg
 import pytest
-from psycopg.conninfo import conninfo_to_dict
 
 from observatorio_secop.warehouse.bundle import verify_current_bundle
 from observatorio_secop.warehouse.config import WarehouseConfig
@@ -19,28 +16,6 @@ from .conftest import silver_row, write_bundle
 
 TEST_DSN = os.environ.get("WAREHOUSE_TEST_DSN")
 pytestmark = pytest.mark.skipif(not TEST_DSN, reason="WAREHOUSE_TEST_DSN is not configured")
-
-
-@pytest.fixture
-def postgres_config(tmp_path: Path) -> WarehouseConfig:
-    assert TEST_DSN
-    connection = conninfo_to_dict(TEST_DSN)
-    schema = f"silver_test_{uuid.uuid4().hex[:12]}"
-    config = WarehouseConfig(
-        silver_root=tmp_path / "silver",
-        schema=schema,
-        contract_table="contract_current",
-        audit_table="load_audit",
-        advisory_lock_id=7404999,
-        host=connection.get("host", "127.0.0.1"),
-        port=int(connection.get("port", "5432")),
-        dbname=connection.get("dbname", "postgres"),
-        user=connection.get("user", "postgres"),
-        password=connection.get("password", ""),
-    )
-    yield config
-    with psycopg.connect(TEST_DSN, autocommit=True) as database:
-        database.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
 
 
 def test_load_repeat_correction_removal_and_conflict(postgres_config: WarehouseConfig) -> None:

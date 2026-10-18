@@ -87,10 +87,15 @@ La carga adquiere un advisory lock y crea una tabla temporal dentro de la transa
 1. valida filas y llaves en staging;
 2. inserta o actualiza por `contract_key` cuando cambia versión o payload;
 3. elimina llaves ausentes del snapshot Silver autoritativo;
-4. registra versión, hash y conteos en `silver.load_audit`;
-5. confirma todos los cambios juntos.
+4. registra una identidad nueva en `silver.load_audit` solo en su primera carga;
+5. agrega el evento a `silver.load_audit_activation` y actualiza `silver.load_audit_active`;
+6. confirma filas, registro, historial y estado activo juntos.
 
-Repetir la misma versión y hash es un no-op exitoso. Reutilizar una `silver_version_id` con otro hash falla como conflicto. Una excepción revierte staging, upsert, retiros y auditoría.
+La consulta de estado y la migración también quedan dentro del lock. Repetir la versión y hash **actualmente activos** es un no-op exitoso con conteos de cambio cero. Haber cargado una versión antes no impide restaurarla después de otra: A → B → A aplica A nuevamente y devuelve `applied`. Reutilizar una `silver_version_id` con otro hash falla como conflicto tanto si está activa como si es histórica. Una excepción revierte reconciliación, registro, historial y estado activo.
+
+`load_audit` conserva hash, fecha del manifiesto y conteos de la primera carga de cada versión. `load_audit_activation` registra cada aplicación confirmada, su identidad previa, conteos y tipo `activation` o `restoration`; repetir la versión activa no agrega eventos. `load_audit_active` contiene como máximo una fila y referencia el evento activo. Los eventos se ordenan por `activation_id`; puede haber saltos por transacciones revertidas. `activated_at` indica el momento del evento, mientras `contract_current.loaded_at` sigue siendo la fecha determinística del manifiesto original, incluso al restaurar.
+
+Los nombres de estado e historial se derivan del `audit_table` configurado con sufijos `_active` y `_activation`; también se crea un índice único `_identity` para las referencias versión/hash. Todos deben ser distintos de `contract_table` y caber en 63 bytes; se rechazan nombres que colisionan o se truncarían antes de conectar. No se necesitan claves YAML nuevas.
 
 Los logs contienen versión, estado y conteos, nunca contraseña ni DSN completo.
 
@@ -186,10 +191,61 @@ El mensaje identifica modelo, columna o relación. Las tablas siguen consultable
 
 ### Volver a una versión Silver anterior
 
+Conserva los bundles inmutables de A y B. Usa la misma raíz exportada, configuración y base para toda la secuencia. Sustituye los identificadores siguientes por versiones reales; prueba primero contra una base desechable dedicada.
+
 ```bash
-uv run --locked --extra data secop-silver rollback --version <silver_version_id>
-make load-warehouse
+export SILVER_ROOT=/ruta/a/la/raiz/silver/existente
+VERSION_A='<version-A>'
+VERSION_B='<version-B>'
+
+uv run --locked --extra data secop-silver rollback --version "$VERSION_A"
+uv run --locked --extra warehouse secop-warehouse verify
+make load-warehouse  # applied; registra filas y digest de A con la consulta de abajo
+
+uv run --locked --extra data secop-silver rollback --version "$VERSION_B"
+uv run --locked --extra warehouse secop-warehouse verify
+make load-warehouse  # applied; PostgreSQL contiene B
+
+uv run --locked --extra data secop-silver rollback --version "$VERSION_A"
+uv run --locked --extra warehouse secop-warehouse verify
+make load-warehouse  # applied; restaura filas, retiros, montos y linaje de A
+make load-warehouse  # noop; no agrega eventos ni cambia filas
+```
+
+Cambiar el puntero Silver no carga PostgreSQL. `verify` valida el bundle sin modificar la base. Si usas YAML propio, conserva el mismo `--config` antes de `verify`/`load` en cada invocación; `make load-warehouse` usa el YAML de ejemplo.
+
+En tu cliente PostgreSQL, ejecuta estas consultas después de cargar A por primera vez y tras restaurarlo. Usa la misma zona UTC para estabilizar la representación temporal. Los nombres corresponden al YAML de ejemplo:
+
+```sql
+SET TIME ZONE 'UTC';
+SELECT count(*) AS contracts, sum(contract_value_cop) AS value_cop,
+       md5(string_agg(row_to_json(c)::text, E'\n' ORDER BY contract_key)) AS content_digest
+FROM silver.contract_current c;
+SELECT contract_key, contract_value_cop, silver_version_id,
+       silver_manifest_sha256, bronze_run_id, loaded_at
+FROM silver.contract_current ORDER BY contract_key;
+SELECT * FROM silver.load_audit_active;
+SELECT activation_id, silver_version_id, manifest_sha256,
+       previous_version_id, event_kind, source_rows,
+       inserted_rows, updated_rows, deleted_rows
+FROM silver.load_audit_activation ORDER BY activation_id;
+SELECT * FROM silver.load_audit ORDER BY silver_version_id;
+```
+
+Conteo, suma decimal y digest de todas las columnas deben ser iguales a los de A inicial; la identidad activa debe ser A. En una base nueva, el historial será A/B/A, con el último evento `restoration`, y el registro conservará solo dos identidades. El segundo intento de A activo debe dejar esas consultas sin cambios. El digest SQL sirve para comparar contenido, no reemplaza el SHA-256 de integridad del bundle; las pruebas automatizadas también comparan todas las columnas y su SHA-256 canónico.
+
+Si la restauración falla, B permanece íntegro junto con su estado e historial. Corrige la causa y repite la carga del bundle A verificado; no borres auditoría ni tablas. Solo después de restaurar PostgreSQL reconstruye los modelos dimensionales:
+
+```bash
 make dbt-build
 ```
 
-El bundle anterior debe seguir siendo válido. La reconciliación restaurará contratos y dimensiones correspondientes sin borrar evidencia Silver.
+### Migrar una auditoría existente
+
+Antes de actualizar el cargador, detén los escritores anteriores y respalda las tablas actuales, la auditoría y los bundles Silver retenidos. No mezcles versiones de escritores. La primera carga con el nuevo código migra dentro de su transacción y lock, sin cambiar ningún valor de las filas históricas de `load_audit`.
+
+Si las filas actuales tienen una sola versión/hash/`loaded_at` y coinciden con identidad, fecha del manifiesto y conteo auditados, se agrega un único evento `legacy_baseline`. Es una inferencia del estado observado al migrar, no una reconstrucción del historial pasado: no inventa conteos de cambio y no escoge la versión por `attempted_at`. Después se aplica la solicitud o se devuelve no-op si ya está activa. Repetir la migración no duplica ese evento ni reinicia el estado.
+
+Con tablas actuales vacías no se infiere una versión activa desde la auditoría histórica: la solicitud verificada se aplica para establecer estado conocido. Si hay versiones/hashes mezclados, registro ausente, conteos/fechas incompatibles o metadatos parcialmente presentes, la carga falla sin confirmar cambios. Conserva el error y los respaldos; inspecciona las identidades y conteos con las consultas anteriores. Recupera el bundle elegido en un schema nuevo mediante un YAML separado y las mismas órdenes `verify`/`load`; valida el resultado antes de cambiar consumidores. No elimines evidencia ni repares los registros para forzar la migración.
+
+Un fallo de migración revierte automáticamente sus cambios. Para volver a un binario anterior, detén escritores y recupera un respaldo coherente previo en otra base/schema bajo control del operador; conserva la evidencia nueva. El cargador antiguo no entiende activaciones y no sirve como procedimiento de restauración A → B → A.

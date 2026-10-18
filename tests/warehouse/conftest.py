@@ -2,16 +2,21 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import uuid
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+import psycopg
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
+from psycopg.conninfo import conninfo_to_dict
 
 from observatorio_secop.warehouse.bundle import EXPECTED_SCHEMA
+from observatorio_secop.warehouse.config import WarehouseConfig
 
 
 def silver_row(
@@ -150,3 +155,30 @@ def silver_root(tmp_path: Path) -> Path:
     root = tmp_path / "silver"
     write_bundle(root, "version-1", [silver_row("version-1")])
     return root
+
+
+TEST_DSN = os.environ.get("WAREHOUSE_TEST_DSN")
+
+
+@pytest.fixture
+def postgres_config(tmp_path: Path) -> WarehouseConfig:
+    if not TEST_DSN:
+        pytest.skip("WAREHOUSE_TEST_DSN must select a disposable database")
+    assert TEST_DSN
+    connection = conninfo_to_dict(TEST_DSN)
+    schema = f"silver_test_{uuid.uuid4().hex[:12]}"
+    config = WarehouseConfig(
+        silver_root=tmp_path / "silver",
+        schema=schema,
+        contract_table="contract_current",
+        audit_table="load_audit",
+        advisory_lock_id=7404999,
+        host=connection.get("host", "127.0.0.1"),
+        port=int(connection.get("port", "5432")),
+        dbname=connection.get("dbname", "postgres"),
+        user=connection.get("user", "postgres"),
+        password=connection.get("password", ""),
+    )
+    yield config
+    with psycopg.connect(TEST_DSN, autocommit=True) as database:
+        database.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
