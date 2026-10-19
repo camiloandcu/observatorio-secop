@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from dataclasses import dataclass
 from datetime import datetime
@@ -14,6 +13,7 @@ import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 
 from observatorio_secop.warehouse.errors import SilverBundleError
+from observatorio_secop.warehouse.inventory import sha256_path, verify_inventory
 from observatorio_secop.warehouse.timestamps import TIMESTAMP_COLUMNS, normalize_timestamps
 
 EXPECTED_FIELDS: tuple[tuple[str, pa.DataType, bool], ...] = (
@@ -83,7 +83,7 @@ def verify_current_bundle(root: Path) -> VerifiedSilverBundle:
     manifest_path = (root / _non_empty_text(manifest_value, "manifest")).resolve()
     if manifest_path != expected_manifest or not manifest_path.is_relative_to(root.resolve()):
         raise SilverBundleError("Silver current pointer does not target its immutable version")
-    manifest_sha256 = _sha256_path(manifest_path)
+    manifest_sha256 = sha256_path(manifest_path)
     if current.get("manifest_sha256") != manifest_sha256:
         raise SilverBundleError("Silver current manifest hash does not match its pointer")
 
@@ -96,13 +96,13 @@ def verify_current_bundle(root: Path) -> VerifiedSilverBundle:
         if item.get("severity") == "critical"
     ):
         raise SilverBundleError("Silver manifest contains a failed critical control")
-    _verify_inventory(manifest_path.parent, manifest.get("files"))
+    data_files = verify_inventory(manifest_path.parent, manifest.get("files"))
 
     expected_rows = _non_negative_integer(
         _mapping(manifest.get("counts"), "counts").get("output_rows"), "output_rows"
     )
     finished_at = _timestamp(manifest.get("finished_at_utc"), "finished_at_utc")
-    table = _read_table(manifest_path.parent / "data")
+    table = _read_table(manifest_path.parent / "data", data_files)
     _verify_table(table, version_id, expected_rows)
     return VerifiedSilverBundle(
         version_id=version_id,
@@ -114,26 +114,22 @@ def verify_current_bundle(root: Path) -> VerifiedSilverBundle:
     )
 
 
-def _read_table(data_path: Path) -> pa.Table:
-    files = sorted(data_path.rglob("*.parquet")) if data_path.is_dir() else []
-    if not files:
-        raise SilverBundleError("Published Silver data contains no Parquet files")
+def _read_table(data_path: Path, files: tuple[Path, ...]) -> pa.Table:
     try:
         partitioning = ds.partitioning(
             pa.schema([pa.field("signing_year", pa.string())]), flavor="hive"
         )
-        dataset = ds.dataset(data_path, format="parquet", partitioning=partitioning)
         tables = []
-        for fragment in dataset.get_fragments():
+        for path in files:
             # Read each physical schema before combining: a dataset-wide target can
             # silently coerce later fragments to the first fragment's precision.
             table = ds.dataset(
-                [fragment.path],
+                [str(path)],
                 format="parquet",
                 partitioning=partitioning,
                 partition_base_dir=str(data_path),
             ).to_table()
-            parquet = pq.ParquetFile(fragment.path)
+            parquet = pq.ParquetFile(path)
             legacy_names = [
                 parquet.schema.column(i).path
                 for i in range(len(parquet.schema))
@@ -141,9 +137,7 @@ def _read_table(data_path: Path) -> pa.Table:
                 and parquet.schema.column(i).path in TIMESTAMP_COLUMNS
             ]
             reference = (
-                pq.ParquetFile(fragment.path, coerce_int96_timestamp_unit="us").read(
-                    columns=legacy_names
-                )
+                pq.ParquetFile(path, coerce_int96_timestamp_unit="us").read(columns=legacy_names)
                 if legacy_names
                 else None
             )
@@ -177,25 +171,6 @@ def _verify_table(table: pa.Table, version_id: str, expected_rows: int) -> None:
         raise SilverBundleError("Silver contract_key values must be non-null and unique")
     if any(not value for value in identifiers):
         raise SilverBundleError("Silver source_contract_id values must be non-null")
-
-
-def _verify_inventory(directory: Path, value: Any) -> None:
-    if not isinstance(value, list) or not value:
-        raise SilverBundleError("Silver manifest file inventory is missing")
-    declared: set[str] = set()
-    for item in value:
-        details = _mapping(item, "files item")
-        relative = _non_empty_text(details.get("path"), "files.path")
-        path = (directory / relative).resolve()
-        if not path.is_relative_to(directory.resolve()) or not path.is_file():
-            raise SilverBundleError(f"Silver inventory file is missing: {relative}")
-        if relative in declared:
-            raise SilverBundleError(f"Silver inventory path is duplicated: {relative}")
-        declared.add(relative)
-        if path.stat().st_size != _non_negative_integer(details.get("size_bytes"), "size_bytes"):
-            raise SilverBundleError(f"Silver inventory size differs: {relative}")
-        if _sha256_path(path) != details.get("sha256"):
-            raise SilverBundleError(f"Silver inventory hash differs: {relative}")
 
 
 def _read_object(path: Path, label: str) -> dict[str, Any]:
@@ -233,14 +208,3 @@ def _timestamp(value: Any, name: str) -> datetime:
     if result.tzinfo is None:
         raise SilverBundleError(f"{name} must include a UTC offset")
     return result
-
-
-def _sha256_path(path: Path) -> str:
-    digest = hashlib.sha256()
-    try:
-        with path.open("rb") as stream:
-            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-                digest.update(chunk)
-    except OSError as error:
-        raise SilverBundleError(f"Could not hash Silver file {path.name}: {error}") from error
-    return digest.hexdigest()

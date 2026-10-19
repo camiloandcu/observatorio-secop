@@ -45,6 +45,12 @@ make clean
 
 ## Diagnóstico
 
+### Silver rechaza archivos o inventario
+
+Ejecuta `uv run --locked --extra warehouse secop-warehouse verify` con la misma raíz y configuración que usarás para cargar. Revisa la ruta relativa indicada en el error y las [reglas de inventario y auxiliares](star-schema.md#archivos-verificados-y-auxiliares). Un Parquet extra se rechaza incluso si los conteos coinciden; las rutas ocultas y particiones no están exentas.
+
+Conserva la evidencia; no edites hashes, manifiestos ni archivos para forzar aceptación. Selecciona un bundle íntegro retenido y sigue la [recuperación A → B → A](star-schema.md#volver-a-una-versión-silver-anterior), o reconstruye desde Bronze en otra raíz. El rechazo ocurre antes de conectar a PostgreSQL y conserva el snapshot y su auditoría. Cambiar el puntero Silver, verificar y cargar son operaciones separadas.
+
 ### Docker no responde
 
 `make preflight` termina con error antes de crear servicios. Inicia Docker Desktop y habilita la distribución en **Settings → Resources → WSL Integration**; luego repite `make up`.
