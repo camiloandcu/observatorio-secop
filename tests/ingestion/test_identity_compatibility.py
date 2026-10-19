@@ -8,6 +8,7 @@ import pytest
 
 from observatorio_secop.identity import code_identity, identity_coverage, load_identity_rules
 from observatorio_secop.ingestion.compatibility import CompatibilityRegistry
+from observatorio_secop.ingestion.contract import load_bronze_contract
 from observatorio_secop.ingestion.errors import SourceContractError
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -54,6 +55,18 @@ def test_tampered_compatibility_or_rule_evidence_is_rejected(tmp_path, tamper) -
         path.write_text(path.read_text() + "\n# altered\n")
         with pytest.raises(SourceContractError, match="hash"):
             CompatibilityRegistry(root / "secop_compatibility.yaml")
+
+
+def test_ingestion_rejects_unregistered_contract_before_acquisition(tmp_path) -> None:
+    registry = CompatibilityRegistry()
+    for profile in registry.profiles:
+        path = ROOT / f"contracts/revisions/{profile.revision.replace('-', '_')}.yaml"
+        supported = load_bronze_contract(path, profile.projection)
+        assert supported.contract_hash == profile.contract_sha256
+    changed = tmp_path / "changed-contract.yaml"
+    changed.write_bytes((ROOT / "contracts/secop_source.yaml").read_bytes() + b"\n# unregistered\n")
+    with pytest.raises(SourceContractError, match="Unsupported source contract"):
+        load_bronze_contract(changed, registry.profiles[1].projection)
 
 
 @pytest.mark.parametrize("role", ["entity", "supplier"])

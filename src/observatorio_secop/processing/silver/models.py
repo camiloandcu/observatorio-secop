@@ -29,6 +29,13 @@ class VerifiedBronzeRun:
     manifest_path: Path
     manifest_sha256: str
     pages: tuple[BronzePage, ...]
+    projection_version: str = "secop-contracts-v1"
+    projection: tuple[str, ...] = ()
+    purpose: str = "incremental"
+    refresh: dict[str, Any] | None = None
+    parameters: dict[str, Any] = field(default_factory=dict)
+    range_complete: bool = False
+    truncated: bool = False
 
 
 @dataclass(frozen=True)
@@ -63,6 +70,11 @@ class SilverManifest:
     limitations: list[str] = field(default_factory=list)
     schema_version: int = 1
     writer_format_version: str | None = None
+    identity_rule_version: str | None = None
+    compatibility_sha256: str | None = None
+    identity_coverage: dict[str, Any] = field(default_factory=dict)
+    refresh: dict[str, Any] | None = None
+    input_purposes: dict[str, str] = field(default_factory=dict)
 
     @property
     def critical_passed(self) -> bool:

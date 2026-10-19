@@ -11,7 +11,12 @@ from typing import Any
 import psycopg
 from psycopg import sql
 
-from observatorio_secop.warehouse.bundle import VerifiedSilverBundle, verify_current_bundle
+from observatorio_secop.warehouse.bundle import (
+    EXPECTED_SCHEMA,
+    IDENTITY_SCHEMA,
+    VerifiedSilverBundle,
+    verify_current_bundle,
+)
 from observatorio_secop.warehouse.config import WarehouseConfig
 from observatorio_secop.warehouse.loader import WarehouseLoader
 
@@ -47,13 +52,29 @@ def snapshot(config: WarehouseConfig) -> dict[str, Any]:
             config.audit_table,
             config.audit_table + "_activation",
             config.audit_table + "_active",
+            config.audit_table + "_schema",
         ]:
             relation = sql.Identifier(config.schema, name)
             if database.execute("SELECT to_regclass(%s)", (relation.as_string(),)).fetchone()[0]:
                 # Each relation has its stable primary key as column 1, except
                 # contracts whose first two columns are version and contract key.
+                columns = sql.SQL("*")
+                if name == config.contract_table:
+                    has_identity = database.execute(
+                        "SELECT EXISTS (SELECT 1 FROM information_schema.columns "
+                        "WHERE table_schema=%s AND table_name=%s "
+                        "AND column_name='identity_rule_version')",
+                        (config.schema, name),
+                    ).fetchone()[0]
+                    if has_identity:
+                        columns = sql.SQL(",").join(
+                            map(
+                                sql.Identifier,
+                                IDENTITY_SCHEMA.names + ["silver_manifest_sha256", "loaded_at"],
+                            )
+                        )
                 result[name] = database.execute(
-                    sql.SQL("SELECT * FROM {} ORDER BY 1, 2").format(relation)
+                    sql.SQL("SELECT {} FROM {} ORDER BY 1, 2").format(columns, relation)
                 ).fetchall()
             else:
                 result[name] = None
@@ -96,15 +117,18 @@ def seed_legacy(config: WarehouseConfig, a: VerifiedSilverBundle, b: VerifiedSil
             sql.Identifier(config.contract_table),
             sql.Identifier(config.audit_table),
         )
-        columns = b.table.column_names + ["silver_manifest_sha256", "loaded_at"]
+        columns = EXPECTED_SCHEMA.names + ["silver_manifest_sha256", "loaded_at"]
         with cursor.copy(
             sql.SQL("COPY {} ({}) FROM STDIN").format(
                 sql.Identifier(config.schema, config.contract_table),
                 sql.SQL(",").join(map(sql.Identifier, columns)),
             )
         ) as copy:
-            for row in expected_rows(b):
-                copy.write_row(row)
+            for row in sorted(b.table.to_pylist(), key=lambda row: row["contract_key"]):
+                copy.write_row(
+                    tuple(row[name] for name in EXPECTED_SCHEMA.names)
+                    + (b.manifest_sha256, b.manifest_finished_at)
+                )
         for bundle, counts in [(a, (2, 0, 0)), (b, (1, 1, 1))]:
             cursor.execute(
                 sql.SQL("INSERT INTO {} VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'applied')").format(

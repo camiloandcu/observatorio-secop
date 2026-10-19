@@ -9,6 +9,7 @@ from typing import Any
 
 import yaml
 
+from observatorio_secop.ingestion.compatibility import CompatibilityRegistry
 from observatorio_secop.ingestion.errors import SourceContractError
 from observatorio_secop.source_profile.contract import SENSITIVE_FIELD_PATTERN
 
@@ -80,6 +81,13 @@ def load_bronze_contract(path: Path, projection: tuple[str, ...]) -> BronzeSourc
     if document["incremental_cursor"].get("status") != "resolved":
         raise SourceContractError("Bronze ingestion requires a resolved incremental cursor")
     _validate_projection(contract, projection)
+    CompatibilityRegistry().resolve(
+        contract.dataset_id,
+        contract.contract_hash,
+        list(projection),
+        contract.projection_version,
+        contract.revision,
+    )
     return contract
 
 

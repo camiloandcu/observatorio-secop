@@ -14,6 +14,11 @@ import pandera.pyspark as pa
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 
+from observatorio_secop.identity import (
+    IDENTITY_TEXT_FIELDS,
+    identity_record_valid,
+    load_identity_rules,
+)
 from observatorio_secop.processing.silver.config import SilverConfig, TerritoryCatalog
 from observatorio_secop.processing.silver.models import QualityResult
 from observatorio_secop.processing.silver.schemas import METRICS_SCHEMA, SILVER_SCHEMA
@@ -39,11 +44,17 @@ def validate_quality(
     metrics_errors = _plain_errors(validated_metrics.pandera.errors)
     metrics_column_order = metrics.columns == [field.name for field in METRICS_SCHEMA.fields]
 
-    critical_nulls = sum(
-        valid.where(F.col(field.name).isNull()).count()
-        for field in SILVER_SCHEMA.fields
-        if not field.nullable
-    )
+    null_totals = valid.agg(
+        *[
+            F.sum(F.when(F.col(field.name).isNull(), 1).otherwise(0)).alias(field.name)
+            for field in SILVER_SCHEMA.fields
+            if not field.nullable
+        ]
+    ).first()
+    critical_nulls = sum(value or 0 for value in null_totals)
+    rules = load_identity_rules(config.contract_path.parent / "identity_rules.yaml")
+    identity_valid = F.udf(lambda row: identity_record_valid(row.asDict(), rules), "boolean")
+    invalid_identities = valid.where(~identity_valid(F.struct(*IDENTITY_TEXT_FIELDS))).count()
     duplicates = valid.groupBy("contract_key").count().where(F.col("count") > 1).count()
     invalid_amounts = valid.where(
         F.col("contract_value_cop").isNull() | (F.col("contract_value_cop") < 0)
@@ -80,6 +91,14 @@ def validate_quality(
     )
     non_empty_passed = config.allow_empty_output or counts["output_rows"] > 0
     results = [
+        QualityResult(
+            "IDENTITY_CONSISTENCY",
+            "critical",
+            invalid_identities == 0,
+            invalid_identities,
+            0,
+            invalid_identities,
+        ),
         QualityResult(
             "PANDERA_SILVER_SCHEMA",
             "critical",

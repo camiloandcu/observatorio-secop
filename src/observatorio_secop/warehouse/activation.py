@@ -23,6 +23,7 @@ class ActivationStore:
             config.audit_table + "_active",
             config.audit_table + "_activation",
             config.audit_table + "_identity",
+            config.audit_table + "_schema",
         ]
         if (
             len(set(names)) != len(names)
@@ -31,10 +32,15 @@ class ActivationStore:
             or len(config.schema.encode()) > 63
         ):
             raise WarehouseConfigurationError("Warehouse relation names collide or exceed limits")
-        self.current, self.audit, self.active, self.events, self.identity_index = [
-            sql.Identifier(config.schema, name) for name in names
-        ]
-        self.index_name = sql.Identifier(names[-1])
+        (
+            self.current,
+            self.audit,
+            self.active,
+            self.events,
+            self.identity_index,
+            self.schema_revision,
+        ) = [sql.Identifier(config.schema, name) for name in names]
+        self.index_name = sql.Identifier(names[4])
 
     def ensure(self, cursor: psycopg.Cursor[Any]) -> Identity | None:
         cursor.execute(
