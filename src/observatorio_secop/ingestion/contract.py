@@ -28,6 +28,14 @@ class BronzeSourceContract:
     raw: dict[str, Any]
 
     @property
+    def projection_version(self) -> str:
+        return self.raw.get("platform_identity", {}).get("projection_version", "secop-contracts-v1")
+
+    @property
+    def revision(self) -> str:
+        return f"secop-source-v{self.raw['contract_version']}"
+
+    @property
     def metadata_url(self) -> str:
         return f"{self.api_base_url}/api/views/{self.dataset_id}"
 
@@ -85,6 +93,8 @@ def _validate_projection(contract: BronzeSourceContract, projection: tuple[str, 
         contract.watermark_field,
         *contract.tie_breaker,
     }
+    if contract.raw.get("platform_identity"):
+        required.update(("codigo_entidad", "codigo_proveedor", "proveedor_adjudicado"))
     missing = sorted(required - set(projection))
     if missing:
         raise SourceContractError(f"Bronze projection is missing required columns: {missing}")

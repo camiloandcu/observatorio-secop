@@ -1,0 +1,31 @@
+version: platform-code-v1
+status: reviewed
+evidence_path: evidence/identity_profile_2026-10-19.json
+evidence_sha256: b501b90a665be7f0522ff2efcaffe3476dc1b10923dd0dc328c7c55fbfc1ce34
+equivalences:
+- trim_surrounding_whitespace_only
+limitations:
+- Digit shape is supported by a bounded sample; placeholders are conservative policy,
+  not observed frequency.
+- Names do not establish identity; longitudinal and source-wide stability are unverified.
+roles:
+  entity:
+    pattern: '[0-9]+'
+    placeholders:
+    - '0'
+    - '-1'
+    - N/A
+    - NA
+    - 'NULL'
+    - NO DEFINIDO
+    - NO APLICA
+  supplier:
+    pattern: '[0-9]+'
+    placeholders:
+    - '0'
+    - '-1'
+    - N/A
+    - NA
+    - 'NULL'
+    - NO DEFINIDO
+    - NO APLICA

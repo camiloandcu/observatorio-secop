@@ -1,0 +1,1588 @@
+contract_version: 1
+source:
+  provider: Datos Abiertos Colombia / SECOP II
+  dataset_id: jbjy-vk9h
+  dataset_name: SECOP II - Contratos Electrónicos
+  api_base_url: https://www.datos.gov.co
+  metadata_rows_updated_at: 1790100029
+observation:
+  observed_at_utc: '2026-09-23T02:26:45+00:00'
+  scope: departamento='Antioquia'
+  sample_rows: 100
+  sample_limit: 100
+  max_query_rows: 250
+  request_count: 17
+  max_requests: 20
+  max_response_bytes: 2097152
+columns:
+- field: ciudad
+  label: Ciudad
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 16
+  examples:
+  - Santa Rosa De Osos
+  - Medellín
+  - Bello
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: true
+  required_for:
+  - municipality mapping
+  compatible_observed_types:
+  - text
+- field: codigo_de_categoria_principal
+  label: Codigo de Categoria Principal
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 63
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: codigo_entidad
+  label: Codigo Entidad
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 32
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: codigo_proveedor
+  label: Codigo Proveedor
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 87
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: condiciones_de_entrega
+  label: Condiciones de Entrega
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 6
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: departamento
+  label: Departamento
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples:
+  - Antioquia
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: true
+  required_for:
+  - department filter
+  compatible_observed_types:
+  - text
+- field: descripcion_del_proceso
+  label: Descripcion del Proceso
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 88
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: descripcion_documentos_tipo
+  label: Descripcion Documentos Tipo
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: destino_gasto
+  label: Destino Gasto
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 2
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: dias_adicionados
+  label: Dias adicionados
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 2
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: direcci_n_de_ejecuci_n_del_contrato
+  label: Dirección de ejecución del contrato
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 43
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: documento_proveedor
+  label: Documento Proveedor
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 84
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: documentos_tipo
+  label: Documentos Tipo
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: domicilio_representante_legal
+  label: Domicilio Representante Legal
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 34
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: duraci_n_del_contrato
+  label: Duración del contrato
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 2
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: el_contrato_puede_ser_prorrogado
+  label: El contrato puede ser prorrogado
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 2
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: entidad_centralizada
+  label: Entidad Centralizada
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 2
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: es_grupo
+  label: Es Grupo
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 2
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: es_pyme
+  label: Es Pyme
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 2
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: espostconflicto
+  label: EsPostConflicto
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 2
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: estado_contrato
+  label: Estado Contrato
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 7
+  examples:
+  - En aprobación
+  - terminado
+  - Borrador
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: fecha_de_fin_del_contrato
+  label: Fecha de Fin del Contrato
+  declared_type: calendar_date
+  observed_types:
+    calendar_date: 89
+  rows_evaluated: 100
+  present_count: 89
+  null_count: 11
+  null_rate: 0.11
+  sample_cardinality: 47
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - calendar_date
+- field: fecha_de_firma
+  label: Fecha de Firma
+  declared_type: calendar_date
+  observed_types:
+    calendar_date: 85
+  rows_evaluated: 100
+  present_count: 85
+  null_count: 15
+  null_rate: 0.15
+  sample_cardinality: 31
+  examples:
+  - '2019-06-18T00:00:00.000'
+  - '2019-06-25T00:00:00.000'
+  - '2019-06-17T00:00:00.000'
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - calendar_date
+- field: fecha_de_inicio_del_contrato
+  label: Fecha de Inicio del Contrato
+  declared_type: calendar_date
+  observed_types:
+    calendar_date: 89
+  rows_evaluated: 100
+  present_count: 89
+  null_count: 11
+  null_rate: 0.11
+  sample_cardinality: 25
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - calendar_date
+- field: fecha_de_notificaci_n_de_prorrogaci_n
+  label: Fecha de notificación de prorrogación
+  declared_type: calendar_date
+  observed_types:
+    calendar_date: 19
+  rows_evaluated: 100
+  present_count: 19
+  null_count: 81
+  null_rate: 0.81
+  sample_cardinality: 9
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - calendar_date
+- field: fecha_fin_liquidacion
+  label: Fecha Fin Liquidacion
+  declared_type: calendar_date
+  observed_types:
+    calendar_date: 42
+  rows_evaluated: 100
+  present_count: 42
+  null_count: 58
+  null_rate: 0.58
+  sample_cardinality: 30
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - calendar_date
+- field: fecha_inicio_liquidacion
+  label: Fecha Inicio Liquidacion
+  declared_type: calendar_date
+  observed_types:
+    calendar_date: 42
+  rows_evaluated: 100
+  present_count: 42
+  null_count: 58
+  null_rate: 0.58
+  sample_cardinality: 28
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - calendar_date
+- field: g_nero_representante_legal
+  label: Género Representante Legal
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 3
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: habilita_pago_adelantado
+  label: Habilita Pago Adelantado
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 2
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: id_contrato
+  label: ID Contrato
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 100
+  examples:
+  - CO1.PCCNTR.1000906
+  - CO1.PCCNTR.1001001
+  - CO1.PCCNTR.1001011
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: true
+  required_for:
+  - identity
+  - traceability
+  - incremental tie-breaker
+  compatible_observed_types:
+  - text
+- field: identificaci_n_representante_legal
+  label: Identificación Representante Legal
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 32
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: justificacion_modalidad_de
+  label: Justificacion Modalidad de Contratacion
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 7
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: liquidaci_n
+  label: Liquidación
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 2
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: localizaci_n
+  label: Localización
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 18
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: modalidad_de_contratacion
+  label: Modalidad de Contratacion
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 8
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: n_mero_de_cuenta
+  label: Número de cuenta
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 62
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: n_mero_de_documento_ordenador_de_pago
+  label: Número de documento Ordenador de Pago
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: n_mero_de_documento_ordenador_del_gasto
+  label: Número de documento Ordenador del gasto
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 15
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: n_mero_de_documento_supervisor
+  label: Número de documento supervisor
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 21
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: nacionalidad_representante_legal
+  label: Nacionalidad Representante Legal
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 3
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: nit_entidad
+  label: Nit Entidad
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 31
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: nombre_del_banco
+  label: Nombre del banco
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 30
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: nombre_entidad
+  label: Nombre Entidad
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 32
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: nombre_ordenador_de_pago
+  label: Nombre Ordenador de Pago
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: nombre_ordenador_del_gasto
+  label: Nombre ordenador del gasto
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 16
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: nombre_representante_legal
+  label: Nombre Representante Legal
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 87
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: nombre_supervisor
+  label: Nombre supervisor
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 22
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: objeto_del_contrato
+  label: Objeto del Contrato
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 88
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: obligaci_n_ambiental
+  label: Obligación Ambiental
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 2
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: obligaciones_postconsumo
+  label: Obligaciones Postconsumo
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: orden
+  label: Orden
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 3
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: origen_de_los_recursos
+  label: Origen de los Recursos
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: pilares_del_acuerdo
+  label: Pilares del Acuerdo
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: presupuesto_general_de_la_nacion_pgn
+  label: Presupuesto General de la Nacion – PGN
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: proceso_de_compra
+  label: Proceso de Compra
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 84
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: proveedor_adjudicado
+  label: Proveedor Adjudicado
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 87
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: puntos_del_acuerdo
+  label: Puntos del Acuerdo
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: rama
+  label: Rama
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 3
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: recursos_de_credito
+  label: Recursos de Credito
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: recursos_propios
+  label: Otros Recursos (Especie, Privados, Cooperación, Propios Entidades Autónomas)
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: recursos_propios_alcald_as_gobernaciones_y_resguardos_ind_genas_
+  label: Recursos Propios (Alcaldías y Gobernaciones)
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: referencia_del_contrato
+  label: Referencia del Contrato
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 100
+  examples:
+  - CO1.PCCNTR.1000906
+  - 89-7-20071-19
+  - CO1.PCCNTR.1001011
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: reversion
+  label: Reversion
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: saldo_cdp
+  label: Saldo CDP
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 64
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: saldo_vigencia
+  label: Saldo Vigencia
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 3
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: sector
+  label: Sector
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 10
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: sistema_general_de_participaciones
+  label: Sistema General de Participaciones
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: sistema_general_de_regal_as
+  label: Sistema General de Regalías
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: tipo_de_contrato
+  label: Tipo de Contrato
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 7
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: tipo_de_cuenta
+  label: Tipo de cuenta
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 3
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: tipo_de_documento_ordenador_de_pago
+  label: Tipo de documento Ordenador de Pago
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: tipo_de_documento_ordenador_del_gasto
+  label: Tipo de documento Ordenador del gasto
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 2
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: tipo_de_documento_supervisor
+  label: Tipo de documento supervisor
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 2
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: tipo_de_identificaci_n_representante_legal
+  label: Tipo de Identificación Representante Legal
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 3
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: tipodocproveedor
+  label: TipoDocProveedor
+  declared_type: text
+  observed_types:
+    text: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 3
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - text
+- field: ultima_actualizacion
+  label: Ultima Actualizacion
+  declared_type: calendar_date
+  observed_types:
+    calendar_date: 50
+  rows_evaluated: 100
+  present_count: 50
+  null_count: 50
+  null_rate: 0.5
+  sample_cardinality: 45
+  examples:
+  - '2020-09-08T00:00:00.000'
+  - '2023-07-28T00:00:00.000'
+  - '2020-09-15T00:00:00.000'
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: true
+  required_for:
+  - incremental cursor
+  compatible_observed_types:
+  - calendar_date
+- field: urlproceso
+  label: URLProceso
+  declared_type: url
+  observed_types:
+    object: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 84
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - object
+  - text
+  - url
+- field: valor_amortizado
+  label: Valor Amortizado
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: valor_de_pago_adelantado
+  label: Valor de pago adelantado
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: valor_del_contrato
+  label: Valor del Contrato
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 88
+  examples:
+  - '1383400'
+  - '15000000'
+  - '30619000'
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: valor_facturado
+  label: Valor Facturado
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 14
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: valor_pagado
+  label: Valor Pagado
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 13
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: valor_pendiente_de
+  label: Valor Pendiente de Amortizacion
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 1
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: valor_pendiente_de_ejecucion
+  label: Valor Pendiente de Ejecucion
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 83
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+- field: valor_pendiente_de_pago
+  label: Valor Pendiente de Pago
+  declared_type: number
+  observed_types:
+    number: 100
+  rows_evaluated: 100
+  present_count: 100
+  null_count: 0
+  null_rate: 0.0
+  sample_cardinality: 83
+  examples: []
+  compatibility: compatible
+  incompatible_observed_types: []
+  critical: false
+  required_for: []
+  compatible_observed_types:
+  - number
+territory:
+  department_field: departamento
+  department_value: Antioquia
+  department_row_count: 576332
+  department_predicate: departamento='Antioquia'
+  municipality_field: ciudad
+  normalization: Unicode accents, case, surrounding and repeated spaces are normalized
+  valle_de_aburra:
+  - canonical: Medellín
+    observed: Medellín
+    row_count: 284011
+  - canonical: Barbosa
+    observed: Barbosa
+    row_count: 3300
+  - canonical: Bello
+    observed: Bello
+    row_count: 17880
+  - canonical: Caldas
+    observed: Caldas
+    row_count: 6641
+  - canonical: Copacabana
+    observed: Copacabana
+    row_count: 4269
+  - canonical: Envigado
+    observed: Envigado
+    row_count: 25826
+  - canonical: Girardota
+    observed: Girardota
+    row_count: 5095
+  - canonical: Itagüí
+    observed: Itagui
+    row_count: 7487
+  - canonical: La Estrella
+    observed: La Estrella
+    row_count: 11639
+  - canonical: Sabaneta
+    observed: Sabaneta
+    row_count: 19014
+identity:
+  status: resolved
+  kind: natural
+  fields: &id001
+  - id_contrato
+  scope: records whose observed department value is Antioquia
+  rows_evaluated: 576332
+  null_rows: 0
+  distinct_keys: 576332
+  duplicate_groups: 0
+  limitations: Observed uniqueness does not guarantee uniqueness in future source
+    rows.
+incremental_cursor:
+  status: resolved
+  field: ultima_actualizacion
+  declared_type: calendar_date
+  semantics: source record last update
+  precision: milliseconds as published
+  timezone: not declared by source
+  scope: records whose observed department value is Antioquia
+  rows_evaluated: 576332
+  non_null_count: 342475
+  null_count: 233857
+  null_rate: 0.405768
+  minimum: '2017-09-13T00:00:00.000'
+  maximum: '2026-09-18T00:00:00.000'
+  cardinality: 2637
+  captures_updates: true
+  tie_breaker: *id001
+  limitations: Records with a null update timestamp require a separate fallback in
+    future ingestion.
+fixture:
+  format: JSON array
+  max_rows: 20
+  allowed_fields:
+  - id_contrato
+  - referencia_del_contrato
+  - departamento
+  - ciudad
+  - estado_contrato
+  - fecha_de_firma
+  - ultima_actualizacion
+  - valor_del_contrato
+  selection: one deterministic safe row per Valle de Aburrá municipality
+change_policy:
+  critical_column_missing: fail
+  incompatible_type: fail
+  optional_column_added: report
+  network_failure: fail without replacing existing artifacts
+  empty_response: fail without replacing existing artifacts
+differences:
+- topic: territorial naming
+  observed: The source publishes ciudad and spells Itagüí as Itagui.
+  decision: Keep the observed value in the source contract and map it to Itagüí.
+- topic: analytical update timestamp
+  observed: The source field is ultima_actualizacion and contains nulls.
+  decision: Map it later to the analytical source_updated_at concept without claiming
+    complete incremental coverage for null rows.

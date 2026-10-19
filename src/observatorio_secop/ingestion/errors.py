@@ -25,6 +25,10 @@ class PageValidationError(IngestionError):
     """A response page violates schema, size, or cursor guarantees."""
 
 
+class RequestBudgetExceeded(TransportError):
+    """This invocation exhausted its bounded HTTP-attempt budget."""
+
+
 class ResumeError(IngestionError):
     """Persisted staging cannot be safely resumed."""
 

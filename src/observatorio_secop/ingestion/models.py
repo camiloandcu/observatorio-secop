@@ -51,6 +51,10 @@ class RunManifest:
     finished_at_utc: str | None = None
     token_used: bool = False
     coverage_limitations: list[str] = field(default_factory=list)
+    source_revision: str | None = None
+    source_projection_version: str | None = None
+    purpose: str = "incremental"
+    refresh: dict[str, Any] | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)

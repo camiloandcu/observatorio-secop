@@ -11,6 +11,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from observatorio_secop.source_json import source_json_loads
 from observatorio_secop.source_profile.config import SourceConfig
 from observatorio_secop.source_profile.errors import (
     InvalidResponseError,
@@ -80,10 +81,10 @@ class SocrataClient:
         return payload
 
     def _request_json(self, url: str) -> Any:
-        self.budget.reserve()
         attempts = self.config.limits.retries + 1
         last_error: Exception | None = None
         for attempt in range(1, attempts + 1):
+            self.budget.reserve()
             started = time.monotonic()
             try:
                 request = Request(url, headers={"Accept": "application/json"})
@@ -105,7 +106,7 @@ class SocrataClient:
                     attempt,
                 )
                 try:
-                    return json.loads(body)
+                    return source_json_loads(body)
                 except (UnicodeDecodeError, json.JSONDecodeError) as error:
                     raise InvalidResponseError("Socrata response is not valid JSON") from error
             except HTTPError as error:

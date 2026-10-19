@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import fcntl
-import json
 import sqlite3
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
@@ -13,6 +12,7 @@ from typing import Any
 from observatorio_secop.ingestion.errors import ConcurrentRunError
 from observatorio_secop.ingestion.models import RunManifest
 from observatorio_secop.ingestion.storage import canonical_json, sha256_bytes
+from observatorio_secop.source_json import source_json_loads
 
 SCHEMA_VERSION = 1
 
@@ -194,7 +194,11 @@ class IngestionState:
                     manifest.finished_at_utc,
                 ),
             )
-            if manifest.range_complete and manifest.checkpoint_candidate:
+            if (
+                manifest.purpose == "incremental"
+                and manifest.range_complete
+                and manifest.checkpoint_candidate
+            ):
                 connection.execute(
                     "INSERT INTO checkpoints VALUES (?, 'primary', ?, ?) "
                     "ON CONFLICT(dataset_id, lane) DO UPDATE SET "
@@ -209,7 +213,7 @@ def observations_from_pages(
 ) -> list[Observation]:
     result = []
     for page in manifest.pages:
-        rows = json.loads((run_directory / page.path).read_bytes())
+        rows = source_json_loads((run_directory / page.path).read_bytes())
         for position, row in enumerate(rows):
             result.append(
                 Observation(
