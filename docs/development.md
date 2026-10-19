@@ -62,6 +62,17 @@ Espera a que `pg_isready` indique disponibilidad antes de ejecutar pytest. La in
 
 Las pruebas de warehouse demuestran además restauración A → B → A con comparación exacta y SHA-256 canónico, migración del esquema de auditoría anterior, conflictos históricos, fallos al registrar/restaurar estado y concurrencia observada en `pg_locks`. La guía de recuperación se ejercita con los entry points CLI de Silver y warehouse sobre bundles retenidos; no modifica datos de trabajo.
 
+La suite de [identidad de plataforma](platform-identity.md) usa datos sintéticos y el mismo
+DSN desechable. `tests/processing_silver/test_identity_pipeline.py` atraviesa Spark,
+PostgreSQL y dbt para perfiles Bronze antiguos/nuevos, nombres cambiantes/ausentes,
+códigos distintos con la misma etiqueta, recarga parcial, observaciones antiguas que
+pierden la selección y restauración. `tests/warehouse/test_identity_refresh.py` verifica
+límites, reanudación, IDs ausentes y checkpoint; los casos de migración comprueban DDL
+antes de un no-op y rollback conjunto de esquema/filas/metadatos. Ejecuta esos casos sin
+skips al aceptar una migración. El reporte agregado de la fuente está versionado; los
+tests no consultan Socrata. El `pythonpath` de pytest incluye `tests` para reutilizar
+los helpers de integración también al seleccionar un solo archivo.
+
 La cobertura de inventario reproduce un Parquet adicional con conteo total coherente y comprueba su rechazo antes de decodificar/conectar, incluso en particiones nuevas y rutas ocultas. Verifica rutas canónicas, enlaces simbólicos, tamaño/hash, duplicados y las reglas explícitas de `_SUCCESS`/CRC. Observa las rutas que recibe Arrow y las lecturas de referencia INT96 para demostrar que solo se decodifica el conjunto verificado. La variante PostgreSQL compara exactamente filas, registro, historial y estado activo antes/después de cada carga inválida. La salida Spark real incluye años 2025/2026 y `unknown`, marcadores y sidecars, y conserva carga/repetición sin cambios en ambos formatos soportados. Estos casos se incluyen en los comandos anteriores; omitir la base deja sin verificar la preservación relacional.
 
 ## Contrato de la fuente SECOP II

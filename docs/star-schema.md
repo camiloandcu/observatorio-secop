@@ -103,7 +103,7 @@ make load-warehouse
 La carga adquiere un advisory lock y crea una tabla temporal dentro de la transacción. Después:
 
 1. valida filas y llaves en staging;
-2. inserta o actualiza por `contract_key` cuando cambia versión o payload;
+2. inserta o actualiza por `contract_key` cuando cambian versión, contenido o campos de identidad;
 3. elimina llaves ausentes del snapshot Silver autoritativo;
 4. registra una identidad nueva en `silver.load_audit` solo en su primera carga;
 5. agrega el evento a `silver.load_audit_activation` y actualiza `silver.load_audit_active`;
@@ -113,7 +113,11 @@ La consulta de estado y la migración también quedan dentro del lock. Repetir l
 
 `load_audit` conserva hash, fecha del manifiesto y conteos de la primera carga de cada versión. `load_audit_activation` registra cada aplicación confirmada, su identidad previa, conteos y tipo `activation` o `restoration`; repetir la versión activa no agrega eventos. `load_audit_active` contiene como máximo una fila y referencia el evento activo. Los eventos se ordenan por `activation_id`; puede haber saltos por transacciones revertidas. `activated_at` indica el momento del evento, mientras `contract_current.loaded_at` sigue siendo la fecha determinística del manifiesto original, incluso al restaurar.
 
-Los nombres de estado e historial se derivan del `audit_table` configurado con sufijos `_active` y `_activation`; también se crea un índice único `_identity` para las referencias versión/hash. Todos deben ser distintos de `contract_table` y caber en 63 bytes; se rechazan nombres que colisionan o se truncarían antes de conectar. No se necesitan claves YAML nuevas.
+Los nombres de estado e historial se derivan del `audit_table` configurado con sufijos
+`_active` y `_activation`; también se crea un índice único `_identity` para las referencias
+versión/hash y una tabla `_schema` para la revisión relacional. Todos deben ser distintos
+de `contract_table` y caber en 63 bytes; se rechazan nombres que colisionan o se truncarían
+antes de conectar. No se necesitan claves YAML nuevas.
 
 Los logs contienen versión, estado y conteos, nunca contraseña ni DSN completo.
 
@@ -121,18 +125,27 @@ Los logs contienen versión, estado y conteos, nunca contraseña ni DSN completo
 
 `fact_contract` tiene una fila por `contract_key`: el contrato vigente que Silver seleccionó de forma determinística. Una corrección histórica actualiza esa fila; este modelo no conserva SCD2.
 
-Las llaves sustitutas de texto se calculan con el `md5` nativo de PostgreSQL sobre `star_key_v1|<namespace>|<natural_key>`. El hash aporta estabilidad y portabilidad, no seguridad. Tests comprueban unicidad y correspondencia entre llave natural y sustituta.
+Las sustitutas de contrato y dimensiones sin código de plataforma usan el `md5` nativo
+de PostgreSQL sobre `star_key_v1|<namespace>|<natural_key>`. Las identidades conocidas de
+entidad/proveedor tienen una regla independiente, descrita abajo. El hash aporta
+estabilidad y portabilidad, no seguridad. Tests comprueban unicidad y correspondencia
+entre llave natural y sustituta.
 
 | Modelo | Llave natural | Llave sustituta | Política desconocida |
 |---|---|---|---|
 | `fact_contract` | `contract_key` | `contract_sk` | No aplica |
-| `dim_entity` | dataset + nombre normalizado | `entity_sk` | `__UNKNOWN__` si falta nombre |
-| `dim_supplier` | no disponible en Silver | `supplier_sk` | único miembro `__UNKNOWN__` |
+| `dim_entity` | dataset + rol + código de entidad | `entity_sk` | `__UNKNOWN__` si el código es desconocido |
+| `dim_supplier` | dataset + rol + código de proveedor | `supplier_sk` | `__UNKNOWN__` si el código es desconocido |
 | `dim_municipality` | `municipality_key` | `municipality_sk` | `__UNKNOWN__` si Silver marca UNKNOWN |
 | `dim_modality` | modalidad normalizada | `modality_sk` | `__UNKNOWN__` si falta modalidad |
 | `dim_date` | fecha calendario | entero `YYYYMMDD` | `date_sk=0` |
 
-Silver no expone identificador ni nombre de proveedor. Por eso `dim_supplier` contiene solo el miembro desconocido y todos los hechos lo referencian. El modelo no infiere proveedores ni lee Bronze lateralmente. La entidad tampoco tiene código fuente en Silver; su identidad por dataset y nombre normalizado es provisional y los tests bloquean colisiones observadas.
+Silver expone códigos de plataforma, etiquetas y estado/motivo por rol. Los nombres no
+definen identidad; un código válido sin nombre sigue conocido. Las sustitutas conocidas
+de entidad/proveedor usan `platform_code_key_v1`; contratos y otras dimensiones conservan
+`star_key_v1`, al igual que los miembros desconocidos. La migración inicial requiere un
+rebuild dbt explícito. Los [detalles de identidad y recuperación](platform-identity.md)
+incluyen perfiles Bronze antiguos/nuevos, adaptación Silver y recarga acotada.
 
 ## Trazabilidad
 
