@@ -1,18 +1,14 @@
 with normalized as (
     select
         *,
-        {{ canonical_text('entity_name') }} as entity_name_normalized,
         {{ canonical_text('procurement_method') }} as modality_name_normalized
     from {{ ref('stg_silver_contract') }}
 )
 
 select
     *,
-    case
-        when entity_name_normalized is null then {{ unknown_natural_key() }}
-        else source_dataset_id || '|' || entity_name_normalized
-    end as entity_natural_key,
-    {{ unknown_natural_key() }} as supplier_natural_key,
+    {{ platform_natural_key('entity') }} as entity_natural_key,
+    {{ platform_natural_key('supplier') }} as supplier_natural_key,
     case
         when municipality_status = 'UNKNOWN' or municipality_key is null
             then {{ unknown_natural_key() }}

@@ -10,6 +10,20 @@ md5('{{ var("star_key_version") }}|{{ namespace }}|' || {{ natural_key }})
 '__UNKNOWN__'
 {%- endmacro %}
 
+{% macro platform_natural_key(role) -%}
+case when {{ role }}_identity_status = 'KNOWN'
+    then jsonb_build_array(source_dataset_id, '{{ role }}', {{ role }}_code)::text
+    else {{ unknown_natural_key() }}
+end
+{%- endmacro %}
+
+{% macro platform_star_key(role, natural_key) -%}
+case when {{ natural_key }} = {{ unknown_natural_key() }}
+    then {{ star_key(role, natural_key) }}
+    else md5('{{ var("identity_key_version") }}|{{ role }}|' || {{ natural_key }})
+end
+{%- endmacro %}
+
 {% macro reconcile_snapshot() -%}
     {%- if is_incremental() -%}
 truncate table {{ this }}

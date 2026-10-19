@@ -38,3 +38,4 @@ models:
 
 vars:
   star_key_version: star_key_v1
+  identity_key_version: platform_code_key_v1
