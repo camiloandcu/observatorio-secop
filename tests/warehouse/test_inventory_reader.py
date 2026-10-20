@@ -120,5 +120,9 @@ def test_only_explicit_verified_files_are_decoded(
             {"coerce_int96_timestamp_unit": "us"}
         ] * 3
     actual = sorted(bundle.table.to_pylist(), key=lambda row: row["contract_key"])
-    assert actual == sorted(rows, key=lambda row: row["contract_key"])
+    assert [{key: row[key] for key in rows[0]} for row in actual] == sorted(
+        rows, key=lambda row: row["contract_key"]
+    )
+    assert all(row["entity_identity_reason"] == "LEGACY_PROJECTION" for row in actual)
+    assert all(row["supplier_identity_reason"] == "LEGACY_PROJECTION" for row in actual)
     assert fingerprint(tmp_path) == before

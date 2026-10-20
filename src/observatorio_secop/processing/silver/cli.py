@@ -12,6 +12,7 @@ from observatorio_secop.processing.silver.config import load_silver_config
 from observatorio_secop.processing.silver.errors import SilverError
 from observatorio_secop.processing.silver.runner import SilverPipeline, manifest_summary
 from observatorio_secop.processing.silver.storage import SilverStorage
+from observatorio_secop.warehouse.errors import SilverBundleError
 
 DEFAULT_CONFIG = Path("config/silver_quality.yaml")
 
@@ -53,7 +54,7 @@ def main(argv: list[str] | None = None) -> int:
         manifest = SilverPipeline(config, config_path=args.config).run(tuple(args.run_id))
         print(manifest_summary(manifest))
         return 0 if manifest.critical_passed else 3
-    except (IngestionError, SilverError, OSError, ValueError) as error:
+    except (IngestionError, SilverError, SilverBundleError, OSError, ValueError) as error:
         print(f"Silver processing failed: {error}", file=sys.stderr)
         return 2
 

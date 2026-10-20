@@ -1,4 +1,4 @@
-contract_version: 1
+contract_version: 2
 source:
   provider: Datos Abiertos Colombia / SECOP II
   dataset_id: jbjy-vk9h
@@ -1586,3 +1586,13 @@ differences:
   observed: The source field is ultima_actualizacion and contains nulls.
   decision: Map it later to the analytical source_updated_at concept without claiming
     complete incremental coverage for null rows.
+platform_identity:
+  rule_version: platform-code-v1
+  rules_path: identity_rules.yaml
+  evidence_sha256: b501b90a665be7f0522ff2efcaffe3476dc1b10923dd0dc328c7c55fbfc1ce34
+  projection_version: secop-contracts-v2
+  optional_row_fields:
+  - codigo_entidad
+  - codigo_proveedor
+  - proveedor_adjudicado
+  rules_sha256: 70835b7c899c2280f02b7f888d6a5cea51657c1007936fd2d8a8897b579b2406

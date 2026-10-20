@@ -9,10 +9,11 @@ import psycopg
 from psycopg import sql
 
 from observatorio_secop.warehouse.activation import ActivationStore
-from observatorio_secop.warehouse.bundle import EXPECTED_SCHEMA, VerifiedSilverBundle
+from observatorio_secop.warehouse.bundle import IDENTITY_SCHEMA, VerifiedSilverBundle
 from observatorio_secop.warehouse.config import WarehouseConfig
 from observatorio_secop.warehouse.errors import WarehouseConflictError, WarehouseLoadError
 from observatorio_secop.warehouse.logging import log_event
+from observatorio_secop.warehouse.migration import migrate_identity
 
 
 @dataclass(frozen=True)
@@ -68,6 +69,7 @@ class WarehouseLoader:
         with connection.cursor() as cursor:
             cursor.execute("SELECT pg_advisory_xact_lock(%s)", (self.config.advisory_lock_id,))
             self._ensure_relations(cursor, schema, current, audit)
+            migrate_identity(cursor, metadata.current, metadata.schema_revision)
             cursor.execute(
                 sql.SQL("SELECT manifest_sha256 FROM {}.{} WHERE silver_version_id = %s").format(
                     schema, audit
@@ -84,7 +86,7 @@ class WarehouseLoader:
             if active == identity:
                 return LoadResult(bundle.version_id, "noop", bundle.row_count, 0, 0, 0)
 
-            copy_columns = [field.name for field in EXPECTED_SCHEMA]
+            copy_columns = [field.name for field in IDENTITY_SCHEMA]
             cursor.execute(
                 sql.SQL(
                     "CREATE TEMP TABLE incoming_contracts ON COMMIT DROP AS "
@@ -118,8 +120,8 @@ class WarehouseLoader:
             cursor.execute(
                 sql.SQL(
                     "SELECT count(*) FROM incoming_contracts i JOIN {}.{} c USING (contract_key) "
-                    "WHERE c.payload_sha256 IS DISTINCT FROM i.payload_sha256 "
-                    "OR c.silver_version_id IS DISTINCT FROM i.silver_version_id"
+                    "WHERE to_jsonb(c) - 'silver_manifest_sha256' - 'loaded_at' "
+                    "IS DISTINCT FROM to_jsonb(i)"
                 ).format(schema, current)
             )
             updated_result = cursor.fetchone()
@@ -156,8 +158,8 @@ class WarehouseLoader:
                 sql.SQL(
                     "INSERT INTO {}.{} AS target ({}) SELECT {}, %s, %s FROM incoming_contracts "
                     "ON CONFLICT (contract_key) DO UPDATE SET {} "
-                    "WHERE target.payload_sha256 IS DISTINCT FROM EXCLUDED.payload_sha256 "
-                    "OR target.silver_version_id IS DISTINCT FROM EXCLUDED.silver_version_id"
+                    "WHERE to_jsonb(target) - 'silver_manifest_sha256' - 'loaded_at' "
+                    "IS DISTINCT FROM to_jsonb(EXCLUDED) - 'silver_manifest_sha256' - 'loaded_at'"
                 ).format(
                     schema,
                     current,

@@ -3,6 +3,11 @@ from {{ ref('dim_entity') }}
 group by entity_sk
 having count(distinct entity_natural_key) <> 1
 union all
+select 'supplier', supplier_sk
+from {{ ref('dim_supplier') }}
+group by supplier_sk
+having count(distinct supplier_natural_key) <> 1
+union all
 select 'municipality', municipality_sk
 from {{ ref('dim_municipality') }}
 group by municipality_sk

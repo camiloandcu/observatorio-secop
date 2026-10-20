@@ -12,6 +12,17 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 
+from observatorio_secop.identity import (
+    IDENTITY_RULE_VERSION,
+    IDENTITY_TEXT_FIELDS,
+    LEGACY_PROJECTION,
+    REQUIRED_IDENTITY_FIELDS,
+    identity_record_valid,
+    key_set_digest,
+    load_identity_rules,
+)
+from observatorio_secop.ingestion.compatibility import CompatibilityRegistry
+from observatorio_secop.ingestion.errors import SourceContractError
 from observatorio_secop.warehouse.errors import SilverBundleError
 from observatorio_secop.warehouse.inventory import sha256_path, verify_inventory
 from observatorio_secop.warehouse.timestamps import TIMESTAMP_COLUMNS, normalize_timestamps
@@ -62,6 +73,16 @@ EXPECTED_FIELDS: tuple[tuple[str, pa.DataType, bool], ...] = (
 EXPECTED_SCHEMA = pa.schema(
     [pa.field(name, kind, nullable) for name, kind, nullable in EXPECTED_FIELDS]
 )
+IDENTITY_SCHEMA = pa.schema(
+    [
+        *list(EXPECTED_SCHEMA)[:-1],
+        *[
+            pa.field(name, pa.string(), name not in REQUIRED_IDENTITY_FIELDS)
+            for name in IDENTITY_TEXT_FIELDS
+        ],
+        list(EXPECTED_SCHEMA)[-1],
+    ]
+)
 
 
 @dataclass(frozen=True)
@@ -72,6 +93,7 @@ class VerifiedSilverBundle:
     manifest_finished_at: datetime
     row_count: int
     table: pa.Table
+    schema_version: int = 1
 
 
 def verify_current_bundle(root: Path) -> VerifiedSilverBundle:
@@ -87,7 +109,19 @@ def verify_current_bundle(root: Path) -> VerifiedSilverBundle:
     if current.get("manifest_sha256") != manifest_sha256:
         raise SilverBundleError("Silver current manifest hash does not match its pointer")
 
+    return verify_manifest_bundle(manifest_path, expected_hash=manifest_sha256)
+
+
+def verify_manifest_bundle(
+    manifest_path: Path, *, expected_hash: str | None = None, verify_refresh: bool = True
+) -> VerifiedSilverBundle:
+    manifest_sha256 = sha256_path(manifest_path)
+    if expected_hash is not None and expected_hash != manifest_sha256:
+        raise SilverBundleError("Silver manifest hash differs from pinned evidence")
     manifest = _read_object(manifest_path, "Silver manifest")
+    version_id = manifest_path.parent.name
+    if manifest_path.name != "manifest.json":
+        raise SilverBundleError("Silver evidence must identify an immutable version manifest")
     if manifest.get("silver_version_id") != version_id or manifest.get("status") != "valid":
         raise SilverBundleError("Silver manifest identity or status is invalid")
     if any(
@@ -96,6 +130,9 @@ def verify_current_bundle(root: Path) -> VerifiedSilverBundle:
         if item.get("severity") == "critical"
     ):
         raise SilverBundleError("Silver manifest contains a failed critical control")
+    schema_version = manifest.get("schema_version", 1)
+    if type(schema_version) is not int or schema_version not in (1, 2):
+        raise SilverBundleError("Unsupported Silver manifest schema_version")
     data_files = verify_inventory(manifest_path.parent, manifest.get("files"))
 
     expected_rows = _non_negative_integer(
@@ -103,7 +140,32 @@ def verify_current_bundle(root: Path) -> VerifiedSilverBundle:
     )
     finished_at = _timestamp(manifest.get("finished_at_utc"), "finished_at_utc")
     table = _read_table(manifest_path.parent / "data", data_files)
-    _verify_table(table, version_id, expected_rows)
+    _verify_table(
+        table,
+        version_id,
+        expected_rows,
+        IDENTITY_SCHEMA if schema_version == 2 else EXPECTED_SCHEMA,
+    )
+    if schema_version == 1:
+        for field in IDENTITY_SCHEMA:
+            if field.name not in table.column_names:
+                value = {
+                    "entity_identity_status": "UNKNOWN",
+                    "supplier_identity_status": "UNKNOWN",
+                    "entity_identity_reason": "LEGACY_PROJECTION",
+                    "supplier_identity_reason": "LEGACY_PROJECTION",
+                    "identity_rule_version": IDENTITY_RULE_VERSION,
+                    "source_contract_sha256": manifest.get("contract_sha256"),
+                    "source_projection_version": LEGACY_PROJECTION,
+                }.get(field.name)
+                table = table.append_column(
+                    field, pa.array([value] * expected_rows, type=field.type)
+                )
+        table = table.select(IDENTITY_SCHEMA.names)
+    else:
+        _verify_identity(table, manifest)
+    if verify_refresh:
+        _verify_refresh(table, manifest, manifest_path)
     return VerifiedSilverBundle(
         version_id=version_id,
         manifest_path=manifest_path,
@@ -111,6 +173,7 @@ def verify_current_bundle(root: Path) -> VerifiedSilverBundle:
         manifest_finished_at=finished_at,
         row_count=expected_rows,
         table=table,
+        schema_version=schema_version,
     )
 
 
@@ -147,17 +210,17 @@ def _read_table(data_path: Path, files: tuple[Path, ...]) -> pa.Table:
         raise SilverBundleError(f"Could not read published Silver Parquet: {error}") from error
 
 
-def _verify_table(table: pa.Table, version_id: str, expected_rows: int) -> None:
+def _verify_table(
+    table: pa.Table, version_id: str, expected_rows: int, schema: pa.Schema = EXPECTED_SCHEMA
+) -> None:
     observed = [(field.name, field.type) for field in table.schema]
-    expected = [(field.name, field.type) for field in EXPECTED_SCHEMA]
+    expected = [(field.name, field.type) for field in schema]
     if observed != expected:
         raise SilverBundleError(f"Silver Parquet schema differs: {table.schema}")
     if table.num_rows != expected_rows:
         raise SilverBundleError("Silver Parquet row count differs from the manifest")
     null_fields = [
-        field.name
-        for field in EXPECTED_SCHEMA
-        if not field.nullable and table.column(field.name).null_count
+        field.name for field in schema if not field.nullable and table.column(field.name).null_count
     ]
     if null_fields:
         raise SilverBundleError(f"Silver required columns contain nulls: {null_fields}")
@@ -171,6 +234,92 @@ def _verify_table(table: pa.Table, version_id: str, expected_rows: int) -> None:
         raise SilverBundleError("Silver contract_key values must be non-null and unique")
     if any(not value for value in identifiers):
         raise SilverBundleError("Silver source_contract_id values must be non-null")
+
+
+def _verify_identity(table: pa.Table, manifest: dict[str, Any]) -> None:
+    try:
+        rules = load_identity_rules()
+        registry = CompatibilityRegistry()
+        profiles = {(p.contract_sha256, p.projection_version) for p in registry.profiles}
+        if (
+            manifest.get("identity_rule_version") != IDENTITY_RULE_VERSION
+            or manifest.get("compatibility_sha256") != registry.digest
+            or manifest.get("dataset_id") != "jbjy-vk9h"
+        ):
+            raise ValueError("Silver identity rule/compatibility metadata differs")
+        purposes = manifest.get("input_purposes")
+        if (
+            not isinstance(purposes, dict)
+            or set(purposes) != {run["run_id"] for run in manifest.get("bronze_runs", [])}
+            or any(value not in ("incremental", "identity_refresh") for value in purposes.values())
+            or ("identity_refresh" in purposes.values() and not manifest.get("refresh"))
+        ):
+            raise ValueError("Silver identity refresh input-purpose evidence is missing or invalid")
+        for row in table.select(
+            [*IDENTITY_TEXT_FIELDS, "source_dataset_id", "bronze_run_id"]
+        ).to_pylist():
+            if row["source_dataset_id"] != "jbjy-vk9h" or row["bronze_run_id"] not in purposes:
+                raise ValueError("Silver identity dataset or winning Bronze lineage differs")
+            if not identity_record_valid(row, rules):
+                raise ValueError("Silver identity code/status/reason is inconsistent")
+            if (row["source_contract_sha256"], row["source_projection_version"]) not in profiles:
+                raise ValueError("Silver source profile is not registered")
+    except (OSError, ValueError, KeyError, TypeError, SourceContractError) as error:
+        raise SilverBundleError(str(error)) from error
+
+
+def _verify_refresh(table: pa.Table, manifest: dict[str, Any], manifest_path: Path) -> None:
+    refresh = manifest.get("refresh")
+    if refresh is None:
+        return
+    if not isinstance(refresh, dict) or refresh.get("complete") is not True:
+        raise SilverBundleError("Silver identity refresh evidence is incomplete")
+    baseline_id = _non_empty_text(refresh.get("baseline_version_id"), "refresh baseline")
+    baseline_path = manifest_path.parent.parent / baseline_id / "manifest.json"
+    if (
+        baseline_id == manifest_path.parent.name
+        or baseline_path.resolve().parent.parent != manifest_path.resolve().parent.parent
+    ):
+        raise SilverBundleError("Invalid identity refresh baseline reference")
+    baseline = verify_manifest_bundle(
+        baseline_path,
+        expected_hash=_non_empty_text(
+            refresh.get("baseline_manifest_sha256"), "refresh baseline hash"
+        ),
+        verify_refresh=False,
+    )
+    actual = key_set_digest(table.column("contract_key").to_pylist())
+    expected = key_set_digest(baseline.table.column("contract_key").to_pylist())
+    baseline_manifest = _read_object(baseline_path, "refresh baseline")
+    if (
+        actual != expected
+        or refresh.get("baseline_keys_sha256") != expected
+        or refresh.get("candidate_keys_sha256") != actual
+        or refresh.get("baseline_bronze_runs") != baseline_manifest.get("bronze_runs")
+    ):
+        raise SilverBundleError(
+            "Identity refresh baseline/dependency/key-set reconciliation differs"
+        )
+    inputs = {(run["run_id"], run["manifest_sha256"]) for run in manifest.get("bronze_runs", [])}
+    if not all(
+        (run["run_id"], run["manifest_sha256"]) in inputs
+        for run in baseline_manifest.get("bronze_runs", [])
+    ):
+        raise SilverBundleError("Identity refresh omits baseline Bronze dependencies")
+    summaries = refresh.get("refresh_runs")
+    if not isinstance(summaries, list) or not summaries:
+        raise SilverBundleError("Identity refresh completion summaries are missing")
+    if any(
+        item.get("complete") is not True
+        or item.get("truncated") is not False
+        or (item.get("run_id"), item.get("manifest_sha256")) not in inputs
+        for item in summaries
+    ):
+        raise SilverBundleError("Identity refresh completion summary is invalid")
+    if {item["run_id"] for item in summaries} != {
+        key for key, purpose in manifest["input_purposes"].items() if purpose == "identity_refresh"
+    }:
+        raise SilverBundleError("Identity refresh summaries differ from declared input purposes")
 
 
 def _read_object(path: Path, label: str) -> dict[str, Any]:

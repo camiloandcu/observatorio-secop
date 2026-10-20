@@ -9,6 +9,7 @@ from typing import Any
 
 import yaml
 
+from observatorio_secop.ingestion.compatibility import CompatibilityRegistry
 from observatorio_secop.ingestion.errors import SourceContractError
 from observatorio_secop.source_profile.contract import SENSITIVE_FIELD_PATTERN
 
@@ -26,6 +27,14 @@ class BronzeSourceContract:
     critical_fields: tuple[str, ...]
     contract_hash: str
     raw: dict[str, Any]
+
+    @property
+    def projection_version(self) -> str:
+        return self.raw.get("platform_identity", {}).get("projection_version", "secop-contracts-v1")
+
+    @property
+    def revision(self) -> str:
+        return f"secop-source-v{self.raw.get('contract_version')}"
 
     @property
     def metadata_url(self) -> str:
@@ -72,6 +81,13 @@ def load_bronze_contract(path: Path, projection: tuple[str, ...]) -> BronzeSourc
     if document["incremental_cursor"].get("status") != "resolved":
         raise SourceContractError("Bronze ingestion requires a resolved incremental cursor")
     _validate_projection(contract, projection)
+    CompatibilityRegistry().resolve(
+        contract.dataset_id,
+        contract.contract_hash,
+        list(projection),
+        contract.projection_version,
+        contract.revision,
+    )
     return contract
 
 
@@ -85,6 +101,8 @@ def _validate_projection(contract: BronzeSourceContract, projection: tuple[str, 
         contract.watermark_field,
         *contract.tie_breaker,
     }
+    if contract.raw.get("platform_identity"):
+        required.update(("codigo_entidad", "codigo_proveedor", "proveedor_adjudicado"))
     missing = sorted(required - set(projection))
     if missing:
         raise SourceContractError(f"Bronze projection is missing required columns: {missing}")

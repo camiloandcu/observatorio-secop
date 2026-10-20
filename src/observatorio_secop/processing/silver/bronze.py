@@ -9,9 +9,12 @@ from typing import Any
 
 from pyspark.sql import DataFrame, SparkSession
 
+from observatorio_secop.ingestion.compatibility import CompatibilityRegistry
+from observatorio_secop.ingestion.errors import SourceContractError
 from observatorio_secop.processing.silver.errors import BronzeEvidenceError
 from observatorio_secop.processing.silver.models import BronzePage, VerifiedBronzeRun
 from observatorio_secop.processing.silver.schemas import BRONZE_FIELDS, BRONZE_SCHEMA
+from observatorio_secop.source_json import source_json_loads
 
 
 def sha256_file(path: Path) -> str:
@@ -31,7 +34,9 @@ def resolve_bronze_runs(
     dataset_id: str,
     contract_sha256: str,
     run_ids: tuple[str, ...] = (),
+    registry: CompatibilityRegistry | None = None,
 ) -> tuple[VerifiedBronzeRun, ...]:
+    registry = registry or CompatibilityRegistry()
     runs_root = bronze_root / "runs"
     if run_ids:
         if len(run_ids) != len(set(run_ids)):
@@ -59,8 +64,16 @@ def resolve_bronze_runs(
             raise BronzeEvidenceError(f"Bronze run directory does not match manifest: {directory}")
         if manifest.get("dataset_id") != dataset_id:
             raise BronzeEvidenceError(f"Bronze run {directory.name} uses another dataset")
-        if manifest.get("contract_sha256") != contract_sha256:
-            raise BronzeEvidenceError(f"Bronze run {directory.name} uses another source contract")
+        try:
+            profile = registry.resolve(
+                dataset_id,
+                manifest.get("contract_sha256"),
+                manifest.get("parameters", {}).get("projection"),
+                manifest.get("source_projection_version"),
+                manifest.get("source_revision"),
+            )
+        except SourceContractError as error:
+            raise BronzeEvidenceError(f"Bronze run {directory.name}: {error}") from error
         pages = tuple(_verify_page(directory, directory.name, item) for item in manifest["pages"])
         written = manifest.get("counts", {}).get("written")
         if written != sum(page.row_count for page in pages):
@@ -71,10 +84,17 @@ def resolve_bronze_runs(
             VerifiedBronzeRun(
                 run_id=directory.name,
                 dataset_id=dataset_id,
-                contract_sha256=contract_sha256,
+                contract_sha256=profile.contract_sha256,
                 manifest_path=manifest_path,
                 manifest_sha256=sha256_file(manifest_path),
                 pages=pages,
+                projection_version=profile.projection_version,
+                projection=profile.projection,
+                purpose=manifest.get("purpose", "incremental"),
+                refresh=manifest.get("refresh"),
+                parameters=manifest.get("parameters", {}),
+                range_complete=manifest.get("range_complete", False),
+                truncated=manifest.get("truncated", False),
             )
         )
     if run_ids and len(verified) != len(run_ids):
@@ -88,8 +108,10 @@ def read_bronze_dataframe(spark: SparkSession, runs: tuple[VerifiedBronzeRun, ..
         for page in run.pages:
             rows = _load_page_rows(page)
             for ordinal, raw in enumerate(rows):
-                projected = {field: raw.get(field) for field in BRONZE_FIELDS}
-                projected_text = {field: _source_text(projected[field]) for field in BRONZE_FIELDS}
+                projected = {field: raw.get(field) for field in run.projection}
+                projected_text = {
+                    field: _source_text(projected.get(field)) for field in BRONZE_FIELDS
+                }
                 payload_json = json.dumps(
                     projected, ensure_ascii=False, sort_keys=True, separators=(",", ":")
                 )
@@ -103,6 +125,8 @@ def read_bronze_dataframe(spark: SparkSession, runs: tuple[VerifiedBronzeRun, ..
                         ordinal,
                         page.fetched_at_utc,
                         payload_json,
+                        run.contract_sha256,
+                        run.projection_version,
                     )
                 )
     return spark.createDataFrame(records, BRONZE_SCHEMA)
@@ -148,7 +172,7 @@ def _verify_page(directory: Path, run_id: str, raw: Any) -> BronzePage:
 
 def _load_page_rows(page: BronzePage) -> list[dict[str, Any]]:
     try:
-        raw = json.loads(page.path.read_text(encoding="utf-8"))
+        raw = source_json_loads(page.path.read_bytes())
     except (OSError, json.JSONDecodeError) as error:
         raise BronzeEvidenceError(f"Invalid Bronze page {page.path}: {error}") from error
     if not isinstance(raw, list) or not all(isinstance(item, dict) for item in raw):

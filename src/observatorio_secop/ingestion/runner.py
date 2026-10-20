@@ -8,6 +8,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
+from observatorio_secop.ingestion.compatibility import CompatibilityRegistry
 from observatorio_secop.ingestion.config import (
     IngestionConfig,
     RunWindow,
@@ -104,6 +105,15 @@ class BronzeIngestion:
         reconciled = []
         for path in self.storage.prepared_runs():
             manifest = self.storage.load_published(path)
+            CompatibilityRegistry(
+                self.config.contract_path.parent / "secop_compatibility.yaml"
+            ).resolve(
+                manifest.dataset_id,
+                manifest.contract_sha256,
+                manifest.parameters.get("projection"),
+                manifest.source_projection_version,
+                manifest.source_revision,
+            )
             if self.state.has_run(manifest.run_id):
                 self.storage.mark_committed(manifest)
                 reconciled.append(manifest.run_id)
@@ -127,6 +137,8 @@ class BronzeIngestion:
             run_id=run_id,
             dataset_id=self.contract.dataset_id,
             contract_sha256=self.contract.contract_hash,
+            source_revision=self.contract.revision,
+            source_projection_version=self.contract.projection_version,
             parameters=parameters,
             checkpoint_before=checkpoint,
             started_at_utc=self._now(),
@@ -147,6 +159,8 @@ class BronzeIngestion:
         manifest = self.storage.load_staging(run_id)
         if manifest.contract_sha256 != self.contract.contract_hash:
             raise ResumeError("Cannot resume with a different source contract")
+        if manifest.source_projection_version not in (None, self.contract.projection_version):
+            raise ResumeError("Cannot resume with a different source projection")
         if manifest.parameters != parameters:
             raise ResumeError("Cannot resume with different effective parameters")
         manifest.status = "staging"

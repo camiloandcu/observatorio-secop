@@ -14,7 +14,12 @@ from urllib.request import Request, urlopen
 
 from observatorio_secop.ingestion.config import IngestionConfig
 from observatorio_secop.ingestion.contract import BronzeSourceContract
-from observatorio_secop.ingestion.errors import PageValidationError, TransportError
+from observatorio_secop.ingestion.errors import (
+    PageValidationError,
+    RequestBudgetExceeded,
+    TransportError,
+)
+from observatorio_secop.source_json import source_json_loads
 
 TRANSIENT_STATUS = {429, 500, 502, 503, 504}
 
@@ -40,6 +45,7 @@ class SocrataTransport:
         sleeper: Any = time.sleep,
         monotonic: Any = time.monotonic,
         jitter: Any = random.uniform,
+        max_requests: int | None = None,
     ) -> None:
         self.config = config
         self.contract = contract
@@ -48,6 +54,8 @@ class SocrataTransport:
         self._sleep = sleeper
         self._monotonic = monotonic
         self._jitter = jitter
+        self.max_requests = max_requests
+        self.requests = 0
 
     def fetch_metadata(self) -> TransportResponse:
         return self._request(self.contract.metadata_url)
@@ -82,6 +90,9 @@ class SocrataTransport:
         attempts = self.config.max_retries + 1
         last_error: BaseException | None = None
         for attempt in range(1, attempts + 1):
+            if self.max_requests is not None and self.requests >= self.max_requests:
+                raise RequestBudgetExceeded("HTTP attempt budget exhausted; resume the refresh")
+            self.requests += 1
             started = self._monotonic()
             try:
                 headers = {"Accept": "application/json"}
@@ -96,7 +107,7 @@ class SocrataTransport:
                     if len(raw) > self.config.max_response_bytes:
                         raise PageValidationError("Response exceeds max_response_bytes")
                     try:
-                        payload = json.loads(raw)
+                        payload = source_json_loads(raw)
                     except (UnicodeDecodeError, json.JSONDecodeError) as error:
                         raise PageValidationError("Socrata response is not valid JSON") from error
                     return TransportResponse(

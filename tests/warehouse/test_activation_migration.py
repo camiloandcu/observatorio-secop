@@ -6,6 +6,7 @@ import psycopg
 import pytest
 from psycopg import sql
 
+from observatorio_secop.warehouse.bundle import EXPECTED_SCHEMA, IDENTITY_SCHEMA
 from observatorio_secop.warehouse.config import WarehouseConfig
 from observatorio_secop.warehouse.errors import WarehouseConflictError, WarehouseLoadError
 from observatorio_secop.warehouse.loader import WarehouseLoader
@@ -21,7 +22,12 @@ def test_legacy_baseline_uses_rows_and_preserves_audit(postgres_config: Warehous
     assert loader.load(b).status == "noop"
     migrated = snapshot(postgres_config)
     assert migrated["load_audit"] == original["load_audit"]
-    assert migrated["contract_current"] == original["contract_current"]
+    new_order = IDENTITY_SCHEMA.names + ["silver_manifest_sha256", "loaded_at"]
+    old_order = EXPECTED_SCHEMA.names + ["silver_manifest_sha256", "loaded_at"]
+    assert [
+        tuple(row[new_order.index(name)] for name in old_order)
+        for row in migrated["contract_current"]
+    ] == original["contract_current"]
     baseline = migrated["load_audit_activation"]
     assert len(baseline) == 1
     assert baseline[0][1:6] == ("B", b.manifest_sha256, None, None, "legacy_baseline")

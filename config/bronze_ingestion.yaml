@@ -30,3 +30,6 @@ ingestion:
     - valor_del_contrato
     - ultima_actualizacion
     - urlproceso
+    - codigo_entidad
+    - codigo_proveedor
+    - proveedor_adjudicado

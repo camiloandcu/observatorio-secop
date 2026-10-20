@@ -21,6 +21,11 @@ def validate_metadata(metadata: dict[str, Any], contract: BronzeSourceContract) 
         if isinstance(item, dict) and isinstance(item.get("fieldName"), str)
     }
     missing = sorted(set(contract.critical_fields) - set(observed))
+    if contract.raw.get("platform_identity"):
+        missing = sorted(
+            set(missing)
+            | ({"codigo_entidad", "codigo_proveedor", "proveedor_adjudicado"} - set(observed))
+        )
     if missing:
         raise SourceContractError(f"Metadata is missing critical columns: {missing}")
     for field in contract.critical_fields:
@@ -50,13 +55,16 @@ def validate_page(
     }
     if lane == "primary":
         required.add(contract.watermark_field)
-    else:
+    elif lane == "null_watermark":
         required.add(fallback_event_field)
     for index, row in enumerate(rows):
         missing = sorted(field for field in required if field not in row or row[field] is None)
         if missing:
             raise PageValidationError(f"Row {index} is missing critical columns: {missing}")
         for field, value in row.items():
+            if field in {"codigo_entidad", "codigo_proveedor", "proveedor_adjudicado"}:
+                # Row-level identity defects remain observable UNKNOWNs in Silver.
+                continue
             if field not in contract.columns or value is None:
                 continue
             expected = set(contract.columns[field].get("compatible_observed_types", []))

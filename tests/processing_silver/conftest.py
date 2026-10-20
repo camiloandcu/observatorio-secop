@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 from pyspark.sql import SparkSession
 
 from observatorio_secop.processing.silver.config import SilverConfig, load_silver_config
@@ -88,6 +89,7 @@ def write_bronze_run(
     *,
     fetched_at: str = "2026-01-03T00:00:00.000Z",
     status: str = "committed",
+    legacy: bool = False,
 ) -> Path:
     run = config.bronze_root / "runs" / run_id
     pages = run / "pages"
@@ -98,7 +100,18 @@ def write_bronze_run(
     manifest = {
         "run_id": run_id,
         "dataset_id": config.dataset_id,
-        "contract_sha256": source_contract_hash(),
+        "contract_sha256": (
+            hashlib.sha256(
+                (ROOT / "contracts/revisions/secop_source_v1.yaml").read_bytes()
+            ).hexdigest()
+            if legacy
+            else source_contract_hash()
+        ),
+        "parameters": {
+            "projection": yaml.safe_load((ROOT / "contracts/secop_compatibility.yaml").read_text())[
+                "profiles"
+            ][0 if legacy else 1]["projection"]
+        },
         "status": status,
         "counts": {"written": len(rows)},
         "pages": [

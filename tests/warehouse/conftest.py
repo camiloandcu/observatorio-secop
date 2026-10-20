@@ -15,7 +15,9 @@ import pyarrow.parquet as pq
 import pytest
 from psycopg.conninfo import conninfo_to_dict
 
-from observatorio_secop.warehouse.bundle import EXPECTED_SCHEMA
+from observatorio_secop.identity import IDENTITY_RULE_VERSION, code_identity, load_identity_rules
+from observatorio_secop.ingestion.compatibility import CompatibilityRegistry
+from observatorio_secop.warehouse.bundle import EXPECTED_SCHEMA, IDENTITY_SCHEMA
 from observatorio_secop.warehouse.config import WarehouseConfig
 
 
@@ -129,6 +131,55 @@ def write_bundle(
     }
     (root / "current.json").write_text(_json(current), encoding="utf-8")
     return manifest_path
+
+
+def identity_row(
+    version_id: str,
+    contract_key: str = "contract-1",
+    *,
+    entity_code: str | None = "00100",
+    supplier_code: str | None = "00200",
+    supplier_name: str | None = "Proveedor sintético",
+    **kwargs: Any,
+) -> dict[str, Any]:
+    row = silver_row(version_id, contract_key, **kwargs)
+    profile = CompatibilityRegistry().profiles[1]
+    row.update(
+        identity_rule_version=IDENTITY_RULE_VERSION,
+        source_contract_sha256=profile.contract_sha256,
+        source_projection_version=profile.projection_version,
+        supplier_name=supplier_name,
+    )
+    for role, raw in (("entity", entity_code), ("supplier", supplier_code)):
+        code, status, reason = code_identity(raw, role, load_identity_rules())
+        row.update(
+            {
+                f"{role}_code_raw": raw,
+                f"{role}_code": code,
+                f"{role}_identity_status": status,
+                f"{role}_identity_reason": reason,
+            }
+        )
+    return row
+
+
+def write_identity_bundle(
+    root: Path, version_id: str, rows: list[dict[str, Any]], **kwargs: Any
+) -> Path:
+    manifest = write_bundle(root, version_id, rows, schema=IDENTITY_SCHEMA, **kwargs)
+    registry = CompatibilityRegistry()
+    rewrite_manifest(
+        manifest,
+        lambda value: value.update(
+            schema_version=2,
+            dataset_id="jbjy-vk9h",
+            identity_rule_version=IDENTITY_RULE_VERSION,
+            compatibility_sha256=registry.digest,
+            bronze_runs=[{"run_id": "run-1", "manifest_sha256": "a" * 64}],
+            input_purposes={"run-1": "incremental"},
+        ),
+    )
+    return manifest
 
 
 def rewrite_manifest(manifest_path: Path, mutate: Any) -> None:

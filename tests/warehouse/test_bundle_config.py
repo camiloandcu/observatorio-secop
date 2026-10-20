@@ -6,7 +6,11 @@ from pathlib import Path
 import pyarrow as pa
 import pytest
 
-from observatorio_secop.warehouse.bundle import EXPECTED_SCHEMA, verify_current_bundle
+from observatorio_secop.warehouse.bundle import (
+    EXPECTED_SCHEMA,
+    IDENTITY_SCHEMA,
+    verify_current_bundle,
+)
 from observatorio_secop.warehouse.cli import main
 from observatorio_secop.warehouse.config import load_warehouse_config
 from observatorio_secop.warehouse.errors import (
@@ -22,7 +26,7 @@ def test_valid_bundle_is_verified(silver_root: Path) -> None:
 
     assert bundle.version_id == "version-1"
     assert bundle.row_count == 1
-    assert bundle.table.column_names == EXPECTED_SCHEMA.names
+    assert bundle.table.column_names == IDENTITY_SCHEMA.names
 
 
 def test_pointer_must_target_immutable_version(silver_root: Path) -> None:

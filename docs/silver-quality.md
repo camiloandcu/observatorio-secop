@@ -63,6 +63,13 @@ Los montos no aceptan moneda, separadores de miles, exponentes ni negativos. Los
 
 ## Identidad y deduplicación
 
+La identidad de entidad/proveedor usa códigos de plataforma y nombres como etiquetas.
+El esquema 2 conserva código crudo/usable, estado/motivo y contrato/proyección de origen;
+las runs legacy soportadas quedan desconocidas sin inferir códigos del nombre. El
+[contrato de identidad](platform-identity.md) detalla cobertura por conteo/valor,
+compatibilidad, recarga acotada y migración. Una falta de código conserva el contrato;
+una inconsistencia entre código, estado y regla es crítica.
+
 `contract_key` es SHA-256 de la versión de regla, `jbjy-vk9h` y `id_contrato` normalizado únicamente con Unicode NFC y espacios exteriores. El identificador crudo siempre se conserva. Identificadores nulos se rechazan y cualquier llave asociada con más de un identificador crudo se reporta como colisión crítica.
 
 Los duplicados exactos comparten llave y hash canónico del payload. Entre versiones distintas gana, en orden:
@@ -118,7 +125,10 @@ data/silver/secop_contracts/
 
 El bundle se escribe primero en staging, se relee y verifica. Si pasa, un rename en el mismo filesystem crea la versión inmutable y un reemplazo durable actualiza `current.json`. Los lectores solo deben seguir ese puntero. Si falla, el candidato se mueve a `invalid/` y la versión válida anterior permanece intacta.
 
-Repetir las mismas entradas, contrato, configuración y perfil del escritor devuelve el mismo `silver_version_id`. Si ya existe un bundle idéntico, la operación es idempotente.
+Repetir las mismas entradas, contrato, configuración, revisión de esquema/identidad,
+registro de compatibilidad y perfil del escritor devuelve el mismo `silver_version_id`.
+Si ya existe un bundle idéntico, la operación es idempotente. Cada run se valida contra
+su revisión registrada y conserva su hash real, aunque difiera del contrato actual.
 
 El manifiesto nuevo registra `writer_format_version=silver-parquet-v2`; ese perfil también participa en la identidad de versión. Un cambio de formato genera otra versión incluso con un YAML antiguo sin cambios, sin modificar reglas de negocio, llaves ni archivos previos. Los manifiestos anteriores sin ese campo siguen siendo legibles.
 

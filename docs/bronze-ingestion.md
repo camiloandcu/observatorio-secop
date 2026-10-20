@@ -2,6 +2,11 @@
 
 Esta guía explica cómo extraer contratos SECOP II de Antioquia hacia local. La ingesta conserva las páginas tal como las entrega Socrata y mantiene los metadatos por separado. No limpia ni interpreta campos de negocio.
 
+La proyección actual añade `codigo_entidad`, `codigo_proveedor` y `proveedor_adjudicado`.
+Cada run nueva registra revisión fuente y proyección; las anteriores conservan sus bytes.
+Las combinaciones soportadas y el comando `refresh-identity`, con progreso independiente
+del checkpoint, se explican en [Identidad de plataforma](platform-identity.md).
+
 ## Ejecución limitada
 
 Instala el entorno y ejecuta un rango UTC explícito:

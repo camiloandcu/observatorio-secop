@@ -22,6 +22,18 @@ sources:
           - {name: contract_reference, description: Referencia pública opcional del contrato.}
           - {name: procurement_process_id, description: Identificador opcional del proceso de compra.}
           - {name: entity_name, description: Nombre publicado de la entidad contratante.}
+          - {name: entity_code_raw, description: Representación cruda del código de plataforma de entidad.}
+          - {name: entity_code, description: Código usable de entidad; nulo para identidad desconocida.}
+          - {name: entity_identity_status, description: Estado KNOWN o UNKNOWN de la identidad de entidad.}
+          - {name: entity_identity_reason, description: Motivo de identidad desconocida de entidad; nulo si conocida.}
+          - {name: supplier_code_raw, description: Representación cruda del código de plataforma de proveedor.}
+          - {name: supplier_code, description: Código usable de proveedor; nulo para identidad desconocida.}
+          - {name: supplier_name, description: Etiqueta fuente de proveedor; no determina identidad.}
+          - {name: supplier_identity_status, description: Estado KNOWN o UNKNOWN de la identidad de proveedor.}
+          - {name: supplier_identity_reason, description: Motivo de identidad desconocida de proveedor; nulo si conocida.}
+          - {name: identity_rule_version, description: Versión de reglas de identidad de plataforma.}
+          - {name: source_contract_sha256, description: Hash real del contrato fuente; puede faltar en evidencia legacy no registrada.}
+          - {name: source_projection_version, description: Proyección de la observación fuente seleccionada.}
           - {name: department_raw, description: Departamento crudo conservado por Silver.}
           - {name: department_name, description: Departamento canónico validado por Silver.}
           - {name: department_key, description: Clave territorial canónica del departamento.}

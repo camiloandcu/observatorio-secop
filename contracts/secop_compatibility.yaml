@@ -1,0 +1,52 @@
+schema_version: 1
+dataset_id: jbjy-vk9h
+profiles:
+- revision: secop-source-v1
+  contract_path: revisions/secop_source_v1.yaml
+  contract_sha256: adc945e137835eda8eea155cddecaba8005a3dfb30afbcaac018cbe545092a56
+  projection_version: secop-contracts-v1
+  projection:
+  - id_contrato
+  - referencia_del_contrato
+  - proceso_de_compra
+  - nombre_entidad
+  - departamento
+  - ciudad
+  - estado_contrato
+  - codigo_de_categoria_principal
+  - descripcion_del_proceso
+  - tipo_de_contrato
+  - modalidad_de_contratacion
+  - fecha_de_firma
+  - fecha_de_inicio_del_contrato
+  - fecha_de_fin_del_contrato
+  - valor_del_contrato
+  - ultima_actualizacion
+  - urlproceso
+  has_identity: false
+- revision: secop-source-v2
+  contract_path: revisions/secop_source_v2.yaml
+  contract_sha256: 513fdf8c03be4f6958e1256e004064dff643a53ed4310a02fa8561817c291e12
+  projection_version: secop-contracts-v2
+  projection:
+  - id_contrato
+  - referencia_del_contrato
+  - proceso_de_compra
+  - nombre_entidad
+  - departamento
+  - ciudad
+  - estado_contrato
+  - codigo_de_categoria_principal
+  - descripcion_del_proceso
+  - tipo_de_contrato
+  - modalidad_de_contratacion
+  - fecha_de_firma
+  - fecha_de_inicio_del_contrato
+  - fecha_de_fin_del_contrato
+  - valor_del_contrato
+  - ultima_actualizacion
+  - urlproceso
+  - codigo_entidad
+  - codigo_proveedor
+  - proveedor_adjudicado
+  has_identity: true

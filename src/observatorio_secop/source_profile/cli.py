@@ -8,6 +8,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from observatorio_secop.ingestion.storage import canonical_json, durable_write
 from observatorio_secop.source_profile.client import SocrataClient
 from observatorio_secop.source_profile.config import load_config
 from observatorio_secop.source_profile.contract import (
@@ -16,6 +17,7 @@ from observatorio_secop.source_profile.contract import (
     validate_fixture,
 )
 from observatorio_secop.source_profile.errors import SourceProfileError
+from observatorio_secop.source_profile.identity import observe_identity
 from observatorio_secop.source_profile.workflow import observe_source, write_artifacts
 
 DEFAULT_CONFIG = Path("config/secop_source.yaml")
@@ -41,12 +43,22 @@ def build_parser() -> argparse.ArgumentParser:
 
     check_live = subparsers.add_parser("check-live", help="check critical fields without writes")
     check_live.add_argument("--contract", type=Path, default=DEFAULT_CONTRACT)
+    identity = subparsers.add_parser("identity", help="profile only the approved identity fields")
+    identity.add_argument("--output", type=Path, required=True, help="new aggregate JSON report")
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
+        if args.command == "identity":
+            if args.output.exists():
+                raise SourceProfileError("Identity output already exists; choose a new report path")
+            config = load_config(args.config)
+            report = observe_identity(config, SocrataClient(config))
+            durable_write(args.output, canonical_json(report) + b"\n")
+            print(f"Wrote bounded aggregate identity evidence to {args.output}")
+            return 0
         if args.command == "live":
             config = load_config(args.config)
             contract, fixture, report = observe_source(config, SocrataClient(config))

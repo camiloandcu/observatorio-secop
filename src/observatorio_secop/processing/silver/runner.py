@@ -11,6 +11,8 @@ from typing import Any
 
 from pyspark.sql import SparkSession
 
+from observatorio_secop.identity import IDENTITY_RULE_VERSION, identity_coverage
+from observatorio_secop.ingestion.compatibility import CompatibilityRegistry
 from observatorio_secop.ingestion.contract import load_bronze_contract
 from observatorio_secop.ingestion.logging import EventLogger
 from observatorio_secop.processing.silver.bronze import (
@@ -25,6 +27,7 @@ from observatorio_secop.processing.silver.config import (
 from observatorio_secop.processing.silver.errors import PublicationError
 from observatorio_secop.processing.silver.models import WRITER_FORMAT_VERSION, SilverManifest
 from observatorio_secop.processing.silver.quality import validate_quality
+from observatorio_secop.processing.silver.refresh import reconcile_refresh, refresh_baseline
 from observatorio_secop.processing.silver.schemas import BRONZE_FIELDS
 from observatorio_secop.processing.silver.storage import (
     SilverStorage,
@@ -50,6 +53,9 @@ class SilverPipeline:
         self.config_path = config_path
         self.catalog: TerritoryCatalog = load_territory_catalog(config.territory_catalog_path)
         self.contract = load_bronze_contract(config.contract_path, BRONZE_FIELDS)
+        self.registry = CompatibilityRegistry(
+            config.contract_path.parent / "secop_compatibility.yaml"
+        )
         if self.contract.dataset_id != config.dataset_id:
             raise PublicationError("Silver config and source contract identify different datasets")
         self.config_sha256 = hashlib.sha256(config_path.read_bytes()).hexdigest()
@@ -64,12 +70,17 @@ class SilverPipeline:
             dataset_id=self.config.dataset_id,
             contract_sha256=self.contract.contract_hash,
             run_ids=run_ids,
+            registry=self.registry,
         )
+        refresh_context = refresh_baseline(runs, self.config.silver_root)
         version_id = self._version_id(runs)
         existing = self.storage.existing_manifest(version_id)
         if existing is not None:
             expected_identity = {
                 "writer_format_version": WRITER_FORMAT_VERSION,
+                "schema_version": 2,
+                "identity_rule_version": IDENTITY_RULE_VERSION,
+                "compatibility_sha256": self.registry.digest,
                 "dataset_id": self.config.dataset_id,
                 "transformation_version": self.config.transformation_version,
                 "key_rule_version": self.config.key_rule_version,
@@ -89,11 +100,13 @@ class SilverPipeline:
 
         started = self._now()
         spark, owns_spark = self._spark()
+        transformed = None
         try:
             bronze = read_bronze_dataframe(spark, runs)
             transformed = transform_bronze(
                 bronze, self.config, self.catalog, silver_version_id=version_id
             )
+            refresh_evidence = reconcile_refresh(transformed.valid, refresh_context)
             results = validate_quality(
                 spark,
                 transformed.valid,
@@ -102,6 +115,27 @@ class SilverPipeline:
                 self.catalog,
             )
             manifest = SilverManifest(
+                refresh=refresh_evidence,
+                input_purposes={run.run_id: run.purpose for run in runs},
+                schema_version=2,
+                identity_rule_version=IDENTITY_RULE_VERSION,
+                compatibility_sha256=self.registry.digest,
+                identity_coverage=identity_coverage(
+                    [
+                        row.asDict()
+                        for row in transformed.valid.select(
+                            "contract_value_cop",
+                            "entity_code",
+                            "entity_name",
+                            "supplier_code",
+                            "supplier_name",
+                            "entity_identity_status",
+                            "entity_identity_reason",
+                            "supplier_identity_status",
+                            "supplier_identity_reason",
+                        ).collect()
+                    ]
+                ),
                 writer_format_version=WRITER_FORMAT_VERSION,
                 silver_version_id=version_id,
                 dataset_id=self.config.dataset_id,
@@ -159,12 +193,18 @@ class SilverPipeline:
             )
             return manifest
         finally:
+            if transformed is not None:
+                transformed.valid.unpersist()
+                transformed.rejected.unpersist()
             if owns_spark:
                 spark.stop()
 
     def _version_id(self, runs: tuple[Any, ...]) -> str:
         identity = {
             "writer_format_version": WRITER_FORMAT_VERSION,
+            "schema_version": 2,
+            "identity_rule_version": IDENTITY_RULE_VERSION,
+            "compatibility_sha256": self.registry.digest,
             "transformation_version": self.config.transformation_version,
             "dataset_id": self.config.dataset_id,
             "bronze_runs": [

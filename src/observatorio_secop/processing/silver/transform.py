@@ -11,6 +11,12 @@ from pyspark.sql import Column, DataFrame, Window
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
 
+from observatorio_secop.identity import (
+    IDENTITY_RULE_VERSION,
+    LEGACY_PROJECTION,
+    code_identity,
+    load_identity_rules,
+)
 from observatorio_secop.processing.silver.config import (
     SilverConfig,
     TerritoryCatalog,
@@ -89,6 +95,9 @@ def transform_bronze(
         "collision_rows": int(collision_rows_value),
         "rejection_rate": rejection_rate,
     }
+    # Both returned frames are materialized; retain no intermediate cache per run.
+    candidates.unpersist()
+    annotated.unpersist()
     return TransformationResult(valid=valid, rejected=rejected, counts=counts)
 
 
@@ -103,6 +112,7 @@ def _annotate(
     extract_url_udf = F.udf(_extract_url, T.StringType())
     catalog_map = _literal_map(catalog.canonical_by_key)
 
+    rules = load_identity_rules(config.contract_path.parent / "identity_rules.yaml")
     result = (
         bronze.withColumn("silver_version_id", F.lit(silver_version_id))
         .withColumn("source_dataset_id", F.lit(config.dataset_id))
@@ -126,6 +136,8 @@ def _annotate(
         .withColumn("contract_reference", normalize_text_udf("referencia_del_contrato"))
         .withColumn("procurement_process_id", normalize_text_udf("proceso_de_compra"))
         .withColumn("entity_name", normalize_text_udf("nombre_entidad"))
+        .withColumn("supplier_name", normalize_text_udf("proveedor_adjudicado"))
+        .withColumn("identity_rule_version", F.lit(IDENTITY_RULE_VERSION))
         .withColumn("department_raw", F.col("departamento"))
         .withColumn("department_key", territory_key_udf("departamento"))
         .withColumn(
@@ -183,6 +195,31 @@ def _annotate(
             ),
         )
     )
+    identity_type = T.StructType(
+        [
+            T.StructField("code", T.StringType()),
+            T.StructField("status", T.StringType()),
+            T.StructField("reason", T.StringType()),
+        ]
+    )
+    for role, field in (("entity", "codigo_entidad"), ("supplier", "codigo_proveedor")):
+        classify = F.udf(
+            lambda raw, legacy, role=role: code_identity(raw, role, rules, legacy=legacy),
+            identity_type,
+        )
+        result = (
+            result.withColumn(f"{role}_code_raw", F.col(field))
+            .withColumn(
+                f"_{role}_identity",
+                classify(
+                    F.col(field),
+                    F.col("source_projection_version") == LEGACY_PROJECTION,
+                ),
+            )
+            .withColumn(f"{role}_code", F.col(f"_{role}_identity.code"))
+            .withColumn(f"{role}_identity_status", F.col(f"_{role}_identity.status"))
+            .withColumn(f"{role}_identity_reason", F.col(f"_{role}_identity.reason"))
+        )
     warnings = F.array_compact(
         F.array(F.when(F.col("municipality_status") == "UNKNOWN", F.lit("UNKNOWN_MUNICIPALITY")))
     )

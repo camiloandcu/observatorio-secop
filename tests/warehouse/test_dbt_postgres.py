@@ -18,7 +18,8 @@ from observatorio_secop.warehouse.bundle import verify_current_bundle
 from observatorio_secop.warehouse.config import WarehouseConfig
 from observatorio_secop.warehouse.loader import WarehouseLoader
 
-from .conftest import silver_row, write_bundle
+from .conftest import identity_row as silver_row
+from .conftest import write_identity_bundle as write_bundle
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST_DSN = os.environ.get("WAREHOUSE_TEST_DSN")
@@ -116,7 +117,7 @@ def test_incremental_full_refresh_quality_and_docs_are_reproducible(tmp_path: Pa
         with psycopg.connect(TEST_DSN, autocommit=True) as database:
             database.execute(
                 "INSERT INTO analytics.dim_entity "
-                "SELECT md5(entity_sk), entity_natural_key, source_dataset_id, "
+                "SELECT md5(entity_sk), entity_natural_key, source_dataset_id, entity_code, "
                 "entity_name, member_status "
                 "FROM analytics.dim_entity WHERE member_status = 'KNOWN' LIMIT 1"
             )

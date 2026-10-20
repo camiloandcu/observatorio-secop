@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pyspark.sql import types as T
 
+from observatorio_secop.identity import IDENTITY_TEXT_FIELDS, REQUIRED_IDENTITY_FIELDS
+
 BRONZE_FIELDS = (
     "id_contrato",
     "referencia_del_contrato",
@@ -22,6 +24,9 @@ BRONZE_FIELDS = (
     "valor_del_contrato",
     "ultima_actualizacion",
     "urlproceso",
+    "codigo_entidad",
+    "codigo_proveedor",
+    "proveedor_adjudicado",
 )
 
 BRONZE_SCHEMA = T.StructType(
@@ -34,6 +39,8 @@ BRONZE_SCHEMA = T.StructType(
         T.StructField("bronze_row_ordinal", T.LongType(), False),
         T.StructField("bronze_fetched_at_utc", T.StringType(), False),
         T.StructField("projected_payload_json", T.StringType(), False),
+        T.StructField("source_contract_sha256", T.StringType(), False),
+        T.StructField("source_projection_version", T.StringType(), False),
     ]
 )
 
@@ -79,6 +86,10 @@ SILVER_SCHEMA = T.StructType(
         T.StructField("bronze_page_sequence", T.IntegerType(), False),
         T.StructField("bronze_row_ordinal", T.LongType(), False),
         T.StructField("bronze_fetched_at_utc", T.TimestampType(), False),
+        *[
+            T.StructField(name, T.StringType(), name not in REQUIRED_IDENTITY_FIELDS)
+            for name in IDENTITY_TEXT_FIELDS
+        ],
         T.StructField("signing_year", T.StringType(), False),
     ]
 )
