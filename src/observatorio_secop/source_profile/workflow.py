@@ -234,6 +234,10 @@ def render_report(contract: dict[str, Any]) -> str:
         "`SECOP II - Contratos Electrónicos` (`jbjy-vk9h`). No es una descarga del "
         "histórico nacional ni una garantía sobre datos futuros.",
         "",
+        "El [perfil enfocado de identidad](platform-identity.md) agrega evidencia "
+        "acotada para códigos de entidad y proveedor y explica sus reglas "
+        "versionadas; no sustituye las métricas de esta observación.",
+        "",
         "## Alcance observado",
         "",
         f"- Fecha UTC: `{observation['observed_at_utc']}`.",

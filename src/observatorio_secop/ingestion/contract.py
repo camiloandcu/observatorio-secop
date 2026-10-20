@@ -34,7 +34,7 @@ class BronzeSourceContract:
 
     @property
     def revision(self) -> str:
-        return f"secop-source-v{self.raw['contract_version']}"
+        return f"secop-source-v{self.raw.get('contract_version')}"
 
     @property
     def metadata_url(self) -> str:

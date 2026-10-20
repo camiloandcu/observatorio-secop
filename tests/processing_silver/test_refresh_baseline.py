@@ -92,11 +92,13 @@ def test_incomplete_refresh_or_missing_baseline_dependencies_are_blocked(tmp_pat
 
 
 @pytest.mark.parametrize("timezone", ["UTC", "Etc/GMT+5"])
+@pytest.mark.parametrize("changed_value", [False, True])
 def test_reconciliation_compares_source_clock_without_host_timezone_shift(
     tmp_path,
     spark,
     monkeypatch,
     timezone,
+    changed_value,
 ):
     seed = run_record(tmp_path, "s0")
     baseline = make_baseline(tmp_path, "base", [seed], seed.run_id)
@@ -108,6 +110,8 @@ def test_reconciliation_compares_source_clock_without_host_timezone_shift(
     )
     for field in ("signing_date", "start_date", "end_date"):
         frame = frame.withColumn(field, F.to_date(field))
+    if changed_value:
+        frame = frame.withColumn("contract_value_cop", F.lit("123.45").cast("decimal(20,2)"))
     try:
         with monkeypatch.context() as environment:
             environment.setenv("TZ", timezone)
@@ -121,7 +125,14 @@ def test_reconciliation_compares_source_clock_without_host_timezone_shift(
                     },
                 ),
             )
-            assert evidence["business_changed_contracts"] == 0
-            assert evidence["changed_contracts"] == []
+            assert evidence["business_changed_contracts"] == int(changed_value)
+            if changed_value:
+                assert evidence["changed_contracts"][0]["business_changed_fields"] == [
+                    "contract_value_cop"
+                ]
+                assert evidence["changed_contracts"][0]["before_value_cop"] == "100.00"
+                assert evidence["changed_contracts"][0]["after_value_cop"] == "123.45"
+            else:
+                assert evidence["changed_contracts"] == []
     finally:
         time.tzset()
