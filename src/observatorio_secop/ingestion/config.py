@@ -159,7 +159,7 @@ def format_utc(value: datetime) -> str:
 def _integer(value: Any, name: str, *, minimum: int) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
         raise IngestionConfigurationError(f"{name} must be an integer >= {minimum}")
-    return value
+    return int(value)
 
 
 def _number(value: Any, name: str, *, positive: bool) -> float:

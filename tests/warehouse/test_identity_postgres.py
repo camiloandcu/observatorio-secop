@@ -21,7 +21,7 @@ from .conftest import (
     write_identity_bundle,
 )
 from .inventory_helpers import cli_environment
-from .snapshot_helpers import expected_rows, snapshot
+from .snapshot_helpers import expected_rows, seed_registered, snapshot
 
 
 def remove_identity_schema(config):
@@ -52,6 +52,9 @@ def test_identity_schema_migrates_before_noop_and_restores_old_values(postgres_c
     config = postgres_config
     write_bundle(config.silver_root, "A", [silver_row("A")])
     old = verify_current_bundle(config.silver_root)
+    write_identity_bundle(config.silver_root, "B", [identity_row("B")])
+    new = verify_current_bundle(config.silver_root)
+    seed_registered(config, new, old)
     loader = WarehouseLoader(config)
     loader.load(old)
     before = snapshot(config)
@@ -65,11 +68,15 @@ def test_identity_schema_migrates_before_noop_and_restores_old_values(postgres_c
                 sql.Identifier(config.schema, config.audit_table + "_schema")
             )
         ).fetchall() == [(2,)]
-    write_identity_bundle(config.silver_root, "B", [identity_row("B")])
-    new = verify_current_bundle(config.silver_root)
-    assert loader.load(new).updated_rows == 1
+    assert (
+        loader.load(new, restore=True, expected_current=("A", old.manifest_sha256)).updated_rows
+        == 1
+    )
     assert snapshot(config)[config.contract_table] == expected_rows(new)
-    assert loader.load(old).status == "applied"
+    assert (
+        loader.load(old, restore=True, expected_current=("B", new.manifest_sha256)).status
+        == "applied"
+    )
     restored = snapshot(config)
     assert restored[config.contract_table] == expected_rows(old)
     assert loader.load(old).status == "noop"
@@ -82,6 +89,7 @@ def test_identity_schema_and_metadata_rollback_together(postgres_config, monkeyp
     write_bundle(config.silver_root, "A", [silver_row("A")])
     old = verify_current_bundle(config.silver_root)
     loader = WarehouseLoader(config)
+    seed_registered(config, old)
     loader.load(old)
     remove_identity_schema(config)
     before, columns = snapshot(config), column_names(config)
@@ -103,6 +111,7 @@ def test_unknown_relational_identity_revision_is_not_silently_reused(postgres_co
     write_bundle(config.silver_root, "A", [silver_row("A")])
     bundle = verify_current_bundle(config.silver_root)
     loader = WarehouseLoader(config)
+    seed_registered(config, bundle)
     loader.load(bundle)
     with psycopg.connect(**config.connection_kwargs) as database:
         relation = sql.Identifier(config.schema, config.audit_table + "_schema")
@@ -126,6 +135,7 @@ def test_invalid_identity_cli_load_never_connects_or_changes_active_snapshot(
 ):
     config = postgres_config
     write_bundle(config.silver_root, "A", [silver_row("A")])
+    seed_registered(config, verify_current_bundle(config.silver_root))
     WarehouseLoader(config).load(verify_current_bundle(config.silver_root))
     before = snapshot(config)
     row = identity_row("B")

@@ -10,7 +10,7 @@ import unicodedata
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
@@ -29,9 +29,12 @@ class TerritoryCatalog:
 
     @property
     def canonical_by_key(self) -> dict[str, str]:
-        result = {territory_key(name): name for name in self.municipalities}
+        result = {cast(str, territory_key(name)): name for name in self.municipalities}
         result.update(
-            {territory_key(alias): canonical for alias, canonical in self.aliases.items()}
+            {
+                cast(str, territory_key(alias)): canonical
+                for alias, canonical in self.aliases.items()
+            }
         )
         return result
 
@@ -155,7 +158,7 @@ def _text(value: Any, name: str) -> str:
 def _positive_integer(value: Any, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
         raise SilverConfigurationError(f"{name} must be an integer >= 1")
-    return value
+    return cast(int, value)
 
 
 def _boolean(value: Any, name: str) -> bool:

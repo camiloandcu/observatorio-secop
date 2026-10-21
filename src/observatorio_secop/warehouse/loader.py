@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
 
 import psycopg
 from psycopg import sql
 
+from observatorio_secop.population import validate_coverage
 from observatorio_secop.warehouse.activation import ActivationStore
 from observatorio_secop.warehouse.bundle import IDENTITY_SCHEMA, VerifiedSilverBundle
 from observatorio_secop.warehouse.config import WarehouseConfig
 from observatorio_secop.warehouse.errors import WarehouseConflictError, WarehouseLoadError
 from observatorio_secop.warehouse.logging import log_event
 from observatorio_secop.warehouse.migration import migrate_identity
+from observatorio_secop.warehouse.population import PopulationStore
 
 
 @dataclass(frozen=True)
@@ -33,7 +36,19 @@ class WarehouseLoader:
     def __init__(self, config: WarehouseConfig) -> None:
         self.config = config
 
-    def load(self, bundle: VerifiedSilverBundle) -> LoadResult:
+    def load(
+        self,
+        bundle: VerifiedSilverBundle,
+        *,
+        restore: bool = False,
+        expected_current: tuple[str, str] | None = None,
+    ) -> LoadResult:
+        if bundle.selection_mode == "preview":
+            raise WarehouseConflictError("Legacy preview cannot be loaded as authoritative")
+        if bundle.coverage is not None:
+            receipt = validate_coverage(bundle.coverage, silver_version_id=bundle.version_id)
+            if receipt["mode"] != "authoritative_candidate" or receipt["state"] != "complete":
+                raise WarehouseConflictError("Preview/incomplete population cannot be loaded")
         metadata = ActivationStore(self.config)
         log_event(
             "warehouse_load_started", silver_version_id=bundle.version_id, rows=bundle.row_count
@@ -47,7 +62,9 @@ class WarehouseLoader:
                 password=self.config.password,
                 connect_timeout=10,
             ) as connection:
-                result = self._load(connection, bundle, metadata)
+                result = self._load(
+                    connection, bundle, metadata, restore=restore, expected_current=expected_current
+                )
         except WarehouseConflictError:
             raise
         except psycopg.Error as error:
@@ -57,11 +74,59 @@ class WarehouseLoader:
         log_event("warehouse_load_finished", **result.as_dict())
         return result
 
+    def adopt(
+        self, bundle: VerifiedSilverBundle, record: dict[str, Any], *, bronze_root: Path
+    ) -> dict[str, Any]:
+        from observatorio_secop.processing.silver.selection import validate_adoption
+
+        validate_adoption(record, bundle, bronze_root=bronze_root)
+        metadata = ActivationStore(self.config)
+        try:
+            with (
+                psycopg.connect(
+                    host=self.config.host,
+                    port=self.config.port,
+                    dbname=self.config.dbname,
+                    user=self.config.user,
+                    password=self.config.password,
+                    connect_timeout=10,
+                ) as connection,
+                connection.cursor() as cursor,
+            ):
+                cursor.execute("SELECT pg_advisory_xact_lock(%s)", (self.config.advisory_lock_id,))
+                self._ensure_relations(
+                    cursor,
+                    sql.Identifier(self.config.schema),
+                    sql.Identifier(self.config.contract_table),
+                    sql.Identifier(self.config.audit_table),
+                )
+                migrate_identity(cursor, metadata.current, metadata.schema_revision)
+                if metadata.ensure(cursor) != (bundle.version_id, bundle.manifest_sha256):
+                    raise WarehouseConflictError(
+                        "Adoption target must be the exact active warehouse snapshot"
+                    )
+                population = PopulationStore(self.config)
+                population.ensure(cursor)
+                population.adopt(cursor, bundle, record)
+        except psycopg.Error as error:
+            raise WarehouseLoadError(
+                f"PostgreSQL adoption failed ({error.__class__.__name__})"
+            ) from error
+        return {
+            "status": "adopted",
+            "silver_version_id": bundle.version_id,
+            "scope_id": record["scope_id"],
+            "coverage_known": False,
+        }
+
     def _load(
         self,
         connection: psycopg.Connection[Any],
         bundle: VerifiedSilverBundle,
         metadata: ActivationStore,
+        *,
+        restore: bool = False,
+        expected_current: tuple[str, str] | None = None,
     ) -> LoadResult:
         schema = sql.Identifier(self.config.schema)
         current = sql.Identifier(self.config.contract_table)
@@ -83,7 +148,18 @@ class WarehouseLoader:
                 )
             active = metadata.ensure(cursor)
             identity = (bundle.version_id, bundle.manifest_sha256)
+            population = PopulationStore(self.config)
+            population.ensure(cursor)
+            population.guard(
+                cursor,
+                bundle,
+                active,
+                existing is not None,
+                restore=restore,
+                expected_current=expected_current,
+            )
             if active == identity:
+                population.persist(cursor, bundle)
                 return LoadResult(bundle.version_id, "noop", bundle.row_count, 0, 0, 0)
 
             copy_columns = [field.name for field in IDENTITY_SCHEMA]
@@ -186,6 +262,7 @@ class WarehouseLoader:
                         deleted_rows,
                     ),
                 )
+            population.persist(cursor, bundle)
             metadata.activate(
                 cursor,
                 identity,

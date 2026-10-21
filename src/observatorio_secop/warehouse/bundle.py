@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
@@ -94,6 +94,11 @@ class VerifiedSilverBundle:
     row_count: int
     table: pa.Table
     schema_version: int = 1
+    coverage: dict[str, Any] | None = None
+    reconciliation: dict[str, Any] | None = None
+    condition_summaries: list[dict[str, Any]] = field(default_factory=list)
+    condition_links: list[dict[str, Any]] = field(default_factory=list)
+    selection_mode: str | None = None
 
 
 def verify_current_bundle(root: Path) -> VerifiedSilverBundle:
@@ -113,8 +118,16 @@ def verify_current_bundle(root: Path) -> VerifiedSilverBundle:
 
 
 def verify_manifest_bundle(
-    manifest_path: Path, *, expected_hash: str | None = None, verify_refresh: bool = True
+    manifest_path: Path,
+    *,
+    expected_hash: str | None = None,
+    verify_refresh: bool = True,
+    _seen: frozenset[Path] = frozenset(),
 ) -> VerifiedSilverBundle:
+    resolved = manifest_path.resolve()
+    if resolved in _seen:
+        raise SilverBundleError("Silver population dependency cycle")
+    ancestors = _seen | {resolved}
     manifest_sha256 = sha256_path(manifest_path)
     if expected_hash is not None and expected_hash != manifest_sha256:
         raise SilverBundleError("Silver manifest hash differs from pinned evidence")
@@ -131,8 +144,12 @@ def verify_manifest_bundle(
     ):
         raise SilverBundleError("Silver manifest contains a failed critical control")
     schema_version = manifest.get("schema_version", 1)
-    if type(schema_version) is not int or schema_version not in (1, 2):
+    if type(schema_version) is not int or schema_version not in (1, 2, 3):
         raise SilverBundleError("Unsupported Silver manifest schema_version")
+    if schema_version == 3 and manifest.get("row_schema_version") != 2:
+        raise SilverBundleError("Population envelope requires explicit contract row schema 2")
+    if schema_version != 3 and manifest.get("population") is not None:
+        raise SilverBundleError("Population metadata requires explicit envelope 3")
     data_files = verify_inventory(manifest_path.parent, manifest.get("files"))
 
     expected_rows = _non_negative_integer(
@@ -144,7 +161,7 @@ def verify_manifest_bundle(
         table,
         version_id,
         expected_rows,
-        IDENTITY_SCHEMA if schema_version == 2 else EXPECTED_SCHEMA,
+        IDENTITY_SCHEMA if schema_version in (2, 3) else EXPECTED_SCHEMA,
     )
     if schema_version == 1:
         for field in IDENTITY_SCHEMA:
@@ -164,7 +181,19 @@ def verify_manifest_bundle(
         table = table.select(IDENTITY_SCHEMA.names)
     else:
         _verify_identity(table, manifest)
-    if verify_refresh:
+    coverage = reconciliation = None
+    summaries: list[dict[str, Any]] = []
+    links: list[dict[str, Any]] = []
+    if schema_version == 3:
+        from observatorio_secop.warehouse.population_bundle import verify_population_bundle
+
+        def verify_related(path: Path, checksum: str) -> VerifiedSilverBundle:
+            return verify_manifest_bundle(path, expected_hash=checksum, _seen=ancestors)
+
+        coverage, reconciliation, summaries, links = verify_population_bundle(
+            table, manifest, manifest_path, verify_related
+        )
+    elif verify_refresh:
         _verify_refresh(table, manifest, manifest_path)
     return VerifiedSilverBundle(
         version_id=version_id,
@@ -174,6 +203,11 @@ def verify_manifest_bundle(
         row_count=expected_rows,
         table=table,
         schema_version=schema_version,
+        coverage=coverage,
+        reconciliation=reconciliation,
+        condition_summaries=summaries,
+        condition_links=links,
+        selection_mode=manifest.get("selection_mode"),
     )
 
 
@@ -228,7 +262,7 @@ def _verify_table(
     versions = set(rows.column("silver_version_id").to_pylist())
     keys = rows.column("contract_key").to_pylist()
     identifiers = rows.column("source_contract_id").to_pylist()
-    if versions != {version_id}:
+    if versions != ({version_id} if expected_rows else set()):
         raise SilverBundleError("Silver rows do not belong to the selected version")
     if any(not value for value in keys) or len(keys) != len(set(keys)):
         raise SilverBundleError("Silver contract_key values must be non-null and unique")
@@ -251,8 +285,20 @@ def _verify_identity(table: pa.Table, manifest: dict[str, Any]) -> None:
         if (
             not isinstance(purposes, dict)
             or set(purposes) != {run["run_id"] for run in manifest.get("bronze_runs", [])}
-            or any(value not in ("incremental", "identity_refresh") for value in purposes.values())
-            or ("identity_refresh" in purposes.values() and not manifest.get("refresh"))
+            or any(
+                value
+                not in (
+                    ("incremental", "identity_refresh", "population_reconciliation")
+                    if manifest.get("schema_version") == 3
+                    else ("incremental", "identity_refresh")
+                )
+                for value in purposes.values()
+            )
+            or (
+                "identity_refresh" in purposes.values()
+                and not manifest.get("refresh")
+                and manifest.get("schema_version") != 3
+            )
         ):
             raise ValueError("Silver identity refresh input-purpose evidence is missing or invalid")
         for row in table.select(

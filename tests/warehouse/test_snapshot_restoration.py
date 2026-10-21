@@ -13,18 +13,27 @@ from observatorio_secop.warehouse.errors import WarehouseConflictError, Warehous
 from observatorio_secop.warehouse.loader import WarehouseLoader
 
 from .conftest import silver_row, write_bundle
-from .snapshot_helpers import bundles, digest, expected_rows, snapshot
+from .snapshot_helpers import bundles, digest, expected_rows, seed_registered, snapshot
 
 
 def test_restore_exact_a_after_b_and_repeat(postgres_config: WarehouseConfig) -> None:
     a, b, pointer_a = bundles(postgres_config)
     loader = WarehouseLoader(postgres_config)
-    assert loader.load(a).status == "applied"
+    seed_registered(postgres_config, a, b)
+    assert (
+        loader.load(a, restore=True, expected_current=("B", b.manifest_sha256)).status == "applied"
+    )
     first = snapshot(postgres_config)
     assert first["contract_current"] == expected_rows(a)
-    assert loader.load(b).status == "applied"
+    assert (
+        loader.load(b, restore=True, expected_current=("A", a.manifest_sha256)).status == "applied"
+    )
     (postgres_config.silver_root / "current.json").write_bytes(pointer_a)
-    restored = loader.load(verify_current_bundle(postgres_config.silver_root))
+    restored = loader.load(
+        verify_current_bundle(postgres_config.silver_root),
+        restore=True,
+        expected_current=("B", b.manifest_sha256),
+    )
 
     assert restored.status == "applied"
     assert (restored.inserted_rows, restored.updated_rows, restored.deleted_rows) == (1, 1, 1)
@@ -36,8 +45,8 @@ def test_restore_exact_a_after_b_and_repeat(postgres_config: WarehouseConfig) ->
     assert {row[1] for row in after["contract_current"]} == {"shared", "only-A"}
     assert len(after["load_audit"]) == 2
     events = after["load_audit_activation"]
-    assert [row[1] for row in events] == ["A", "B", "A"]
-    assert [row[5] for row in events] == ["activation", "activation", "restoration"]
+    assert [row[1] for row in events] == ["A", "B", "A", "B", "A"]
+    assert [row[5] for row in events] == ["activation", "activation"] + ["restoration"] * 3
     assert events[-1][3:5] == (b.version_id, b.manifest_sha256)
     assert after["load_audit_active"][0][1:] == ("A", a.manifest_sha256, events[-1][0])
     repeated = loader.load(a)
@@ -52,8 +61,7 @@ def test_conflicting_active_and_inactive_identity_are_unchanged(
 ) -> None:
     a, b, _ = bundles(postgres_config)
     loader = WarehouseLoader(postgres_config)
-    loader.load(a)
-    loader.load(b)
+    seed_registered(postgres_config, a, b)
     original = snapshot(postgres_config)
     # A separately valid bundle attempts to reuse the same identity with new
     # verified content, rather than bypassing the verifier with an altered hash.
@@ -72,8 +80,7 @@ def test_restoration_metadata_failure_preserves_b_and_retry_restores_a(
 ) -> None:
     a, b, _ = bundles(postgres_config)
     loader = WarehouseLoader(postgres_config)
-    loader.load(a)
-    loader.load(b)
+    seed_registered(postgres_config, a, b)
     original = snapshot(postgres_config)
     with psycopg.connect(**postgres_config.connection_kwargs) as database:
         database.execute(
@@ -92,7 +99,7 @@ def test_restoration_metadata_failure_preserves_b_and_retry_restores_a(
             )
         )
     with pytest.raises(WarehouseLoadError):
-        loader.load(a)
+        loader.load(a, restore=True, expected_current=("B", b.manifest_sha256))
     assert snapshot(postgres_config) == original
     assert digest(snapshot(postgres_config)) == digest(original)
     with psycopg.connect(**postgres_config.connection_kwargs) as database:
@@ -101,7 +108,9 @@ def test_restoration_metadata_failure_preserves_b_and_retry_restores_a(
                 sql.Identifier(postgres_config.schema, relation)
             )
         )
-    assert loader.load(a).status == "applied"
+    assert (
+        loader.load(a, restore=True, expected_current=("B", b.manifest_sha256)).status == "applied"
+    )
     after = snapshot(postgres_config)
     assert after["contract_current"] == expected_rows(a)
     assert len(after["load_audit_activation"]) == 3
@@ -116,9 +125,8 @@ def test_custom_relation_names_restore_without_new_configuration(
     config = replace(postgres_config, contract_table="contracts", audit_table=audit_name)
     a, b, _ = bundles(config)
     loader = WarehouseLoader(config)
-    loader.load(a)
-    loader.load(b)
-    loader.load(a)
+    seed_registered(config, a, b)
+    loader.load(a, restore=True, expected_current=("B", b.manifest_sha256))
     after = snapshot(config)
     assert after["contracts"] == expected_rows(a)
     assert len(after[audit_name]) == 2
@@ -130,9 +138,7 @@ def test_database_constraints_protect_activation_identity(
     postgres_config: WarehouseConfig, damage: str
 ) -> None:
     a, b, _ = bundles(postgres_config)
-    loader = WarehouseLoader(postgres_config)
-    loader.load(a)
-    loader.load(b)
+    seed_registered(postgres_config, a, b)
     before = snapshot(postgres_config)
     statements = {
         "hash": "UPDATE {active} SET manifest_sha256 = 'wrong'",

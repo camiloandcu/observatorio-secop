@@ -70,3 +70,38 @@ sources:
           - {name: signing_year, description: Año de firma usado como partición Silver o unknown.}
           - {name: silver_manifest_sha256, description: Hash del manifiesto Silver verificado al cargar.}
           - {name: loaded_at, description: Timestamp estable finished_at_utc del manifiesto Silver.}
+
+      - name: contract_current_population
+        description: Recibo inmutable de cobertura por versión y hash del manifiesto.
+        columns:
+          - {name: silver_version_id, description: Versión Silver del recibo.}
+          - {name: manifest_sha256, description: Hash del manifiesto verificado.}
+          - {name: scope_id, description: Scope conocido; nulo para evidencia legacy sin evaluar.}
+          - {name: receipt, description: Recibo de cobertura validado o ausencia explícita legacy.}
+          - {name: evidence_sha256, description: Digest conjunto de recibo y evidencia de condiciones.}
+
+      - name: contract_current_population_binding
+        description: Scope persistente del workspace, conservado durante restauración.
+        columns:
+          - {name: singleton, description: Único binding de población del workspace.}
+          - {name: scope_id, description: Hash del descriptor de población.}
+          - {name: scope, description: Descriptor canónico de población.}
+
+      - name: contract_current_observation_condition
+        description: Una condición resumida por contrato y versión, separada de rechazos múltiples.
+        columns:
+          - {name: silver_version_id, description: Versión de la evidencia.}
+          - {name: manifest_sha256, description: Hash del manifiesto verificado.}
+          - {name: scope_id, description: Población de la condición.}
+          - {name: contract_key, description: Contrato al que pertenece el resumen único.}
+          - {name: condition, description: Resumen validado con linaje y cronología de adquisición.}
+
+      - name: contract_current_observation_link
+        description: Enlaces de rechazos atribuibles; no se unen como filas adicionales del hecho.
+        columns:
+          - {name: silver_version_id, description: Versión de la evidencia.}
+          - {name: manifest_sha256, description: Hash del manifiesto verificado.}
+          - {name: scope_id, description: Población del enlace.}
+          - {name: contract_key, description: Contrato relacionado.}
+          - {name: link_id, description: Identidad determinística del enlace.}
+          - {name: evidence, description: Localizadores y motivos validados sin payload rechazado crudo.}

@@ -64,6 +64,14 @@ class SilverPipeline:
         self.logger = logger or EventLogger()
         self._provided_spark = spark
 
+    def run_population(
+        self, scope: Any, campaign_run_ids: tuple[str, ...], **options: Any
+    ) -> SilverManifest:
+        """Build a scoped version without changing the standalone refresh contract."""
+        from observatorio_secop.processing.silver.population import run_population
+
+        return run_population(self, scope, campaign_run_ids, **options)
+
     def run(self, run_ids: tuple[str, ...] = ()) -> SilverManifest:
         runs = resolve_bronze_runs(
             self.config.bronze_root,
@@ -73,12 +81,25 @@ class SilverPipeline:
             registry=self.registry,
         )
         refresh_context = refresh_baseline(runs, self.config.silver_root)
-        version_id = self._version_id(runs)
+        # The old identity can prove an exact-current legacy retry; it cannot
+        # authorize a new unscoped replacement or an inactive historical target.
+        legacy_id = self._version_id(runs)
+        if self.storage.current().get("silver_version_id") == legacy_id:
+            legacy = self.storage.existing_manifest(legacy_id)
+            if legacy is not None and legacy.get("selection_mode") != "preview":
+                from observatorio_secop.warehouse.bundle import verify_manifest_bundle
+
+                verify_manifest_bundle(self.storage.version_path(legacy_id) / "manifest.json")
+                self.storage.verify_existing(legacy_id, legacy)
+                self.storage.rollback(legacy_id)
+                return SilverManifest.from_dict(legacy)
+        version_id = self._version_id(runs, selection_mode="preview")
         existing = self.storage.existing_manifest(version_id)
         if existing is not None:
             expected_identity = {
                 "writer_format_version": WRITER_FORMAT_VERSION,
                 "schema_version": 2,
+                "selection_mode": "preview",
                 "identity_rule_version": IDENTITY_RULE_VERSION,
                 "compatibility_sha256": self.registry.digest,
                 "dataset_id": self.config.dataset_id,
@@ -94,7 +115,6 @@ class SilverPipeline:
             if any(existing.get(key) != value for key, value in expected_identity.items()):
                 raise PublicationError(f"Silver version {version_id} has conflicting identity")
             self.storage.verify_existing(version_id, existing)
-            self.storage.rollback(version_id)
             self.logger.emit("silver_idempotent", run_id=version_id, bronze_runs=len(runs))
             return SilverManifest.from_dict(existing)
 
@@ -118,6 +138,7 @@ class SilverPipeline:
                 refresh=refresh_evidence,
                 input_purposes={run.run_id: run.purpose for run in runs},
                 schema_version=2,
+                selection_mode="preview",
                 identity_rule_version=IDENTITY_RULE_VERSION,
                 compatibility_sha256=self.registry.digest,
                 identity_coverage=identity_coverage(
@@ -199,7 +220,7 @@ class SilverPipeline:
             if owns_spark:
                 spark.stop()
 
-    def _version_id(self, runs: tuple[Any, ...]) -> str:
+    def _version_id(self, runs: tuple[Any, ...], *, selection_mode: str | None = None) -> str:
         identity = {
             "writer_format_version": WRITER_FORMAT_VERSION,
             "schema_version": 2,
@@ -214,6 +235,8 @@ class SilverPipeline:
             "config_sha256": self.config_sha256,
             "territory_catalog_sha256": self.catalog.digest,
         }
+        if selection_mode is not None:
+            identity["selection_mode"] = selection_mode
         return sha256_bytes(canonical_json(identity))
 
     def _spark(self) -> tuple[SparkSession, bool]:
@@ -251,6 +274,7 @@ def manifest_summary(manifest: SilverManifest) -> str:
             "status": manifest.status,
             "counts": manifest.counts,
             "critical_passed": manifest.critical_passed,
+            "selection_mode": manifest.selection_mode or (manifest.population or {}).get("mode"),
         },
         ensure_ascii=False,
         sort_keys=True,

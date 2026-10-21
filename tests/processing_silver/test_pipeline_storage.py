@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 import pyarrow.parquet as pq
 import pytest
 from conftest import ROOT, row, write_bronze_run
@@ -9,6 +7,7 @@ from conftest import ROOT, row, write_bronze_run
 from observatorio_secop.processing.silver.errors import PublicationError
 from observatorio_secop.processing.silver.runner import SilverPipeline
 from observatorio_secop.processing.silver.storage import SilverStorage
+from warehouse.conftest import identity_row, write_identity_bundle
 
 
 def _pipeline(config, spark):
@@ -19,7 +18,9 @@ def _pipeline(config, spark):
     )
 
 
-def test_pipeline_publishes_partitioned_snappy_and_is_idempotent(silver_config, spark) -> None:
+def test_unscoped_pipeline_builds_partitioned_preview_and_is_idempotent(
+    silver_config, spark
+) -> None:
     write_bronze_run(
         silver_config,
         "run-1",
@@ -34,16 +35,16 @@ def test_pipeline_publishes_partitioned_snappy_and_is_idempotent(silver_config, 
     version = silver_config.silver_root / "versions" / first.silver_version_id
     assert (version / "data/signing_year=2026").is_dir()
     assert (version / "rejected").is_dir()
-    assert (
-        json.loads((silver_config.silver_root / "current.json").read_text())["silver_version_id"]
-        == first.silver_version_id
-    )
+    assert first.selection_mode == "preview"
+    assert not (silver_config.silver_root / "current.json").exists()
+    assert (silver_config.silver_root / "previews" / f"{first.silver_version_id}.json").exists()
     parquet = next((version / "data").rglob("*.parquet"))
     metadata = pq.ParquetFile(parquet).metadata
     assert metadata.row_group(0).column(0).compression == "SNAPPY"
 
 
 def test_critical_failure_preserves_current_and_writes_invalid_bundle(silver_config, spark) -> None:
+    write_identity_bundle(silver_config.silver_root, "historical", [identity_row("historical")])
     write_bronze_run(silver_config, "good", [row("GOOD")])
     pipeline = _pipeline(silver_config, spark)
     good = pipeline.run(("good",))
@@ -70,13 +71,19 @@ def test_staging_is_not_current_and_cleanup_is_scoped(silver_config) -> None:
     assert protected.exists()
 
 
-def test_rollback_repoints_only_to_valid_version(silver_config, spark) -> None:
-    write_bronze_run(silver_config, "run-1", [row("A")])
-    manifest = _pipeline(silver_config, spark).run(("run-1",))
+def test_legacy_current_noop_does_not_authorize_unregistered_rollback(silver_config) -> None:
+    write_identity_bundle(silver_config.silver_root, "historical", [identity_row("historical")])
     storage = SilverStorage(silver_config.silver_root)
+    before = storage.current_path.read_bytes()
+    storage.rollback("historical")
+    assert storage.current_path.read_bytes() == before
+    write_identity_bundle(silver_config.silver_root, "unregistered", [identity_row("unregistered")])
+    storage.current_path.write_bytes(before)
+    with pytest.raises(PublicationError, match="unscoped"):
+        storage.rollback("unregistered")
     (silver_config.silver_root / "current.json").unlink()
-    pointer = storage.rollback(manifest.silver_version_id)
-    assert pointer["silver_version_id"] == manifest.silver_version_id
+    with pytest.raises(PublicationError, match="unscoped"):
+        storage.rollback("historical")
 
 
 def test_manifest_contains_deterministic_quality_evidence(silver_config, spark) -> None:
@@ -91,30 +98,25 @@ def test_manifest_contains_deterministic_quality_evidence(silver_config, spark) 
     assert (version / "manifest.json").exists()
 
 
-def test_retry_repairs_pointer_after_crash_between_promotion_and_pointer(
+def test_unscoped_preview_never_attempts_pointer_write_even_on_reuse(
     silver_config, spark, monkeypatch
 ) -> None:
     write_bronze_run(silver_config, "run-1", [row("A")])
     pipeline = _pipeline(silver_config, spark)
-    original = pipeline.storage._write_current
 
     def interrupt(*_args, **_kwargs):
-        raise OSError("simulated pointer interruption")
+        pytest.fail("unscoped preview attempted authoritative pointer write")
 
     monkeypatch.setattr(pipeline.storage, "_write_current", interrupt)
-    with pytest.raises(OSError, match="pointer interruption"):
-        pipeline.run(("run-1",))
+    first = pipeline.run(("run-1",))
     versions = list((silver_config.silver_root / "versions").iterdir())
     assert len(versions) == 1
     assert not (silver_config.silver_root / "current.json").exists()
 
-    monkeypatch.setattr(pipeline.storage, "_write_current", original)
     recovered = pipeline.run(("run-1",))
     assert recovered.status == "valid"
-    assert (
-        json.loads((silver_config.silver_root / "current.json").read_text())["silver_version_id"]
-        == recovered.silver_version_id
-    )
+    assert recovered.silver_version_id == first.silver_version_id
+    assert not (silver_config.silver_root / "current.json").exists()
 
 
 def test_idempotent_retry_rejects_tampered_published_file(silver_config, spark) -> None:

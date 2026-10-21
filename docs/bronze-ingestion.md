@@ -2,6 +2,8 @@
 
 Esta guía explica cómo extraer contratos SECOP II de Antioquia hacia local. La ingesta conserva las páginas tal como las entrega Socrata y mantiene los metadatos por separado. No limpia ni interpreta campos de negocio.
 
+El agotamiento incremental no demuestra cobertura de una población por firma. Para recuperar contratos antiguos o con actualización nula sin mover el checkpoint, usa [recuperación acotada](population-recovery.md).
+
 La proyección actual añade `codigo_entidad`, `codigo_proveedor` y `proveedor_adjudicado`.
 Cada run nueva registra revisión fuente y proyección; las anteriores conservan sus bytes.
 Las combinaciones soportadas y el comando `refresh-identity`, con progreso independiente

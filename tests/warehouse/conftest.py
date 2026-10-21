@@ -3,8 +3,9 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -191,6 +192,112 @@ def rewrite_manifest(manifest_path: Path, mutate: Any) -> None:
     current = json.loads(current_path.read_text(encoding="utf-8"))
     current["manifest_sha256"] = _sha256(manifest_path)
     current_path.write_text(_json(current), encoding="utf-8")
+
+
+def population_key(label: str) -> str:
+    return hashlib.sha256(label.encode()).hexdigest()
+
+
+def population_row(
+    version_id: str, contract_key: str = "contract-1", **kwargs: Any
+) -> dict[str, Any]:
+    return identity_row(version_id, population_key(contract_key), **kwargs)
+
+
+def write_population_bundle(
+    root: Path,
+    version_id: str,
+    rows: list[dict[str, Any]],
+) -> Path:
+    """Real envelope-3 fixture; ordinary successors preserve their pinned parent.
+
+    Share the independently reviewed Arrow fixture serializer rather than inventing
+    a loader-only object or bypassing the production bundle verifier.
+    """
+    from copy import deepcopy
+
+    from observatorio_secop.identity import key_set_digest
+    from observatorio_secop.warehouse.bundle import verify_current_bundle
+
+    from .inventory_helpers import inventory_entry
+    from .test_population_bundle import fixture, persist
+
+    parent = verify_current_bundle(root) if (root / "current.json").exists() else None
+    run_id = f"population-{version_id}"
+    value = fixture(root, version_id, run_id)
+    for row in rows:
+        row["bronze_run_id"] = run_id
+    data = value["path"].parent / "data"
+    shutil.rmtree(data)
+    pq.write_to_dataset(
+        pa.Table.from_pylist(rows, schema=IDENTITY_SCHEMA),
+        root_path=data,
+        partition_cols=["signing_year"],
+        compression="snappy",
+    )
+    manifest, coverage, reconciliation = (
+        value["manifest"],
+        value["coverage"],
+        value["reconciliation"],
+    )
+    manifest["files"] = [
+        inventory_entry(path, value["path"].parent) for path in sorted(data.rglob("*.parquet"))
+    ]
+    keys = [row["contract_key"] for row in rows]
+    counts = {"input_rows": len(rows), "output_rows": len(rows), "rejected_rows": 0}
+    manifest["counts"] = counts
+    coverage["candidate_keys_sha256"] = key_set_digest(keys)
+    acquisition = coverage["acquisitions"][0]
+    acquisition["limits"] = {"rows": max(len(rows) * 2, 10), "attempts": 10}
+    acquisition["consumed"] = {"rows": len(rows), "attempts": 2}
+    reconciliation.update(
+        candidate_keys=sorted(keys),
+        admitted_keys=sorted(keys),
+        counts={**counts, "unattributable_rejected_rows": 0},
+    )
+    prototype = value["condition_summary"][0]
+    summaries = []
+    for row in rows:
+        summaries.append(
+            {
+                **prototype,
+                "contract_key": row["contract_key"],
+                "winner_payload_sha256": row["payload_sha256"],
+                "winner_run_id": row["bronze_run_id"],
+                "winner_page_path": row["bronze_page_path"],
+                "winner_row_ordinal": row["bronze_row_ordinal"],
+                "winner_observed_at_utc": row["bronze_fetched_at_utc"].replace(tzinfo=UTC),
+                "winner_profile_sha256": row["source_contract_sha256"],
+                "winner_projection_version": row["source_projection_version"],
+            }
+        )
+    value["condition_summary"] = summaries
+    manifest["population"]["summary_rows"] = len(rows)
+    if parent is not None:
+        document = json.loads(parent.manifest_path.read_bytes())
+        baseline_keys = parent.table["contract_key"].to_pylist()
+        binding = {
+            "silver_version_id": parent.version_id,
+            "manifest_sha256": parent.manifest_sha256,
+            "keys_sha256": key_set_digest(baseline_keys),
+        }
+        coverage.update(
+            baseline=binding,
+            baseline_keys_sha256=binding["keys_sha256"],
+            expected_parent={key: binding[key] for key in ("silver_version_id", "manifest_sha256")},
+        )
+        acquisition["baseline"] = deepcopy(binding)
+        manifest["bronze_runs"] = document["bronze_runs"] + manifest["bronze_runs"]
+        manifest["input_purposes"].update(document["input_purposes"])
+        coverage["bronze_runs"] = deepcopy(manifest["bronze_runs"])
+        reconciliation.update(
+            baseline_bronze_runs=document["bronze_runs"],
+            baseline_keys=sorted(baseline_keys),
+            admitted_keys=sorted(set(keys) - set(baseline_keys)),
+        )
+    persist(value)
+    rewrite_manifest(value["path"], lambda _: None)
+    return value["path"]
 
 
 def _json(value: Any) -> str:

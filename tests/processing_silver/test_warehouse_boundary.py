@@ -21,10 +21,12 @@ from observatorio_secop.processing.silver import runner
 from observatorio_secop.processing.silver.config import load_silver_config
 from observatorio_secop.processing.silver.models import SilverManifest
 from observatorio_secop.processing.silver.runner import SilverPipeline
-from observatorio_secop.warehouse.bundle import verify_current_bundle
+from observatorio_secop.warehouse.bundle import verify_manifest_bundle
 from observatorio_secop.warehouse.config import WarehouseConfig, load_warehouse_config
+from observatorio_secop.warehouse.errors import WarehouseConflictError
 from observatorio_secop.warehouse.inventory import verify_inventory
 from observatorio_secop.warehouse.loader import WarehouseLoader
+from warehouse.snapshot_helpers import seed_registered
 
 TEST_DSN = os.environ.get("WAREHOUSE_TEST_DSN")
 
@@ -96,13 +98,11 @@ def publication(request, tmp_path_factory, spark):
         legacy_manifest = legacy_directory / "manifest.json"
         old_document = json.loads(legacy_manifest.read_text())
         old_document.pop("writer_format_version")
+        # Model retained pre-EN02 writer evidence, not a new authoritative build.
+        old_document.pop("selection_mode", None)
         legacy_manifest.write_text(json.dumps(old_document, sort_keys=True))
-        pointer_path = config.silver_root / "current.json"
-        pointer = json.loads(pointer_path.read_text())
-        pointer["manifest_sha256"] = hashlib.sha256(legacy_manifest.read_bytes()).hexdigest()
-        pointer_path.write_text(json.dumps(pointer))
         legacy_hashes = hashes(legacy_directory)
-        legacy_bundle = verify_current_bundle(warehouse.silver_root)
+        legacy_bundle = verify_manifest_bundle(legacy_manifest)
         assert SilverManifest.from_dict(old_document).writer_format_version is None
         pipeline = SilverPipeline(config, config_path=config_path, spark=spark)
         current = pipeline.run()
@@ -110,7 +110,14 @@ def publication(request, tmp_path_factory, spark):
         assert current.silver_version_id != old.silver_version_id
         assert repeated.silver_version_id == current.silver_version_id
         assert hashes(legacy_directory) == legacy_hashes
-        yield config, current, verify_current_bundle(warehouse.silver_root), legacy_bundle
+        yield (
+            config,
+            current,
+            verify_manifest_bundle(
+                config.silver_root / "versions" / current.silver_version_id / "manifest.json"
+            ),
+            legacy_bundle,
+        )
 
 
 def test_real_publication_has_microseconds_and_exact_logical_values(publication) -> None:
@@ -149,11 +156,11 @@ def test_real_publication_has_microseconds_and_exact_logical_values(publication)
 
 
 @pytest.mark.skipif(not TEST_DSN, reason="WAREHOUSE_TEST_DSN must select a disposable database")
-def test_actual_spark_and_legacy_output_load_and_repeat_without_changes(publication) -> None:
+def test_retained_spark_snapshot_noops_and_new_unscoped_output_is_denied(publication) -> None:
     assert TEST_DSN
     _, _, new_bundle, legacy_bundle = publication
     connection = conninfo_to_dict(TEST_DSN)
-    for bundle in [new_bundle, legacy_bundle]:
+    for bundle in [legacy_bundle]:
         schema = "boundary_test_" + uuid.uuid4().hex[:12]
         config = WarehouseConfig(
             silver_root=bundle.manifest_path.parents[2],
@@ -170,8 +177,10 @@ def test_actual_spark_and_legacy_output_load_and_repeat_without_changes(publicat
         before = hashes(bundle.manifest_path.parent)
         try:
             loader = WarehouseLoader(config)
-            assert loader.load(bundle).inserted_rows == 3
+            seed_registered(config, bundle)
             assert loader.load(bundle).status == "noop"
+            with pytest.raises(WarehouseConflictError, match="[Pp]review|[Ll]egacy|[Uu]nscoped"):
+                loader.load(new_bundle)
             with psycopg.connect(TEST_DSN) as database:
                 cursor = database.execute(
                     sql.SQL(

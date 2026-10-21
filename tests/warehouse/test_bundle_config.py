@@ -29,6 +29,17 @@ def test_valid_bundle_is_verified(silver_root: Path) -> None:
     assert bundle.table.column_names == IDENTITY_SCHEMA.names
 
 
+@pytest.mark.parametrize("population", [None, {}])
+def test_legacy_optional_population_null_is_not_envelope3_metadata(silver_root, population):
+    path = silver_root / "versions" / "version-1" / "manifest.json"
+    rewrite_manifest(path, lambda document: document.update(population=population))
+    if population is None:
+        assert verify_current_bundle(silver_root).coverage is None
+    else:
+        with pytest.raises(SilverBundleError, match="envelope 3"):
+            verify_current_bundle(silver_root)
+
+
 def test_pointer_must_target_immutable_version(silver_root: Path) -> None:
     current_path = silver_root / "current.json"
     current = json.loads(current_path.read_text(encoding="utf-8"))

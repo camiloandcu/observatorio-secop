@@ -4,7 +4,7 @@
 
 El modelo estrella ofrece una vista estable y trazable de los contratos vigentes en Silver. PostgreSQL mantiene el snapshot relacional y dbt construye una tabla de hechos y cinco dimensiones para consultas consistentes.
 
-Esta capa no calcula indicadores, agregaciones Gold, puntuaciones ni lógica para Power BI. Tampoco consulta Socrata o Bronze: su único límite de entrada es una versión Silver publicada y verificada.
+Esta capa no calcula indicadores, agregaciones Gold, puntuaciones ni lógica para Power BI. La carga normal recibe una versión Silver verificada y no consulta Socrata ni Bronze. La adopción histórica explícita también verifica el cierre Bronze retenido.
 
 ## Flujo
 
@@ -19,7 +19,7 @@ flowchart LR
     F --> G
 ```
 
-`secop-warehouse` acepta únicamente el bundle señalado por `<SILVER_ROOT>/current.json`, por defecto `data/silver/secop_contracts/current.json`. Antes de conectarse a PostgreSQL comprueba:
+`secop-warehouse` acepta un bundle fijado con `--version` y `--manifest-sha256`, o fija una vez la identidad señalada por `<SILVER_ROOT>/current.json`, por defecto `data/silver/secop_contracts/current.json`. Las nuevas activaciones requieren una población completa con alcance verificado; las vistas previas se rechazan. Consulta [cobertura y recuperación](population-recovery.md) para adopción histórica y restauración explícita. Antes de conectarse a PostgreSQL comprueba:
 
 - que el puntero resuelva exactamente `versions/<silver_version_id>/manifest.json`;
 - hash del manifiesto, estado `valid` y ausencia de controles críticos fallidos;
@@ -224,26 +224,7 @@ El mensaje identifica modelo, columna o relación. Las tablas siguen consultable
 
 ### Volver a una versión Silver anterior
 
-Conserva los bundles inmutables de A y B. Usa la misma raíz exportada, configuración y base para toda la secuencia. Sustituye los identificadores siguientes por versiones reales; prueba primero contra una base desechable dedicada.
-
-```bash
-export SILVER_ROOT=/ruta/a/la/raiz/silver/existente
-VERSION_A='<version-A>'
-VERSION_B='<version-B>'
-
-uv run --locked --extra data secop-silver rollback --version "$VERSION_A"
-uv run --locked --extra warehouse secop-warehouse verify
-make load-warehouse  # applied; registra filas y digest de A con la consulta de abajo
-
-uv run --locked --extra data secop-silver rollback --version "$VERSION_B"
-uv run --locked --extra warehouse secop-warehouse verify
-make load-warehouse  # applied; PostgreSQL contiene B
-
-uv run --locked --extra data secop-silver rollback --version "$VERSION_A"
-uv run --locked --extra warehouse secop-warehouse verify
-make load-warehouse  # applied; restaura filas, retiros, montos y linaje de A
-make load-warehouse  # noop; no agrega eventos ni cambia filas
-```
+Conserva los bundles inmutables de A y B y prueba primero contra una base desechable dedicada. Sigue los comandos fijados de [restauración compatible](population-recovery.md#cargar-adoptar-y-restaurar): cada almacén exige destino registrado, alcance compatible e identidad actual esperada. La secuencia A→B→A recupera los datos originales y conserva el alcance persistente; una repetición exacta de A es no-op.
 
 Cambiar el puntero Silver no carga PostgreSQL. `verify` valida el bundle sin modificar la base. Si usas YAML propio, conserva el mismo `--config` antes de `verify`/`load` en cada invocación; `make load-warehouse` usa el YAML de ejemplo.
 

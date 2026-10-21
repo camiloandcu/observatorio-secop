@@ -20,6 +20,7 @@ class SourceProfile:
     projection_version: str
     projection: tuple[str, ...]
     has_identity: bool
+    contract_path: Path
 
 
 class CompatibilityRegistry:
@@ -53,6 +54,7 @@ class CompatibilityRegistry:
                         projection_version=entry["projection_version"],
                         projection=tuple(entry["projection"]),
                         has_identity=entry["has_identity"],
+                        contract_path=snapshot,
                     )
                 )
             combinations = {(p.contract_sha256, p.projection) for p in self.profiles}

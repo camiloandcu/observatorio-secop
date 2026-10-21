@@ -36,6 +36,7 @@ class VerifiedBronzeRun:
     parameters: dict[str, Any] = field(default_factory=dict)
     range_complete: bool = False
     truncated: bool = False
+    population: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -75,6 +76,9 @@ class SilverManifest:
     identity_coverage: dict[str, Any] = field(default_factory=dict)
     refresh: dict[str, Any] | None = None
     input_purposes: dict[str, str] = field(default_factory=dict)
+    row_schema_version: int | None = None
+    population: dict[str, Any] | None = None
+    selection_mode: str | None = None
 
     @property
     def critical_passed(self) -> bool:
