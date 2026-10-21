@@ -1,6 +1,6 @@
 # Observatorio SECOP
 
-El Observatorio SECOP busca convertir datos públicos de contratación en información comprensible para analizar cómo se distribuyen los recursos públicos en Antioquia y orientar revisiones humanas hacia los casos que merecen mayor atención.
+El Observatorio SECOP transforma registros públicos de contratos SECOP II de entidades registradas en Antioquia en información comprensible sobre contratación y prioridades de revisión humana. El valor analizado es el total contractual nominal observado en COP; la ubicación corresponde al registro de la entidad y no identifica necesariamente el lugar de ejecución o gasto.
 
 ## El problema
 
@@ -8,22 +8,24 @@ La información contractual está disponible, pero su volumen, variabilidad y di
 
 Esa dificultad limita el seguimiento ciudadano y obliga a invertir demasiado tiempo en reunir, limpiar y reconciliar datos antes de poder analizarlos.
 
-El flujo de datos planteado es el siguiente: 
-
+El flujo objetivo es el siguiente; las capacidades disponibles se detallan en el alcance actual:
 
 ```mermaid
 flowchart TD
     A["<b>Problema de negocio</b><br/>'Hay demasiados contratos para revisar manualmente'"]
     B["<b>SECOP II</b><br/>Datos públicos disponibles en Socrata"]
-    C["<b>Ingesta incremental</b><br/>Obtener únicamente los datos que sean nuevos o hayan sido modificados"]
+    C["<b>Ingesta incremental acotada</b><br/>Adquirir observaciones según ventanas y límites explícitos"]
     D["<b>BRONZE</b><br/>Copia cruda y trazable que sirve como evidencia"]
     E["<b>PySpark</b><br/>Limpiar, tipificar, validar y deduplicar"]
     F["<b>SILVER</b><br/>Datos limpios, tipificados, validados y deduplicados"]
     G["<b>dbt + PostgreSQL</b><br/>Modelo de negocio"]
-    H["<b>Modelo de anomalías</b><br/>Prioriza contratos distintos a los demás"]
-    I["<b>GOLD</b><br/>Indicadores, hechos y dimensiones"]
+    H["<b>Priorización / MLflow</b><br/>Evaluar y versionar señales de revisión"]
+    I["<b>Publicación analítica validada</b><br/>Estrella, indicadores y calidad"]
     J["<b>Power BI</b><br/>Análisis visual de los datos"]
     K["<b>FastAPI</b><br/>Consulta técnica de los datos"]
+    L["<b>Features retrospectivas</b><br/>Referencias y elegibilidad versionadas"]
+    M["<b>Scores y razones</b><br/>Compatibles con la publicación analítica"]
+    N["<b>S3 / Glue / Athena</b><br/>Exportación acotada validada"]
 
     A --> B
     B --> C
@@ -31,20 +33,26 @@ flowchart TD
     D --> E
     E --> F
     F --> G
-    F --> H
     G --> I
-    H --> I
     I --> J
     I --> K
+    I --> L
+    L --> H
+    H --> M
+    M --> J
+    M --> K
+    I --> N
 ```
+
+Airflow orquestará los mismos comandos del pipeline. La analítica base seguirá disponible cuando no haya un modelo o scores compatibles. La etapa AWS será acotada y requiere autorización de acceso, recursos y costos.
 
 ## La solución
 
 El proyecto construye una ruta reproducible que transforma datos de SECOP II en:
 
 - información contractual depurada y trazable;
-- indicadores comparables sobre valor, volumen, oportunidad y concentración;
-- vistas para explorar entidades, proveedores, modalidades, territorios y periodos;
+- indicadores comparables sobre valor nominal COP, volumen y concentración;
+- vistas para explorar entidades, proveedores, modalidades, municipios de registro y periodos de firma;
 - señales explicables que ayuden a priorizar contratos para revisión humana;
 - medios de consulta mediante productos analíticos y una API documentada.
 
@@ -52,7 +60,9 @@ La priorización es una ayuda para ordenar la revisión. Una señal alta NO demu
 
 ## Alcance actual
 
-El repositorio cuenta con una base local reproducible, ingesta Bronze incremental, una capa Silver tipificada y un modelo estrella de contratos construido con dbt sobre PostgreSQL. Los indicadores, la priorización, API, dashboard y publicación en nube se incorporan de manera incremental y pueden seguirse en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).
+El repositorio cuenta con una base local reproducible, ingesta Bronze incremental acotada, una capa Silver tipificada con PySpark, carga y restauración de snapshots en PostgreSQL y un modelo estrella con dbt. La identidad de entidades y proveedores se conserva entre estas capas, con estados desconocidos explícitos y trazabilidad.
+
+Los marts e indicadores Gold, la publicación analítica validada para consumidores, la orquestación de negocio con Airflow, la priorización con MLflow, la API FastAPI, el dashboard Power BI y la exportación acotada a AWS están pendientes. Su avance puede seguirse en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).
 
 ## Principios
 
