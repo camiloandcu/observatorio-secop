@@ -2,6 +2,8 @@
 
 Silver convierte Bronze a contratos tipificados, normalizados y deduplicados. Cada versión contiene datos válidos, rechazados, métricas y resultados de controles. Una falla crítica conserva evidencia, pero no cambia la versión publicada.
 
+Las construcciones nuevas con `run` son vistas previas sin selección autoritativa. Para publicar y cargar una población con alcance verificado, sigue [Cobertura y recuperación acotada](population-recovery.md).
+
 ## Ejecutar e inspeccionar
 
 Instala las dependencias y procesa todas las runs Bronze publicadas:
@@ -123,7 +125,7 @@ data/silver/secop_contracts/
   current.json
 ```
 
-El bundle se escribe primero en staging, se relee y verifica. Si pasa, un rename en el mismo filesystem crea la versión inmutable y un reemplazo durable actualiza `current.json`. Los lectores solo deben seguir ese puntero. Si falla, el candidato se mueve a `invalid/` y la versión válida anterior permanece intacta.
+El bundle se escribe primero en staging, se relee y verifica. Si pasa, un rename en el mismo filesystem crea la versión inmutable. Solo una candidata autoritativa completa y compatible puede actualizar `current.json`; una vista previa permanece disponible por versión. Si falla, el candidato se mueve a `invalid/` y la versión válida anterior permanece intacta.
 
 Repetir las mismas entradas, contrato, configuración, revisión de esquema/identidad,
 registro de compatibilidad y perfil del escritor devuelve el mismo `silver_version_id`.
@@ -132,11 +134,7 @@ su revisión registrada y conserva su hash real, aunque difiera del contrato act
 
 El manifiesto nuevo registra `writer_format_version=silver-parquet-v2`; ese perfil también participa en la identidad de versión. Un cambio de formato genera otra versión incluso con un YAML antiguo sin cambios, sin modificar reglas de negocio, llaves ni archivos previos. Los manifiestos anteriores sin ese campo siguen siendo legibles.
 
-Para apuntar a otra versión válida:
-
-```bash
-uv run --locked --extra dev --extra data secop-silver rollback --version <silver_version_id>
-```
+Para restaurar una versión registrada, usa la identidad destino y la identidad actual esperada con `restore`, según la [guía de recuperación](population-recovery.md). La mera existencia de un bundle válido no autoriza su activación.
 
 Para eliminar únicamente staging incompleto:
 

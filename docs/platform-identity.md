@@ -96,7 +96,9 @@ Cada dimensión selecciona una etiqueta no vacía con orden determinístico y co
 exactamente un miembro por identidad. No es SCD2.
 
 En la primera actualización, detén consumidores/escritores anteriores, conserva un
-respaldo y los bundles previos, verifica/carga Silver y reconstruye dbt explícitamente:
+respaldo y los bundles previos, verifica/carga una candidata autoritativa con alcance
+o reintenta la versión histórica ya activa, y reconstruye dbt explícitamente. Las nuevas
+construcciones sin alcance son vistas previas; consulta [cobertura y recuperación](population-recovery.md).
 
 ```bash
 uv run --locked --extra dev --extra data --extra warehouse secop-warehouse verify
@@ -132,10 +134,13 @@ reutiliza su evidencia sin consultar de nuevo; una adquisición nueva puede obse
 cambios reales de la fuente.
 
 Construye Silver con **todas** las dependencias Bronze del baseline y la run de recarga
-completa, identificadas en sus manifiestos. No publiques solo la run de recarga. Cualquier
-selección que la incluya debe pasar la conciliación del conjunto completo de llaves,
-también cuando usa `--run-id` explícito. El warehouse verifica ese respaldo antes de
-abrir PostgreSQL. Cantidades iguales no sustituyen conjuntos de llaves iguales.
+completa, identificadas en sus manifiestos. No publiques solo la run de recarga. La
+construcción independiente con `run` produce una vista previa y exige igualdad del
+conjunto completo de llaves, también con `--run-id` explícito. Para una población
+acotada que hereda refrescos históricos, cada nodo original conserva esa comprobación
+contra su propia base; la población exterior prueba por separado conservación y nuevas
+admisiones. El warehouse verifica ese respaldo antes de abrir PostgreSQL. Cantidades
+iguales no sustituyen conjuntos de llaves iguales.
 
 Una respuesta completa sin un ID conserva el contrato del baseline; una respuesta
 truncada no habilita el candidato. La selección de versión sigue usando actualización
