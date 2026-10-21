@@ -12,7 +12,9 @@ from observatorio_secop.warehouse.config import WarehouseConfig
 from observatorio_secop.warehouse.errors import WarehouseConflictError, WarehouseLoadError
 from observatorio_secop.warehouse.loader import WarehouseLoader
 
-from .conftest import silver_row, write_bundle
+from .conftest import population_key
+from .conftest import population_row as silver_row
+from .conftest import write_population_bundle as write_bundle
 
 TEST_DSN = os.environ.get("WAREHOUSE_TEST_DSN")
 pytestmark = pytest.mark.skipif(not TEST_DSN, reason="WAREHOUSE_TEST_DSN is not configured")
@@ -30,7 +32,8 @@ def test_load_repeat_correction_removal_and_conflict(postgres_config: WarehouseC
     )
     loader = WarehouseLoader(postgres_config)
 
-    first = loader.load(verify_current_bundle(root))
+    first_bundle = verify_current_bundle(root)
+    first = loader.load(first_bundle)
     repeated = loader.load(verify_current_bundle(root))
 
     assert (first.status, first.inserted_rows, first.updated_rows, first.deleted_rows) == (
@@ -46,13 +49,14 @@ def test_load_repeat_correction_removal_and_conflict(postgres_config: WarehouseC
         "version-2",
         [
             silver_row("version-2", "contract-1", amount="125.00"),
+            silver_row("version-2", "contract-2", contract_id="CO1.PCCNTR.2"),
             silver_row("version-2", "contract-3", contract_id="CO1.PCCNTR.3"),
         ],
     )
     second_bundle = verify_current_bundle(root)
     second = loader.load(second_bundle)
 
-    assert (second.inserted_rows, second.updated_rows, second.deleted_rows) == (1, 1, 1)
+    assert (second.inserted_rows, second.updated_rows, second.deleted_rows) == (1, 2, 0)
     with psycopg.connect(TEST_DSN) as database:
         rows = database.execute(
             f"SELECT contract_key, contract_value_cop "
@@ -61,8 +65,20 @@ def test_load_repeat_correction_removal_and_conflict(postgres_config: WarehouseC
         audits = database.execute(
             f'SELECT count(*) FROM "{postgres_config.schema}".load_audit'
         ).fetchone()[0]
-    assert rows == [("contract-1", 125), ("contract-3", 100)]
+    assert rows == sorted(
+        [
+            (population_key("contract-1"), 125),
+            (population_key("contract-2"), 100),
+            (population_key("contract-3"), 100),
+        ]
+    )
     assert audits == 2
+    restored = loader.load(
+        first_bundle,
+        restore=True,
+        expected_current=(second_bundle.version_id, second_bundle.manifest_sha256),
+    )
+    assert restored.deleted_rows == 1
 
     with pytest.raises(WarehouseConflictError):
         loader.load(replace(second_bundle, manifest_sha256="f" * 64))

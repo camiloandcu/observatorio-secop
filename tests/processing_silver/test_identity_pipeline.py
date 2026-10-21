@@ -18,8 +18,10 @@ from observatorio_secop.ingestion.refresh import IdentityRefresh
 from observatorio_secop.ingestion.transport import SocrataTransport
 from observatorio_secop.processing.silver.errors import PublicationError
 from observatorio_secop.processing.silver.runner import SilverPipeline
+from observatorio_secop.processing.silver.selection import adopt
 from observatorio_secop.warehouse.bundle import verify_current_bundle
 from observatorio_secop.warehouse.loader import WarehouseLoader
+from warehouse.snapshot_helpers import advance_registered, seed_registered
 from warehouse.test_dbt_postgres import (
     _dbt,
     _dbt_environment,
@@ -83,6 +85,20 @@ def star_identity():
         }
 
 
+def historical_snapshot(pipeline, manifest):
+    """Model a retained pre-EN02 publication using real writer/refresh output.
+
+    This fixture represents old snapshots, never an allowed new unscoped
+    production activation. New scoped acquisition is exercised separately.
+    """
+    path = pipeline.storage.version_path(manifest.silver_version_id) / "manifest.json"
+    document = json.loads(path.read_bytes())
+    document.pop("selection_mode", None)
+    path.write_text(json.dumps(document, sort_keys=True, separators=(",", ":")))
+    pipeline.storage._write_current(manifest.silver_version_id, path)
+    return verify_current_bundle(pipeline.config.silver_root)
+
+
 def test_mixed_identity_refresh_rename_and_restoration_reconcile_through_real_pipeline(
     silver_config,
     spark,
@@ -114,10 +130,11 @@ def test_mixed_identity_refresh_rename_and_restoration_reconcile_through_real_pi
     try:
         baseline = pipeline.run(("legacy", "seed-current"))
         assert baseline.status == "valid"
-        base_bundle = verify_current_bundle(silver_config.silver_root)
+        base_bundle = historical_snapshot(pipeline, baseline)
         baseline_path = base_bundle.manifest_path
         baseline_bytes = file_hashes(baseline_path.parent)
-        loader.load(base_bundle)
+        seed_registered(warehouse_config, base_bundle)
+        assert loader.load(base_bundle).status == "noop"
         _dbt(dbt_env, "build", "--full-refresh")
         first_star = star_identity()
         assert set(first_star) == set("ABCDEFG")
@@ -176,10 +193,11 @@ def test_mixed_identity_refresh_rename_and_restoration_reconcile_through_real_pi
         assert candidate.refresh["supplier_still_unknown"] == 4
         assert candidate.identity_coverage["entity"]["known_value_cop"] == "300.00"
         assert candidate.identity_coverage["supplier"]["unknown_count"] == 4
-        current = verify_current_bundle(silver_config.silver_root)
+        current = historical_snapshot(pipeline, candidate)
         assert current.table.num_rows == 7
         assert sum(current.table["contract_value_cop"].to_pylist()) == Decimal("700.00")
-        loader.load(current)
+        advance_registered(warehouse_config, current)
+        assert loader.load(current).status == "noop"
         _dbt(dbt_env, "build")
         actual = star_identity()
         assert {key: values[:2] for key, values in actual.items()} == {
@@ -214,7 +232,9 @@ def test_mixed_identity_refresh_rename_and_restoration_reconcile_through_real_pi
         )
         renamed = pipeline.run(("legacy", "seed-current", refreshed.run_id, "renamed"))
         assert renamed.status == "valid"
-        loader.load(verify_current_bundle(silver_config.silver_root))
+        renamed_bundle = historical_snapshot(pipeline, renamed)
+        advance_registered(warehouse_config, renamed_bundle)
+        assert loader.load(renamed_bundle).status == "noop"
         _dbt(dbt_env, "build")
         after_rename = star_identity()
         assert after_rename["A"][:6] == actual["A"][:6]
@@ -227,12 +247,63 @@ def test_mixed_identity_refresh_rename_and_restoration_reconcile_through_real_pi
             for key, value in original_bronze.items()
         )
         assert file_hashes(baseline_path.parent) == baseline_bytes
-        assert loader.load(base_bundle).status == "applied"
+        assert (
+            loader.load(
+                base_bundle,
+                restore=True,
+                expected_current=(renamed_bundle.version_id, renamed_bundle.manifest_sha256),
+            ).status
+            == "applied"
+        )
         _dbt(dbt_env, "build")
         restored = star_identity()
         assert {key: values[:9] for key, values in restored.items()} == {
             key: values[:9] for key, values in first_star.items()
         }
+        assert refresher.state.checkpoint(contract.dataset_id) == checkpoint
+        # Transition a genuinely retained refresh graph into scoped acquisition.
+        # The original refresh still has seven exact baseline keys; the outer
+        # population may independently admit H after explicit legacy adoption.
+        assert (
+            loader.load(
+                renamed_bundle,
+                restore=True,
+                expected_current=(base_bundle.version_id, base_bundle.manifest_sha256),
+            ).status
+            == "applied"
+        )
+        from processing_silver.test_population_pipeline import SCOPE, acquire
+
+        record = adopt(
+            pipeline.storage,
+            renamed_bundle.version_id,
+            renamed_bundle.manifest_sha256,
+            SCOPE,
+            bronze_root=config.bronze_root,
+        )
+        loader.adopt(renamed_bundle, record, bronze_root=config.bronze_root)
+        campaign = acquire(
+            silver_config,
+            "population-after-refresh",
+            [[row(key) for key in "ABCDEFGH"], [row(key) for key in "ABCDEFG"]],
+            baseline=renamed_bundle.manifest_path,
+            day=4,
+        )
+        population = pipeline.run_population(
+            SCOPE,
+            (campaign.run_id,),
+            baseline_version_id=renamed_bundle.version_id,
+            baseline_manifest_sha256=renamed_bundle.manifest_sha256,
+            mode="authoritative_candidate",
+        )
+        assert population.critical_passed
+        scoped = verify_current_bundle(silver_config.silver_root)
+        assert scoped.row_count == 8
+        assert len(scoped.reconciliation["historical_refresh_nodes"]) > 0
+        assert loader.load(scoped).status == "applied"
+        _dbt(dbt_env, "build")
+        assert set(star_identity()) == set("ABCDEFGH")
+        assert sum(values[8] for values in star_identity().values()) == Decimal("800.00")
         assert refresher.state.checkpoint(contract.dataset_id) == checkpoint
     finally:
         _drop_schemas()

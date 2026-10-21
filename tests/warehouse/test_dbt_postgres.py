@@ -18,8 +18,8 @@ from observatorio_secop.warehouse.bundle import verify_current_bundle
 from observatorio_secop.warehouse.config import WarehouseConfig
 from observatorio_secop.warehouse.loader import WarehouseLoader
 
-from .conftest import identity_row as silver_row
-from .conftest import write_identity_bundle as write_bundle
+from .conftest import population_row as silver_row
+from .conftest import write_population_bundle as write_bundle
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST_DSN = os.environ.get("WAREHOUSE_TEST_DSN")
@@ -75,6 +75,16 @@ def test_incremental_full_refresh_quality_and_docs_are_reproducible(tmp_path: Pa
                 silver_row("version-2", "contract-1", amount="125.00"),
                 silver_row(
                     "version-2",
+                    "contract-2",
+                    contract_id="CO1.PCCNTR.2",
+                    municipality_status="UNKNOWN",
+                    municipality_key=None,
+                    municipality_name=None,
+                    entity_name=None,
+                    procurement_method=None,
+                ),
+                silver_row(
+                    "version-2",
                     "contract-3",
                     contract_id="CO1.PCCNTR.3",
                     entity_name="Otra entidad",
@@ -82,7 +92,7 @@ def test_incremental_full_refresh_quality_and_docs_are_reproducible(tmp_path: Pa
             ],
         )
         result = loader.load(verify_current_bundle(config.silver_root))
-        assert (result.inserted_rows, result.updated_rows, result.deleted_rows) == (1, 1, 1)
+        assert (result.inserted_rows, result.updated_rows, result.deleted_rows) == (1, 2, 0)
         _dbt(environment, "build")
         incremental_hashes = _logical_hashes()
 

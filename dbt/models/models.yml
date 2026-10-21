@@ -228,3 +228,34 @@ models:
       - {name: silver_manifest_sha256, description: Hash del manifiesto Silver verificado.}
       - {name: payload_sha256, description: Hash del payload aprobado.}
       - {name: loaded_at, description: Timestamp determinístico finished_at_utc del manifiesto.}
+
+  - name: stg_population_coverage
+    description: Cobertura de la versión actualmente cargada con semántica legacy desconocida.
+    columns:
+      - {name: silver_version_id, description: Versión activa.}
+      - {name: silver_manifest_sha256, description: Hash activo.}
+      - {name: scope_id, description: Scope vinculado o nulo si desconocido.}
+      - {name: coverage_known, description: Indica si existe un recibo poblacional evaluado.}
+      - {name: coverage_state, description: sample partial o complete respecto del plan declarado; nulo legacy.}
+      - {name: basis, description: Base de cobertura observada; no garantiza snapshot fuente.}
+      - {name: receipt, description: Recibo íntegro para interpretar límites.}
+
+  - name: stg_contract_observation_condition
+    description: Una fila por contrato activo; ausencias históricas conservan LEGACY_UNASSESSED.
+    columns:
+      - {name: silver_version_id, description: Versión contractual activa.}
+      - {name: silver_manifest_sha256, description: Hash del manifiesto activo.}
+      - {name: contract_key, description: Llave única del contrato vigente.}
+      - {name: scope_id, description: Scope vinculado si se conoce.}
+      - {name: condition_state, description: Condición relativa a la adquisición del ganador; no actualidad fuente.}
+      - {name: condition, description: Resumen validado o nulo para legacy desconocido.}
+
+  - name: stg_contract_observation_link
+    description: Rechazos atribuibles de la versión activa sin multiplicar el hecho contractual.
+    columns:
+      - {name: silver_version_id, description: Versión activa.}
+      - {name: silver_manifest_sha256, description: Hash del manifiesto activo.}
+      - {name: scope_id, description: Scope de la evidencia.}
+      - {name: contract_key, description: Contrato al que pertenece el enlace.}
+      - {name: link_id, description: Identidad única del enlace.}
+      - {name: evidence, description: Motivos y localizadores sin payload crudo.}

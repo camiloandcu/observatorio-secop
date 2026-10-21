@@ -35,6 +35,7 @@ class TransformationResult:
     valid: DataFrame
     rejected: DataFrame
     counts: dict[str, int | float]
+    observations: DataFrame | None = None
 
 
 def transform_bronze(
@@ -42,6 +43,8 @@ def transform_bronze(
     config: SilverConfig,
     catalog: TerritoryCatalog,
     silver_version_id: str,
+    *,
+    preserve_observations: bool = False,
 ) -> TransformationResult:
     annotated = _annotate(bronze, config, catalog, silver_version_id).cache()
     input_rows = annotated.count()
@@ -58,11 +61,11 @@ def transform_bronze(
         .where(F.col("raw_identifiers") > 1)
     )
     collision_groups = collision_groups_df.count()
-    collision_rows_value = (
-        collision_groups_df.agg(F.coalesce(F.sum("rows"), F.lit(0))).first()[0]
-        if collision_groups
-        else 0
-    )
+    collision_rows_value = 0
+    if collision_groups:
+        collision_total = collision_groups_df.agg(F.coalesce(F.sum("rows"), F.lit(0))).first()
+        assert collision_total is not None
+        collision_rows_value = collision_total[0]
 
     order = _version_order()
     exact_window = Window.partitionBy("contract_key", "payload_sha256").orderBy(*order)
@@ -97,8 +100,14 @@ def transform_bronze(
     }
     # Both returned frames are materialized; retain no intermediate cache per run.
     candidates.unpersist()
-    annotated.unpersist()
-    return TransformationResult(valid=valid, rejected=rejected, counts=counts)
+    if not preserve_observations:
+        annotated.unpersist()
+    return TransformationResult(
+        valid=valid,
+        rejected=rejected,
+        counts=counts,
+        observations=annotated if preserve_observations else None,
+    )
 
 
 def _annotate(
@@ -392,7 +401,7 @@ def _version_order() -> list[Column]:
 
 
 def _literal_map(values: dict[str, str]) -> Column:
-    entries = []
+    entries: list[Column] = []
     for key, value in sorted(values.items()):
         entries.extend((F.lit(key), F.lit(value)))
     return F.create_map(*entries)

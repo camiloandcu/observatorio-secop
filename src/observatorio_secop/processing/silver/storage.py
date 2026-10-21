@@ -165,22 +165,64 @@ class SilverStorage:
         else:
             os.replace(source, target)
             _fsync_directory(target.parent)
-        self._write_current(manifest.silver_version_id, target / "manifest.json")
+        if manifest.selection_mode == "preview" or (
+            manifest.population and manifest.population.get("mode") == "preview"
+        ):
+            durable_write(
+                self.root / "previews" / f"{manifest.silver_version_id}.json",
+                canonical_json(
+                    {
+                        "silver_version_id": manifest.silver_version_id,
+                        "manifest_sha256": _sha256_path(target / "manifest.json"),
+                    }
+                )
+                + b"\n",
+            )
+        else:
+            from observatorio_secop.processing.silver.selection import select
+
+            select(self, manifest.as_dict())
         return target
 
-    def rollback(self, version_id: str) -> dict[str, Any]:
+    def rollback(
+        self,
+        version_id: str,
+        *,
+        manifest_sha256: str | None = None,
+        expected_current: dict[str, str] | None = None,
+        restore: bool = False,
+    ) -> dict[str, Any]:
+        if Path(version_id).name != version_id or version_id in (".", ".."):
+            raise PublicationError("Invalid Silver version identifier")
+        if restore and (manifest_sha256 is None or expected_current is None):
+            raise PublicationError(
+                "Restoration requires pinned target hash and expected-current identity"
+            )
         target = self.version_path(version_id)
         manifest = self.load_manifest(target)
         if manifest.get("status") != "valid":
             raise PublicationError(f"Silver version {version_id} is not valid")
-        self._write_current(version_id, target / "manifest.json")
-        return self.current()
+        if (
+            manifest_sha256 is not None
+            and _sha256_path(target / "manifest.json") != manifest_sha256
+        ):
+            raise PublicationError("Restoration target manifest hash differs")
+        from observatorio_secop.processing.silver.selection import select
+
+        if (
+            manifest.get("selection_mode") == "preview"
+            or (manifest.get("population") or {}).get("mode") == "preview"
+        ):
+            raise PublicationError("Preview cannot be selected by rollback")
+        return select(self, manifest, expected_current=expected_current, restore=restore)
 
     def current(self) -> dict[str, Any]:
         if not self.current_path.exists():
             return {"current": None}
         try:
-            value = json.loads(self.current_path.read_text(encoding="utf-8"))
+            value: dict[str, Any] = json.loads(self.current_path.read_text(encoding="utf-8"))
+            if not isinstance(value, dict):
+                raise PublicationError("Silver current pointer must be an object")
         except (OSError, json.JSONDecodeError) as error:
             raise PublicationError(f"Could not read current Silver pointer: {error}") from error
         return value

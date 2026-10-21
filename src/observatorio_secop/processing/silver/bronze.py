@@ -5,12 +5,15 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pyspark.sql import DataFrame, SparkSession
 
 from observatorio_secop.ingestion.compatibility import CompatibilityRegistry
-from observatorio_secop.ingestion.errors import SourceContractError
+from observatorio_secop.ingestion.contract import load_bronze_contract
+from observatorio_secop.ingestion.errors import IngestionError, SourceContractError
+from observatorio_secop.ingestion.models import PageRecord, RunManifest
+from observatorio_secop.ingestion.population_plan import verify_population_run
 from observatorio_secop.processing.silver.errors import BronzeEvidenceError
 from observatorio_secop.processing.silver.models import BronzePage, VerifiedBronzeRun
 from observatorio_secop.processing.silver.schemas import BRONZE_FIELDS, BRONZE_SCHEMA
@@ -67,13 +70,26 @@ def resolve_bronze_runs(
         try:
             profile = registry.resolve(
                 dataset_id,
-                manifest.get("contract_sha256"),
+                cast(str, manifest.get("contract_sha256")),
                 manifest.get("parameters", {}).get("projection"),
                 manifest.get("source_projection_version"),
                 manifest.get("source_revision"),
             )
         except SourceContractError as error:
             raise BronzeEvidenceError(f"Bronze run {directory.name}: {error}") from error
+        if manifest.get("purpose") == "population_reconciliation":
+            try:
+                copied = dict(manifest)
+                copied["pages"] = [PageRecord(**page) for page in manifest["pages"]]
+                verify_population_run(
+                    RunManifest(**copied),
+                    directory,
+                    load_bronze_contract(profile.contract_path, profile.projection),
+                )
+            except (ValueError, TypeError, IngestionError) as error:
+                raise BronzeEvidenceError(
+                    f"Invalid population campaign evidence: {error}"
+                ) from error
         pages = tuple(_verify_page(directory, directory.name, item) for item in manifest["pages"])
         written = manifest.get("counts", {}).get("written")
         if written != sum(page.row_count for page in pages):
@@ -95,6 +111,7 @@ def resolve_bronze_runs(
                 parameters=manifest.get("parameters", {}),
                 range_complete=manifest.get("range_complete", False),
                 truncated=manifest.get("truncated", False),
+                population=manifest.get("population"),
             )
         )
     if run_ids and len(verified) != len(run_ids):

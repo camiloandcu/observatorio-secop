@@ -11,6 +11,7 @@ from typing import Any
 import psycopg
 from psycopg import sql
 
+from observatorio_secop.warehouse.activation import ActivationStore
 from observatorio_secop.warehouse.bundle import (
     EXPECTED_SCHEMA,
     IDENTITY_SCHEMA,
@@ -19,6 +20,7 @@ from observatorio_secop.warehouse.bundle import (
 )
 from observatorio_secop.warehouse.config import WarehouseConfig
 from observatorio_secop.warehouse.loader import WarehouseLoader
+from observatorio_secop.warehouse.migration import migrate_identity
 
 from .conftest import silver_row, write_bundle
 
@@ -105,7 +107,14 @@ def expected_rows(bundle: VerifiedSilverBundle) -> list[tuple[Any, ...]]:
     ]
 
 
-def seed_legacy(config: WarehouseConfig, a: VerifiedSilverBundle, b: VerifiedSilverBundle) -> None:
+def seed_legacy(
+    config: WarehouseConfig,
+    a: VerifiedSilverBundle,
+    b: VerifiedSilverBundle,
+    *,
+    registered_history: bool = False,
+    registered_bundles: tuple[VerifiedSilverBundle, ...] | None = None,
+) -> None:
     """Use the unchanged pre-metadata DDL and old first-load audit shape."""
     with (
         psycopg.connect(**config.connection_kwargs) as database,
@@ -117,19 +126,13 @@ def seed_legacy(config: WarehouseConfig, a: VerifiedSilverBundle, b: VerifiedSil
             sql.Identifier(config.contract_table),
             sql.Identifier(config.audit_table),
         )
-        columns = EXPECTED_SCHEMA.names + ["silver_manifest_sha256", "loaded_at"]
-        with cursor.copy(
-            sql.SQL("COPY {} ({}) FROM STDIN").format(
-                sql.Identifier(config.schema, config.contract_table),
-                sql.SQL(",").join(map(sql.Identifier, columns)),
-            )
-        ) as copy:
-            for row in sorted(b.table.to_pylist(), key=lambda row: row["contract_key"]):
-                copy.write_row(
-                    tuple(row[name] for name in EXPECTED_SCHEMA.names)
-                    + (b.manifest_sha256, b.manifest_finished_at)
-                )
-        for bundle, counts in [(a, (2, 0, 0)), (b, (1, 1, 1))]:
+        registered = (
+            list(registered_bundles)
+            if registered_bundles
+            else ([a] if a.version_id == b.version_id else [a, b])
+        )
+        for index, bundle in enumerate(registered):
+            counts = (bundle.row_count, 0, 0) if index == 0 else (1, 1, 1)
             cursor.execute(
                 sql.SQL("INSERT INTO {} VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'applied')").format(
                     sql.Identifier(config.schema, config.audit_table)
@@ -143,3 +146,111 @@ def seed_legacy(config: WarehouseConfig, a: VerifiedSilverBundle, b: VerifiedSil
                     *counts,
                 ),
             )
+        metadata = ActivationStore(config)
+        if registered_history:
+            assert metadata.ensure(cursor) is None
+            previous = None
+            for index, bundle in enumerate(registered):
+                identity = (bundle.version_id, bundle.manifest_sha256)
+                counts = (bundle.row_count, 0, 0) if index == 0 else (1, 1, 1)
+                metadata.activate(
+                    cursor, identity, previous, "activation", bundle.row_count, *counts
+                )
+                previous = identity
+        schema = EXPECTED_SCHEMA
+        if b.schema_version == 2:
+            migrate_identity(cursor, metadata.current, metadata.schema_revision)
+            schema = IDENTITY_SCHEMA
+        columns = schema.names + ["silver_manifest_sha256", "loaded_at"]
+        with cursor.copy(
+            sql.SQL("COPY {} ({}) FROM STDIN").format(
+                sql.Identifier(config.schema, config.contract_table),
+                sql.SQL(",").join(map(sql.Identifier, columns)),
+            )
+        ) as copy:
+            for row in sorted(b.table.to_pylist(), key=lambda row: row["contract_key"]):
+                copy.write_row(
+                    tuple(row[name] for name in schema.names)
+                    + (b.manifest_sha256, b.manifest_finished_at)
+                )
+
+
+def seed_registered(
+    config: WarehouseConfig,
+    a: VerifiedSilverBundle,
+    *subsequent: VerifiedSilverBundle,
+) -> None:
+    """Authentic pre-EN02 SQL snapshot with immutable audit/history, active B.
+
+    This fixture never calls the new loader to perform a forbidden initial legacy
+    activation. Tests exercise its actual no-op/migration/restoration afterwards.
+    """
+    seed_legacy(
+        config,
+        a,
+        subsequent[-1] if subsequent else a,
+        registered_history=True,
+        registered_bundles=(a, *subsequent),
+    )
+
+
+def advance_registered(config: WarehouseConfig, bundle: VerifiedSilverBundle) -> None:
+    """Append a pre-EN02 historical fixture without replacing derived test schemas.
+
+    This is setup for inherited unscoped pipeline scenarios, never evidence that
+    the current loader permits new unscoped publications.
+    """
+    with psycopg.connect(**config.connection_kwargs) as database, database.cursor() as cursor:
+        metadata = ActivationStore(config)
+        active = metadata.ensure(cursor)
+        identity = (bundle.version_id, bundle.manifest_sha256)
+        if active == identity:
+            return
+        migrate_identity(cursor, metadata.current, metadata.schema_revision)
+        cursor.execute(sql.SQL("SELECT contract_key FROM {}").format(metadata.current))
+        before = {row[0] for row in cursor.fetchall()}
+        after = set(bundle.table["contract_key"].to_pylist())
+        changes = (len(after - before), len(after & before), len(before - after))
+        cursor.execute(
+            sql.SQL("SELECT manifest_sha256 FROM {} WHERE silver_version_id=%s").format(
+                metadata.audit
+            ),
+            (bundle.version_id,),
+        )
+        prior = cursor.fetchone()
+        assert prior is None or prior == (bundle.manifest_sha256,)
+        if prior is None:
+            cursor.execute(
+                sql.SQL("INSERT INTO {} VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'applied')").format(
+                    metadata.audit
+                ),
+                (
+                    bundle.version_id,
+                    bundle.manifest_sha256,
+                    bundle.manifest_finished_at,
+                    datetime(2026, 1, 5, tzinfo=UTC),
+                    bundle.row_count,
+                    *changes,
+                ),
+            )
+        cursor.execute(sql.SQL("DELETE FROM {}").format(metadata.current))
+        columns = IDENTITY_SCHEMA.names + ["silver_manifest_sha256", "loaded_at"]
+        with cursor.copy(
+            sql.SQL("COPY {} ({}) FROM STDIN").format(
+                metadata.current,
+                sql.SQL(",").join(map(sql.Identifier, columns)),
+            )
+        ) as copy:
+            for row in bundle.table.to_pylist():
+                copy.write_row(
+                    tuple(row[name] for name in IDENTITY_SCHEMA.names)
+                    + (bundle.manifest_sha256, bundle.manifest_finished_at)
+                )
+        metadata.activate(
+            cursor,
+            identity,
+            active,
+            "restoration" if prior else "activation",
+            bundle.row_count,
+            *changes,
+        )

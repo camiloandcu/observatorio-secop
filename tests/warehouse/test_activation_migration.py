@@ -11,7 +11,7 @@ from observatorio_secop.warehouse.config import WarehouseConfig
 from observatorio_secop.warehouse.errors import WarehouseConflictError, WarehouseLoadError
 from observatorio_secop.warehouse.loader import WarehouseLoader
 
-from .snapshot_helpers import bundles, expected_rows, seed_legacy, snapshot
+from .snapshot_helpers import bundles, expected_rows, seed_legacy, seed_registered, snapshot
 
 
 def test_legacy_baseline_uses_rows_and_preserves_audit(postgres_config: WarehouseConfig) -> None:
@@ -34,7 +34,9 @@ def test_legacy_baseline_uses_rows_and_preserves_audit(postgres_config: Warehous
     assert baseline[0][8:] == (None, None, None)
     assert loader.load(b).status == "noop"
     assert snapshot(postgres_config) == migrated
-    assert loader.load(a).status == "applied"
+    assert (
+        loader.load(a, restore=True, expected_current=("B", b.manifest_sha256)).status == "applied"
+    )
     restored = snapshot(postgres_config)
     assert restored["load_audit"] == original["load_audit"]
     assert restored["contract_current"] == expected_rows(a)
@@ -56,7 +58,10 @@ def test_empty_legacy_current_does_not_infer_active(postgres_config: WarehouseCo
             )
         )
     original = snapshot(postgres_config)
-    assert WarehouseLoader(postgres_config).load(a).status == "applied"
+    assert (
+        WarehouseLoader(postgres_config).load(a, restore=True, expected_current=None).status
+        == "applied"
+    )
     after = snapshot(postgres_config)
     assert after["load_audit"] == original["load_audit"]
     assert after["contract_current"] == expected_rows(a)
@@ -115,7 +120,7 @@ def test_legacy_hash_conflict_does_not_migrate(postgres_config: WarehouseConfig)
 def test_partial_metadata_fails_safely(postgres_config: WarehouseConfig, missing: str) -> None:
     a, _, _ = bundles(postgres_config)
     loader = WarehouseLoader(postgres_config)
-    loader.load(a)
+    seed_registered(postgres_config, a)
     with psycopg.connect(**postgres_config.connection_kwargs) as database:
         database.execute(
             sql.SQL("DROP TABLE {} CASCADE").format(
@@ -136,7 +141,7 @@ def test_missing_active_or_history_is_not_silently_repaired(
     # exercised with TRUNCATE CASCADE to represent externally damaged metadata.
     a, _, _ = bundles(postgres_config)
     loader = WarehouseLoader(postgres_config)
-    loader.load(a)
+    seed_registered(postgres_config, a)
     with psycopg.connect(**postgres_config.connection_kwargs) as database:
         statement = "TRUNCATE {events} CASCADE" if damage == "history" else "DELETE FROM {active}"
         database.execute(

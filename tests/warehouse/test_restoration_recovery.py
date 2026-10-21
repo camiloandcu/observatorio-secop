@@ -11,7 +11,7 @@ import yaml
 
 from observatorio_secop.warehouse.config import WarehouseConfig
 
-from .snapshot_helpers import bundles, digest, expected_rows, snapshot
+from .snapshot_helpers import bundles, digest, expected_rows, seed_registered, snapshot
 
 
 def test_supported_recovery_commands_restore_retained_bundle(
@@ -19,6 +19,15 @@ def test_supported_recovery_commands_restore_retained_bundle(
 ) -> None:
     a, b, _ = bundles(postgres_config)
     root = postgres_config.silver_root
+    seed_registered(postgres_config, a, b)
+    (root / "selection_registry.json").write_text(
+        json.dumps(
+            {
+                a.version_id: a.manifest_sha256,
+                b.version_id: b.manifest_sha256,
+            }
+        )
+    )
     immutable_hashes = {
         str(path): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in (root / "versions").rglob("*")
@@ -56,25 +65,50 @@ def test_supported_recovery_commands_restore_retained_bundle(
         )
         return json.loads(result.stdout)
 
-    def rollback(version: str) -> None:
-        selected = command("observatorio_secop.processing.silver", "rollback", "--version", version)
-        assert selected["silver_version_id"] == version
+    def rollback(target, current) -> None:
+        selected = command(
+            "observatorio_secop.processing.silver",
+            "restore",
+            "--version",
+            target.version_id,
+            "--manifest-sha256",
+            target.manifest_sha256,
+            "--expected-current-version",
+            current.version_id,
+            "--expected-current-manifest-sha256",
+            current.manifest_sha256,
+        )
+        assert selected["silver_version_id"] == target.version_id
 
-    def warehouse(action: str) -> dict:
-        return command("observatorio_secop.warehouse", "--config", str(config_path), action)
+    def warehouse(action: str, target=None, current=None) -> dict:
+        arguments = []
+        if target is not None:
+            arguments += [
+                "--version",
+                target.version_id,
+                "--manifest-sha256",
+                target.manifest_sha256,
+                "--expected-current-version",
+                current.version_id,
+                "--expected-current-hash",
+                current.manifest_sha256,
+            ]
+        return command(
+            "observatorio_secop.warehouse", "--config", str(config_path), action, *arguments
+        )
 
-    rollback("A")
+    rollback(a, b)
     assert warehouse("verify")["manifest_sha256"] == a.manifest_sha256
-    assert warehouse("load")["status"] == "applied"
+    assert warehouse("restore", a, b)["status"] == "applied"
     first = snapshot(postgres_config)
-    rollback("B")
+    rollback(b, a)
     assert warehouse("verify")["manifest_sha256"] == b.manifest_sha256
-    assert warehouse("load")["status"] == "applied"
-    rollback("A")
+    assert warehouse("restore", b, a)["status"] == "applied"
+    rollback(a, b)
     # The Silver pointer alone has not restored the relational snapshot.
     assert snapshot(postgres_config)["contract_current"] == expected_rows(b)
     assert warehouse("verify")["manifest_sha256"] == a.manifest_sha256
-    assert warehouse("load")["status"] == "applied"
+    assert warehouse("restore", a, b)["status"] == "applied"
     after = snapshot(postgres_config)
     assert after["contract_current"] == expected_rows(a)
     assert digest(after["contract_current"]) == digest(first["contract_current"])

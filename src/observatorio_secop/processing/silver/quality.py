@@ -6,7 +6,7 @@ import json
 import os
 from collections.abc import Mapping
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 os.environ.setdefault("PYARROW_IGNORE_TIMEZONE", "1")
 
@@ -51,7 +51,8 @@ def validate_quality(
             if not field.nullable
         ]
     ).first()
-    critical_nulls = sum(value or 0 for value in null_totals)
+    assert null_totals is not None
+    critical_nulls = sum(int(value or 0) for value in null_totals)
     rules = load_identity_rules(config.contract_path.parent / "identity_rules.yaml")
     identity_valid = F.udf(lambda row: identity_record_valid(row.asDict(), rules), "boolean")
     invalid_identities = valid.where(~identity_valid(F.struct(*IDENTITY_TEXT_FIELDS))).count()
@@ -210,7 +211,9 @@ def _pandera_silver_schema(catalog: TerritoryCatalog) -> pa.DataFrameSchema:
         checks = None
         if field.name == "contract_value_cop":
             checks = pa.Check.greater_than_or_equal_to(Decimal("0.00"))
-        columns[field.name] = pa.Column(field.dataType, checks=checks, nullable=field.nullable)
+        columns[field.name] = pa.Column(
+            cast(Any, field.dataType), checks=checks, nullable=field.nullable
+        )
     return pa.DataFrameSchema(
         columns,
         checks=[
@@ -259,7 +262,9 @@ def _pandera_silver_schema(catalog: TerritoryCatalog) -> pa.DataFrameSchema:
 
 
 def _pandera_metrics_schema(config: SilverConfig) -> pa.DataFrameSchema:
-    columns = {field.name: pa.Column(field.dataType, nullable=False) for field in METRICS_SCHEMA}
+    columns = {
+        field.name: pa.Column(cast(Any, field.dataType), nullable=False) for field in METRICS_SCHEMA
+    }
     return pa.DataFrameSchema(
         columns,
         checks=[
@@ -300,7 +305,10 @@ def _plain_errors(value: Any) -> dict[str, Any]:
     if not value:
         return {}
     normalized = _normalize(value)
-    return json.loads(json.dumps(normalized, ensure_ascii=False, sort_keys=True, default=str))
+    return cast(
+        dict[str, Any],
+        json.loads(json.dumps(normalized, ensure_ascii=False, sort_keys=True, default=str)),
+    )
 
 
 def _normalize(value: Any) -> Any:

@@ -11,7 +11,7 @@ from observatorio_secop.warehouse.loader import WarehouseLoader
 
 from .conftest import silver_row, write_bundle
 from .inventory_helpers import INVALID_CASES, cli_environment, corrupt_inventory
-from .snapshot_helpers import digest, snapshot
+from .snapshot_helpers import digest, seed_registered, snapshot
 
 
 @pytest.mark.parametrize("case", INVALID_CASES)
@@ -21,7 +21,8 @@ def test_invalid_cli_load_preserves_exact_relational_snapshot(
     root = postgres_config.silver_root
     write_bundle(root, "active", [silver_row("active", amount="123.45")])
     active = verify_current_bundle(root)
-    assert WarehouseLoader(postgres_config).load(active).status == "applied"
+    seed_registered(postgres_config, active)
+    assert WarehouseLoader(postgres_config).load(active).status == "noop"
     before = snapshot(postgres_config)
     manifest = write_bundle(root, "version-1", [silver_row("version-1", amount="999.99")])
     message = corrupt_inventory(manifest, case)
