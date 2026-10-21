@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
@@ -30,7 +30,10 @@ class BronzeSourceContract:
 
     @property
     def projection_version(self) -> str:
-        return self.raw.get("platform_identity", {}).get("projection_version", "secop-contracts-v1")
+        return cast(
+            str,
+            self.raw.get("platform_identity", {}).get("projection_version", "secop-contracts-v1"),
+        )
 
     @property
     def revision(self) -> str:

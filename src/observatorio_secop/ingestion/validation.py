@@ -16,7 +16,7 @@ def validate_metadata(metadata: dict[str, Any], contract: BronzeSourceContract) 
     if not isinstance(raw_columns, list):
         raise SourceContractError("Socrata metadata is missing its columns list")
     observed = {
-        item.get("fieldName"): item.get("dataTypeName")
+        str(item["fieldName"]): item.get("dataTypeName")
         for item in raw_columns
         if isinstance(item, dict) and isinstance(item.get("fieldName"), str)
     }

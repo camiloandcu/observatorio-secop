@@ -114,6 +114,12 @@ class BronzeIngestion:
                 manifest.source_projection_version,
                 manifest.source_revision,
             )
+            if manifest.purpose == "population_reconciliation":
+                from observatorio_secop.ingestion.population_plan import verify_population_run
+
+                verify_population_run(manifest, path, self.contract)
+            elif manifest.purpose not in ("incremental", "identity_refresh"):
+                raise ResumeError("Prepared run has an unsupported acquisition purpose")
             if self.state.has_run(manifest.run_id):
                 self.storage.mark_committed(manifest)
                 reconciled.append(manifest.run_id)
@@ -157,6 +163,8 @@ class BronzeIngestion:
 
     def _resume(self, run_id: str, parameters: dict[str, Any]) -> RunManifest:
         manifest = self.storage.load_staging(run_id)
+        if manifest.purpose != "incremental":
+            raise ResumeError("Use the original acquisition command to resume this purpose")
         if manifest.contract_sha256 != self.contract.contract_hash:
             raise ResumeError("Cannot resume with a different source contract")
         if manifest.source_projection_version not in (None, self.contract.projection_version):
@@ -191,15 +199,19 @@ class BronzeIngestion:
             while received < self.config.max_rows:
                 request_limit = min(self.config.page_size, self.config.max_rows - received)
                 query = self._query(lane, window, request_limit, cursor)
+
+                def on_retry(
+                    event: dict[str, int | float | None],
+                    lane: str = lane,
+                    sequence: int = sequence,
+                ) -> None:
+                    self.logger.emit(
+                        "request_retry", run_id=manifest.run_id, lane=lane, page=sequence, **event
+                    )
+
                 response = self.transport.query(
                     query,
-                    on_retry=lambda event, lane=lane, sequence=sequence: self.logger.emit(
-                        "request_retry",
-                        run_id=manifest.run_id,
-                        lane=lane,
-                        page=sequence,
-                        **event,
-                    ),
+                    on_retry=on_retry,
                 )
                 rows = response.payload
                 assert isinstance(rows, list)

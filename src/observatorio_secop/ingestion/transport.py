@@ -56,6 +56,8 @@ class SocrataTransport:
         self._jitter = jitter
         self.max_requests = max_requests
         self.requests = 0
+        # Population campaigns durably reserve each attempt before any network I/O.
+        self.before_attempt: Callable[[], None] | None = None
 
     def fetch_metadata(self) -> TransportResponse:
         return self._request(self.contract.metadata_url)
@@ -92,6 +94,8 @@ class SocrataTransport:
         for attempt in range(1, attempts + 1):
             if self.max_requests is not None and self.requests >= self.max_requests:
                 raise RequestBudgetExceeded("HTTP attempt budget exhausted; resume the refresh")
+            if self.before_attempt is not None:
+                self.before_attempt()
             self.requests += 1
             started = self._monotonic()
             try:

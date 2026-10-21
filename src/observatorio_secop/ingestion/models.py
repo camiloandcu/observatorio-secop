@@ -55,6 +55,7 @@ class RunManifest:
     source_projection_version: str | None = None
     purpose: str = "incremental"
     refresh: dict[str, Any] | None = None
+    population: dict[str, Any] | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
