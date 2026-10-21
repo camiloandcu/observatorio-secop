@@ -23,7 +23,9 @@ make lint
 make typecheck
 make test
 make check-tracked   # falla si Git rastrea rutas prohibidas
-make quality         # reproduce los controles de CI
+make quality         # controles locales; sin DSN puede omitir integración
+make ci              # integración estricta: requiere base desechable y Java 17
+make security        # escaneos de secretos e inventario de dependencias
 ```
 
 Los equivalentes sin Make son:
@@ -36,7 +38,7 @@ uv run --locked --extra dev --extra data --extra warehouse pytest
 uv run --locked --extra dev --extra data --extra warehouse python scripts/check_tracked_files.py
 ```
 
-No es necesario activar `.venv`. GitHub Actions instala `uv`, sincroniza el mismo lockfile y ejecuta `make quality` sin necesidad de tener la arquitectura montada. 
+No es necesario activar `.venv`. GitHub Actions instala los runtimes y ejecuta `make ci` sobre PostgreSQL desechable, además de escaneos independientes. Consulta [integración continua y seguridad](continuous-integration.md) para reproducir todos los controles, revisar omisiones críticas y entender los límites medidos.
 
 ## Integración Silver real → PostgreSQL
 

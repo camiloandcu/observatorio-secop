@@ -205,6 +205,16 @@ def test_population_recovery_later_invalid_and_registered_restore_are_exact(
         a = verify_current_bundle(config.silver_root)
         loader.load(a)
         before_rows = logical_rows()
+        environment = _dbt_environment(tmp_path, connection)
+        _dbt(environment, "build", "--full-refresh")
+        with psycopg.connect(TEST_DSN) as database:
+            original_facts = database.execute(
+                "SELECT to_jsonb(f) FROM analytics.fact_contract f ORDER BY contract_key"
+            ).fetchall()
+            assert database.execute(
+                "SELECT count(*),sum(contract_value_cop),min(silver_version_id),"
+                "max(silver_version_id) FROM analytics.fact_contract"
+            ).fetchone() == (1, Decimal("100.00"), a.version_id, a.version_id)
         original_hash = hashlib.sha256(a.manifest_path.read_bytes()).hexdigest()
         second = acquire(
             config,
@@ -237,12 +247,14 @@ def test_population_recovery_later_invalid_and_registered_restore_are_exact(
         assert loader.load(b).status == "applied"
         assert loader.load(b).status == "noop"
         assert hashlib.sha256(a.manifest_path.read_bytes()).hexdigest() == original_hash
-        environment = _dbt_environment(tmp_path, connection)
         _dbt(environment, "build", "--full-refresh")
         with psycopg.connect(TEST_DSN) as database:
             assert database.execute(
                 "SELECT count(*),sum(contract_value_cop) FROM analytics.fact_contract"
             ).fetchone() == (2, Decimal("500.00"))
+            assert database.execute(
+                "SELECT DISTINCT silver_version_id FROM analytics.fact_contract"
+            ).fetchall() == [(b.version_id,)]
             assert database.execute(
                 "SELECT count(*) FROM analytics.fact_contract f JOIN "
                 "staging.stg_contract_observation_condition c "
@@ -295,6 +307,20 @@ def test_population_recovery_later_invalid_and_registered_restore_are_exact(
             == "applied"
         )
         assert logical_rows() == before_rows
+        # Incremental reconciliation must remove B-only facts and recover A's
+        # complete deterministic lineage, including manifest-derived loaded_at.
+        _dbt(environment, "build")
+        with psycopg.connect(TEST_DSN) as database:
+            assert (
+                database.execute(
+                    "SELECT to_jsonb(f) FROM analytics.fact_contract f ORDER BY contract_key"
+                ).fetchall()
+                == original_facts
+            )
+            assert database.execute(
+                "SELECT count(*),sum(contract_value_cop),min(silver_version_id),"
+                "max(silver_version_id) FROM analytics.fact_contract"
+            ).fetchone() == (1, Decimal("100.00"), a.version_id, a.version_id)
         assert (
             loader.load(a, restore=True, expected_current=(b.version_id, b.manifest_sha256)).status
             == "noop"

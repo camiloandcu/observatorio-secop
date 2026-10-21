@@ -10,19 +10,91 @@ permissions:
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16.4-alpine@sha256:5660c2cbfea50c7a9127d17dc4e48543eedd3d7a41a595a2dfa572471e37e64c
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: secop_ci_us07
+        ports:
+          - 127.0.0.1:5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d secop_ci_us07"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      WAREHOUSE_TEST_DSN: host=127.0.0.1 port=5432 dbname=secop_ci_us07 user=postgres
+      CI_DISPOSABLE_DB_HOST: 127.0.0.1
+      CI_DISPOSABLE_DB_PORT: '5432'
+      CI_DISPOSABLE_DB_NAME: secop_ci_us07
+      SPARK_LOCAL_IP: 127.0.0.1
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Java
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: Set up uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          enable-cache: true
+          version: '0.12.0'
+          python-version: '3.12'
+          enable-cache: false
 
       - name: Install development dependencies
         run: make install
 
-      - name: Run quality checks
-        run: make quality
+      - name: Run strict integration and quality checks
+        run: make ci
+
+      - name: Upload sanitized integration evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: integration-evidence
+          path: |
+            reports/ci/summary.json
+            reports/ci/outcomes.json
+            reports/ci/resources.json
+          retention-days: 7
+          if-no-files-found: warn
+
+  security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        control: [secrets, dependencies]
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: '0.12.0'
+          python-version: '3.12'
+          enable-cache: false
+
+      - name: Run security control
+        run: uv run --locked python scripts/ci_security.py ${{ matrix.control }} --summary reports/security/${{ matrix.control }}.json
+
+      - name: Upload sanitized security evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: security-${{ matrix.control }}
+          path: reports/security/${{ matrix.control }}.json
+          retention-days: 7
+          if-no-files-found: warn
