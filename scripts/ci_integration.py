@@ -34,6 +34,8 @@ def disposable_target(environment):
             for key, name in (("host", "HOST"), ("port", "PORT"), ("dbname", "NAME"))
         }
         actual = conninfo_to_dict(dsn)
+        if not actual.get("password", "").strip():
+            raise ValueError
         if not expected["dbname"].startswith("secop_ci_"):
             raise ValueError
         if any(not value or actual.get(key) != value for key, value in expected.items()):
@@ -46,7 +48,7 @@ def disposable_target(environment):
         return dsn, expected
     except (KeyError, ValueError, Error) as error:
         raise PreflightError(
-            "explicit disposable DSN/host/port/secop_ci_ database required"
+            "explicit disposable DSN/password/host/port/secop_ci_ database required"
         ) from error
 
 

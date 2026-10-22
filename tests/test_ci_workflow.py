@@ -30,6 +30,8 @@ def test_ci_has_isolated_real_integration_and_bounded_controls() -> None:
     service = quality["services"]["postgres"]
     assert "@sha256:" in service["image"]
     assert service["env"]["POSTGRES_DB"].startswith("secop_ci_")
+    assert service["env"]["POSTGRES_PASSWORD"]
+    assert "POSTGRES_HOST_AUTH_METHOD" not in service["env"]
     assert service["ports"] == ["127.0.0.1:5432:5432"]
     assert "pg_isready" in service["options"]
     environment = quality["env"]

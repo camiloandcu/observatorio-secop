@@ -19,10 +19,10 @@ sin volumen de trabajo ni datos reales. Este contenedor expone solo el loopback 
 make install
 docker run --detach --rm --name secop-ci-test-postgres \
   --publish 127.0.0.1:55432:5432 \
-  --env POSTGRES_HOST_AUTH_METHOD=trust \
+  --env POSTGRES_PASSWORD=secop_ci_test_only \
   --env POSTGRES_DB=secop_ci_local postgres:16.4-alpine
 docker exec secop-ci-test-postgres pg_isready -U postgres -d secop_ci_local
-export WAREHOUSE_TEST_DSN='host=127.0.0.1 port=55432 dbname=secop_ci_local user=postgres'
+export WAREHOUSE_TEST_DSN='host=127.0.0.1 port=55432 dbname=secop_ci_local user=postgres password=secop_ci_test_only'
 export CI_DISPOSABLE_DB_HOST=127.0.0.1
 export CI_DISPOSABLE_DB_PORT=55432
 export CI_DISPOSABLE_DB_NAME=secop_ci_local
@@ -35,8 +35,9 @@ Espera la respuesta saludable de `pg_isready`. El preflight exige destino explí
 coincidente, nombre `secop_ci_*`, Java 17 y runtimes de Spark/dbt. No infiere la base
 ni usa la configuración de trabajo cuando falta el DSN. El nombre por sí solo no
 hace desechable una base: el operador debe crear el contenedor dedicado mostrado.
-La autenticación `trust` se limita a ese servicio efímero de pruebas; no es configuración
-para un servidor compartido.
+La contraseña mostrada es un valor de fixture para el servicio efímero aislado;
+no se reutiliza para cuentas ni servidores compartidos. El contrato de la CLI exige
+una contraseña no vacía, incluso cuando una conexión local permitiría otra autenticación.
 
 El runner ejecuta `make quality` serialmente. Las pruebas construyen Bronze sintético,
 Silver con Spark real, verifican su inventario, cargan PostgreSQL y ejecutan dbt.

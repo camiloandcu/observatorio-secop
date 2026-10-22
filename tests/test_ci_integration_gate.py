@@ -100,7 +100,9 @@ def test_disposable_identity_requires_explicit_matching_target():
     runner = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(runner)
     environment = {
-        "WAREHOUSE_TEST_DSN": "host=/tmp/secop-test port=5432 dbname=secop_ci_test",
+        "WAREHOUSE_TEST_DSN": (
+            "host=/tmp/secop-test port=5432 dbname=secop_ci_test password=secop_ci_test_only"
+        ),
         "CI_DISPOSABLE_DB_HOST": "/tmp/secop-test",
         "CI_DISPOSABLE_DB_PORT": "5432",
         "CI_DISPOSABLE_DB_NAME": "secop_ci_test",
@@ -196,7 +198,9 @@ def test_mapped_database_port_uses_client_endpoint(monkeypatch):
     runner = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(runner)
     for key, value in {
-        "WAREHOUSE_TEST_DSN": "host=127.0.0.1 port=55432 dbname=secop_ci_test",
+        "WAREHOUSE_TEST_DSN": (
+            "host=127.0.0.1 port=55432 dbname=secop_ci_test password=secop_ci_test_only"
+        ),
         "CI_DISPOSABLE_DB_HOST": "127.0.0.1",
         "CI_DISPOSABLE_DB_PORT": "55432",
         "CI_DISPOSABLE_DB_NAME": "secop_ci_test",
@@ -217,3 +221,22 @@ def test_mapped_database_port_uses_client_endpoint(monkeypatch):
     connection.info.port = 5432
     with pytest.raises(runner.PreflightError):
         runner.preflight()
+
+
+@pytest.mark.parametrize("password", ["", " password=''", " password=", " password=' '"])
+def test_disposable_target_requires_explicit_nonempty_password(password):
+    spec = importlib.util.spec_from_file_location(
+        "ci_integration", ROOT / "scripts/ci_integration.py"
+    )
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    environment = {
+        "WAREHOUSE_TEST_DSN": "host=127.0.0.1 port=55432 dbname=secop_ci_test" + password,
+        "CI_DISPOSABLE_DB_HOST": "127.0.0.1",
+        "CI_DISPOSABLE_DB_PORT": "55432",
+        "CI_DISPOSABLE_DB_NAME": "secop_ci_test",
+        # Implicit libpq credentials cannot satisfy the explicit test contract.
+        "PGPASSWORD": "implicit_password",
+    }
+    with pytest.raises(runner.PreflightError, match="DSN/password"):
+        runner.disposable_target(environment)

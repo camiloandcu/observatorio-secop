@@ -16,7 +16,7 @@ jobs:
       postgres:
         image: postgres:16.4-alpine@sha256:5660c2cbfea50c7a9127d17dc4e48543eedd3d7a41a595a2dfa572471e37e64c
         env:
-          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_PASSWORD: secop_ci_test_only
           POSTGRES_DB: secop_ci_us07
         ports:
           - 127.0.0.1:5432:5432
@@ -24,7 +24,7 @@ jobs:
           --health-cmd "pg_isready -U postgres -d secop_ci_us07"
           --health-interval 5s --health-timeout 5s --health-retries 12
     env:
-      WAREHOUSE_TEST_DSN: host=127.0.0.1 port=5432 dbname=secop_ci_us07 user=postgres
+      WAREHOUSE_TEST_DSN: host=127.0.0.1 port=5432 dbname=secop_ci_us07 user=postgres password=secop_ci_test_only
       CI_DISPOSABLE_DB_HOST: 127.0.0.1
       CI_DISPOSABLE_DB_PORT: '5432'
       CI_DISPOSABLE_DB_NAME: secop_ci_us07
