@@ -41,23 +41,61 @@ def test_environment_example_is_allowed() -> None:
     assert result.returncode == 1
 
 
-def test_checker_rejects_already_tracked_generated_artifact(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "relative_path",
+    [
+        "data/sample.csv",
+        "models/model.bin",
+        "mlruns/run.json",
+        ".project/plan.md",
+        ".codex/config.toml",
+        ".ai/context.md",
+        "openspec/specs/private.md",
+        ".env",
+        ".env.local",
+        "nested/.env.production",
+        ".dbt/profiles.yml",
+        "dbt/profiles.yml",
+        "report.PBIX",
+    ],
+)
+def test_checker_rejects_forced_tracked_private_paths(tmp_path: Path, relative_path: str) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
     init_repository(repository)
 
-    generated_file = repository / "data" / "sample.csv"
-    generated_file.parent.mkdir()
+    generated_file = repository / relative_path
+    generated_file.parent.mkdir(parents=True, exist_ok=True)
+    (repository / ".gitignore").write_text("*\n", encoding="utf-8")
     generated_file.write_text("generated\n", encoding="utf-8")
     run("git", "add", "-f", str(generated_file.relative_to(repository)), cwd=repository)
 
     result = run(sys.executable, str(CHECKER), str(repository), cwd=ROOT, check=False)
 
     assert result.returncode == 1
-    assert "data/sample.csv" in result.stderr
+    assert relative_path in result.stderr
     assert generated_file.read_text(encoding="utf-8") == "generated\n"
 
 
 def test_checker_script_is_portable() -> None:
     assert shutil.which("git")
     assert os.access(CHECKER, os.R_OK)
+
+
+def test_checker_allows_public_examples_and_fixtures(tmp_path: Path) -> None:
+    init_repository(tmp_path)
+    paths = [
+        ".env.example",
+        "nested/.env.example",
+        "tests/fixtures/data/sample.csv",
+        "tests/fixtures/models/sample.json",
+        "config/silver_quality.yaml",
+        "dbt/models/facts/fact_contract.sql",
+    ]
+    for relative_path in paths:
+        path = tmp_path / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("public fixture\n", encoding="utf-8")
+        run("git", "add", "-f", relative_path, cwd=tmp_path)
+    result = run(sys.executable, str(CHECKER), str(tmp_path), cwd=ROOT)
+    assert "No forbidden paths" in result.stdout

@@ -9,11 +9,15 @@ import sys
 from pathlib import Path, PurePosixPath
 
 FORBIDDEN_DIRECTORIES = {
+    ".project",
+    ".codex",
+    ".ai",
+    "openspec",
     "data",
     "mlruns",
     "models",
 }
-FORBIDDEN_ROOT_NAMES = {".env"}
+FORBIDDEN_PROFILE_PATHS = {PurePosixPath(".dbt/profiles.yml"), PurePosixPath("dbt/profiles.yml")}
 
 
 def tracked_paths(repository: Path) -> list[PurePosixPath]:
@@ -33,9 +37,10 @@ def is_forbidden(path: PurePosixPath) -> bool:
         return False
     if path.parts[0] in FORBIDDEN_DIRECTORIES:
         return True
-    if len(path.parts) == 1 and path.name in FORBIDDEN_ROOT_NAMES:
+    if path in FORBIDDEN_PROFILE_PATHS:
         return True
-    return path.name == ".env" or path.suffix.casefold() == ".pbix"
+    environment_file = path.name == ".env" or path.name.startswith(".env.")
+    return (environment_file and path.name != ".env.example") or path.suffix.casefold() == ".pbix"
 
 
 def main() -> int:

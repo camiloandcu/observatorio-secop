@@ -1,4 +1,4 @@
-ARG MLFLOW_IMAGE=ghcr.io/mlflow/mlflow:v3.4.0
+ARG MLFLOW_IMAGE=ghcr.io/mlflow/mlflow:v3.17.2
 FROM ${MLFLOW_IMAGE}
 
 RUN python -m pip install --no-cache-dir "psycopg2-binary==2.9.10"

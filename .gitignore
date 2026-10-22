@@ -22,6 +22,9 @@ dbt/target/
 dbt/logs/
 dbt/dbt_packages/
 
+# Sanitized local CI reports (uploaded explicitly by CI only)
+reports/
+
 # Test and coverage artifacts
 .coverage
 coverage.xml

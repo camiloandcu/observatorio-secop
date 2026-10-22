@@ -23,7 +23,9 @@ make lint
 make typecheck
 make test
 make check-tracked   # falla si Git rastrea rutas prohibidas
-make quality         # reproduce los controles de CI
+make quality         # controles locales; sin DSN puede omitir integración
+make ci              # integración estricta: requiere base desechable y Java 17
+make security        # escaneos de secretos e inventario de dependencias
 ```
 
 Los equivalentes sin Make son:
@@ -36,7 +38,7 @@ uv run --locked --extra dev --extra data --extra warehouse pytest
 uv run --locked --extra dev --extra data --extra warehouse python scripts/check_tracked_files.py
 ```
 
-No es necesario activar `.venv`. GitHub Actions instala `uv`, sincroniza el mismo lockfile y ejecuta `make quality` sin necesidad de tener la arquitectura montada. 
+No es necesario activar `.venv`. GitHub Actions instala los runtimes y ejecuta `make ci` sobre PostgreSQL desechable, además de escaneos independientes. Consulta [integración continua y seguridad](continuous-integration.md) para reproducir todos los controles, revisar omisiones críticas y entender los límites medidos.
 
 ## Integración Silver real → PostgreSQL
 
@@ -74,6 +76,12 @@ tests no consultan Socrata. El `pythonpath` de pytest incluye `tests` para reuti
 los helpers de integración también al seleccionar un solo archivo.
 
 La cobertura de inventario reproduce un Parquet adicional con conteo total coherente y comprueba su rechazo antes de decodificar/conectar, incluso en particiones nuevas y rutas ocultas. Verifica rutas canónicas, enlaces simbólicos, tamaño/hash, duplicados y las reglas explícitas de `_SUCCESS`/CRC. Observa las rutas que recibe Arrow y las lecturas de referencia INT96 para demostrar que solo se decodifica el conjunto verificado. La variante PostgreSQL compara exactamente filas, registro, historial y estado activo antes/después de cada carga inválida. La salida Spark real incluye años 2025/2026 y `unknown`, marcadores y sidecars, y conserva carga/repetición sin cambios en ambos formatos soportados. Estos casos se incluyen en los comandos anteriores; omitir la base deja sin verificar la preservación relacional.
+
+## Actualizar dependencias
+
+Consulta [actualización compatible de dependencias](dependency-maintenance.md) para
+verificar el grafo conjunto, las imágenes opcionales y migraciones de estado antes
+de actualizar servicios existentes. Los hallazgos residuales siguen bloqueando CI.
 
 ## Contrato de la fuente SECOP II
 

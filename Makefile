@@ -39,6 +39,21 @@ check-tracked:
 
 quality: format-check lint typecheck test check-tracked
 
+.PHONY: ci ci-preflight security security-secrets security-dependencies
+ci:
+	$(UV_RUN) python scripts/ci_integration.py run --report-dir reports/ci
+
+ci-preflight:
+	$(UV_RUN) python scripts/ci_integration.py preflight
+
+security: security-secrets security-dependencies
+
+security-secrets:
+	$(UV) run --locked python scripts/ci_security.py secrets --summary reports/security/secrets.json
+
+security-dependencies:
+	$(UV) run --locked python scripts/ci_security.py dependencies --summary reports/security/dependencies.json
+
 profile-source:
 	$(UV_RUN) secop-source-profile live --write
 
