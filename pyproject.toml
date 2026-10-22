@@ -38,14 +38,14 @@ warehouse = [
   "pyarrow>=19,<20",
 ]
 orchestration = [
-  "apache-airflow>=2.10,<2.11",
+  "apache-airflow>=2.11.2,<2.12",
 ]
 ml = [
-  "mlflow>=3.4,<3.5",
+  "mlflow>=3.17.2,<3.18",
   "scikit-learn>=1.6,<1.7",
 ]
 api = [
-  "fastapi>=0.115,<0.116",
+  "fastapi>=0.160,<0.161",
   "uvicorn[standard]>=0.34,<0.35",
 ]
 

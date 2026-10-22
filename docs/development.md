@@ -77,6 +77,12 @@ los helpers de integración también al seleccionar un solo archivo.
 
 La cobertura de inventario reproduce un Parquet adicional con conteo total coherente y comprueba su rechazo antes de decodificar/conectar, incluso en particiones nuevas y rutas ocultas. Verifica rutas canónicas, enlaces simbólicos, tamaño/hash, duplicados y las reglas explícitas de `_SUCCESS`/CRC. Observa las rutas que recibe Arrow y las lecturas de referencia INT96 para demostrar que solo se decodifica el conjunto verificado. La variante PostgreSQL compara exactamente filas, registro, historial y estado activo antes/después de cada carga inválida. La salida Spark real incluye años 2025/2026 y `unknown`, marcadores y sidecars, y conserva carga/repetición sin cambios en ambos formatos soportados. Estos casos se incluyen en los comandos anteriores; omitir la base deja sin verificar la preservación relacional.
 
+## Actualizar dependencias
+
+Consulta [actualización compatible de dependencias](dependency-maintenance.md) para
+verificar el grafo conjunto, las imágenes opcionales y migraciones de estado antes
+de actualizar servicios existentes. Los hallazgos residuales siguen bloqueando CI.
+
 ## Contrato de la fuente SECOP II
 
 La validación habitual es completamente offline y utiliza una fixture pequeña:
