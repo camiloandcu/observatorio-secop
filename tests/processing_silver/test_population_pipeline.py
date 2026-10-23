@@ -182,7 +182,7 @@ def test_population_recovery_later_invalid_and_registered_restore_are_exact(
 ):
     assert TEST_DSN
     connection = conninfo_to_dict(TEST_DSN)
-    # This fixture deliberately produces one reject out of four observations.
+    # This fixture produces one reject and one supersession across four observations.
     # Production's rejection threshold remains unchanged.
     config = replace(silver_config, max_rejection_rate=0.5)
     config_path = tmp_path / "population-silver.yaml"
@@ -205,6 +205,14 @@ def test_population_recovery_later_invalid_and_registered_restore_are_exact(
         a = verify_current_bundle(config.silver_root)
         loader.load(a)
         before_rows = logical_rows()
+        assert a.quality_summary["state"] == "AVAILABLE"
+        with psycopg.connect(TEST_DSN) as database:
+            original_quality = database.execute(
+                "SELECT summary,evidence_sha256 FROM silver.contract_current_quality "
+                "WHERE silver_version_id=%s AND manifest_sha256=%s",
+                (a.version_id, a.manifest_sha256),
+            ).fetchone()
+            assert original_quality[0] == a.quality_summary
         environment = _dbt_environment(tmp_path, connection)
         _dbt(environment, "build", "--full-refresh")
         with psycopg.connect(TEST_DSN) as database:
@@ -220,7 +228,10 @@ def test_population_recovery_later_invalid_and_registered_restore_are_exact(
             config,
             "scope-correction",
             [
-                [row("A", updated=None, amount="200.00"), row("B", updated=None, amount="300.00")],
+                [
+                    row("A", updated=None, amount="200.00"),
+                    row("B", updated=None, amount="300.00"),
+                ],
                 [row("A", updated=None, amount="-1.00")],
             ],
             baseline=a.manifest_path,
@@ -244,6 +255,14 @@ def test_population_recovery_later_invalid_and_registered_restore_are_exact(
         assert condition["later_invalid_count"] == 1
         assert len(b.condition_links) == 1
         assert b.condition_links[0]["rejection_codes"] == ["AMOUNT_NEGATIVE"]
+        assert b.quality_summary["counts"] == {
+            "input_observations": 4,
+            "output_contracts": 2,
+            "rejected_observations": 1,
+            "exact_duplicates": 0,
+            "superseded_valid_observations": 1,
+            "accepted_valid_observations": 3,
+        }
         assert loader.load(b).status == "applied"
         assert loader.load(b).status == "noop"
         assert hashlib.sha256(a.manifest_path.read_bytes()).hexdigest() == original_hash
@@ -265,6 +284,23 @@ def test_population_recovery_later_invalid_and_registered_restore_are_exact(
                 "WHERE contract_key=%s",
                 (a_key,),
             ).fetchone() == ("LATER_INVALID_OBSERVED",)
+            assert database.execute(
+                "SELECT count(*),count(distinct contract_key) FROM analytics.mart_contract_detail"
+            ).fetchone() == (2, 2)
+            assert database.execute(
+                "SELECT condition_state FROM analytics.mart_contract_detail WHERE contract_key=%s",
+                (a_key,),
+            ).fetchone() == ("LATER_INVALID_OBSERVED",)
+            assert database.execute(
+                "SELECT control_id,numerator,denominator FROM analytics.mart_data_quality "
+                "WHERE control_id IN ('input_observations','rejected_observations',"
+                "'exact_duplicates','superseded_valid_observations') ORDER BY control_id"
+            ).fetchall() == [
+                ("exact_duplicates", 0, 4),
+                ("input_observations", 4, 4),
+                ("rejected_observations", 1, 4),
+                ("superseded_valid_observations", 1, 4),
+            ]
         # A verified baseline correction outside the signing interval must not
         # silently remove that member, even when another member remains valid.
         before_drift_rows = logical_rows()
@@ -307,6 +343,20 @@ def test_population_recovery_later_invalid_and_registered_restore_are_exact(
             == "applied"
         )
         assert logical_rows() == before_rows
+        with psycopg.connect(TEST_DSN) as database:
+            assert (
+                database.execute(
+                    "SELECT summary,evidence_sha256 FROM silver.contract_current_quality "
+                    "WHERE silver_version_id=%s AND manifest_sha256=%s",
+                    (a.version_id, a.manifest_sha256),
+                ).fetchone()
+                == original_quality
+            )
+            assert database.execute(
+                "SELECT summary FROM silver.contract_current_quality "
+                "WHERE silver_version_id=%s AND manifest_sha256=%s",
+                (b.version_id, b.manifest_sha256),
+            ).fetchone() == (b.quality_summary,)
         # Incremental reconciliation must remove B-only facts and recover A's
         # complete deterministic lineage, including manifest-derived loaded_at.
         _dbt(environment, "build")
