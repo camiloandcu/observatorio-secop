@@ -1,7 +1,7 @@
 UV ?= uv
 UV_RUN := $(UV) run --locked --extra dev --extra data --extra warehouse
 DBT_PROFILES_DIR ?= $(CURDIR)/.dbt
-DBT := $(UV_RUN) dbt
+DBT := $(UV_RUN) python scripts/gold_dbt.py
 DBT_OPTIONS := --project-dir dbt --profiles-dir $(DBT_PROFILES_DIR)
 
 BRONZE_FROM ?= 2026-09-01T00:00:00Z

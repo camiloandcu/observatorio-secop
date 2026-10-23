@@ -283,7 +283,18 @@
     "tests/warehouse/test_timestamp_compatibility.py::test_legacy_int96_values_are_exact",
     "tests/warehouse/test_timestamp_compatibility.py::test_standard_microseconds_do_not_inherit_the_int96_range_limit",
     "tests/warehouse/test_timestamp_compatibility.py::test_each_fragment_is_validated_before_dataset_coercion[0]",
-    "tests/warehouse/test_timestamp_compatibility.py::test_each_fragment_is_validated_before_dataset_coercion[1]"
+    "tests/warehouse/test_timestamp_compatibility.py::test_each_fragment_is_validated_before_dataset_coercion[1]",
+    "tests/warehouse/test_quality_postgres.py::test_quality_immutable_noop_and_failed_restore_are_atomic",
+    "tests/warehouse/test_gold_postgres.py::test_exact_numeric_distribution_and_multi_month_recomputation",
+    "tests/warehouse/test_gold_postgres.py::test_partial_identity_selection_preserves_reference_and_synthetic_formula",
+    "tests/warehouse/test_gold_postgres.py::test_empty_zero_unknown_and_absent_signature_states",
+    "tests/warehouse/test_gold_postgres.py::test_invalid_bound_selections_fail_explicitly",
+    "tests/warehouse/test_gold_postgres.py::test_detail_safe_lineage_metadata_and_relationships",
+    "tests/warehouse/test_gold_postgres.py::test_hhi_full_identity_and_null_reasons",
+    "tests/warehouse/test_gold_postgres.py::test_dimension_intersection_uses_same_population",
+    "tests/warehouse/test_gold_postgres.py::test_unsupported_supplier_population_filter_is_rejected",
+    "tests/warehouse/test_gold_postgres.py::test_quality_filter_denominators_and_unavailable_global_evidence",
+    "tests/warehouse/test_gold_postgres.py::test_source_drift_during_build_fails_validation"
   ],
   "contracts": [
     "real Spark \u2192 PostgreSQL \u2192 dbt",
