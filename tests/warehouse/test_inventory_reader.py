@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -84,10 +85,28 @@ def test_only_explicit_verified_files_are_decoded(
         (directory / "._SUCCESS.crc").write_bytes(b"checksum")
     for path in renamed:
         path.with_name(f".{path.name}.crc").write_bytes(b"checksum")
+    # The declared quality file is now consumed as verified JSON evidence; it
+    # must remain valid while this test proves it never enters the Parquet reader.
+    rewrite_manifest(
+        manifest,
+        lambda document: document.update(
+            counts={
+                "input_rows": 3,
+                "output_rows": 3,
+                "rejected_rows": 0,
+                "exact_duplicates": 0,
+                "superseded_versions": 0,
+            },
+            bronze_runs=[{"run_id": "run-1", "manifest_sha256": "a" * 64}],
+        ),
+    )
     for relative in ["rejected/part.parquet", "quality/results.json", "data-other/part.parquet"]:
         evidence = manifest.parent / relative
         evidence.parent.mkdir(exist_ok=True)
-        evidence.write_bytes(b"evidence which must never be decoded as Parquet")
+        if relative == "quality/results.json":
+            evidence.write_text(json.dumps(json.loads(manifest.read_text())["quality_results"]))
+        else:
+            evidence.write_bytes(b"evidence which must never be decoded as Parquet")
         declare(manifest, evidence)
     # Extras outside data cannot supply rows and are outside exact data equality.
     (manifest.parent / "rejected/extra.parquet").write_bytes(b"not data")

@@ -135,7 +135,7 @@ def _query(database, environment, tmp_path: Path, macro: str, filters=None, *, v
     analyses = project / "analyses"
     analyses.mkdir(exist_ok=True)
     (analyses / "acceptance_query.sql").write_text(
-        "{{ "
+        "-- depends_on: {{ ref('mart_contract_detail') }}\n{{ "
         + macro
         + "(ref('mart_contract_detail'), filters="
         + repr(filters or {})

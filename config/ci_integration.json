@@ -294,7 +294,8 @@
     "tests/warehouse/test_gold_postgres.py::test_dimension_intersection_uses_same_population",
     "tests/warehouse/test_gold_postgres.py::test_unsupported_supplier_population_filter_is_rejected",
     "tests/warehouse/test_gold_postgres.py::test_quality_filter_denominators_and_unavailable_global_evidence",
-    "tests/warehouse/test_gold_postgres.py::test_source_drift_during_build_fails_validation"
+    "tests/warehouse/test_gold_postgres.py::test_source_drift_during_build_fails_validation",
+    "tests/warehouse/test_gold_multiple_links_postgres.py::test_multiple_rejection_links_do_not_expand_detail_or_money"
   ],
   "contracts": [
     "real Spark \u2192 PostgreSQL \u2192 dbt",
