@@ -32,8 +32,8 @@ separado: no modifica el checkpoint incremental ni permite publicar solo el subs
 ## Health checks y observabilidad
 
 - PostgreSQL usa `pg_isready` y una consulta confirma las bases de aplicación, Airflow y MLflow.
-- El webserver de Airflow consulta `/health`.
-- El scheduler de Airflow usa `airflow jobs check`.
+- El API server de Airflow consulta `/api/v2/monitor/health`. Esta sonda de disponibilidad no sustituye la prueba de autenticación.
+- El scheduler y el DAG processor separado usan `airflow jobs check`.
 - MLflow consulta `/health` con la biblioteca estándar de Python.
 - `make ps` muestra estado y health; `make logs SERVICE=<nombre>` limita la salida a las últimas 200 líneas.
 
@@ -47,7 +47,7 @@ Un servicio en estado `unhealthy`, `exited` o `dead` hace fallar la espera inmed
 make clean
 ```
 
-**Advertencia:** `make clean` elimina contenedores, el volumen PostgreSQL del proyecto y `mlruns/`. No elimina archivos fuente, `.env`, datos fuera del proyecto ni imágenes Docker.
+**Advertencia:** `make clean` elimina contenedores, los volúmenes PostgreSQL y Airflow del proyecto y `mlruns/`. No elimina archivos fuente, `.env`, datos fuera del proyecto ni imágenes Docker.
 
 ## Diagnóstico
 
@@ -74,8 +74,9 @@ Docker informa el puerto que no puede publicar y no limpia automáticamente. Cam
 ```bash
 make ps
 make logs SERVICE=postgres
-make logs SERVICE=airflow-webserver
+make logs SERVICE=airflow-api-server
 make logs SERVICE=airflow-scheduler
+make logs SERVICE=airflow-dag-processor
 make logs SERVICE=mlflow
 ```
 
@@ -99,3 +100,51 @@ Después ejecuta `make quality` como usuario normal.
 2. Corrige Docker Desktop, la variable o el puerto reportado.
 3. Repite el mismo comando de inicio; la inicialización de bases es idempotente y conserva el volumen.
 4. Usa `make clean` solo cuando necesites reconstruir PostgreSQL y los artefactos de MLflow desde cero.
+
+## Airflow 3: acceso y estado local
+
+El perfil usa Airflow 3.3.2 con LocalExecutor, API server, scheduler y DAG processor
+separado. El inicio crea un secreto JWT compartido y una contraseña aleatoria de
+`admin` en el volumen `airflow_local_state`, con archivos de modo `600`. No se
+sobrescriben al reiniciar. SimpleAuthManager exige autenticación; el modo anónimo
+`all_admins` está desactivado. Este perfil solo admite desarrollo local por loopback.
+
+Para abrir la sesión, consulta la contraseña únicamente en una terminal privada:
+
+```bash
+docker compose --env-file .env exec -T airflow-api-server \
+  cat /opt/airflow/local-state/passwords.json
+```
+
+Usa el archivo indicado por `ENV_FILE` si seleccionaste otra configuración. No
+copies la salida en logs, capturas, commits ni evidencia. Los comandos habituales
+no imprimen estos secretos. `make down` conserva credenciales y logs; `make clean`
+elimina también ese volumen y genera credenciales nuevas en el próximo arranque.
+
+## Actualizar o recuperar metadatos Airflow
+
+No ejecutes `make up-airflow` sobre una base Airflow 2 existente antes de preparar
+la migración: `airflow-init` ejecuta `airflow db migrate`. Actualiza el pin
+`AIRFLOW_IMAGE` de tu configuración local únicamente después del ensayo; copiar
+`.env.example` encima de `.env` perdería tus valores locales.
+
+1. Detén todos los escritores Airflow y registra la versión de imagen y del lock
+   anterior. Conserva DAGs, configuración, logs y secretos locales fuera de Git.
+2. Obtén un respaldo PostgreSQL consistente de la base de metadatos Airflow con
+   `pg_dump --format=custom`. Conserva el respaldo con permisos restrictivos; puede
+   contener credenciales de conexiones. No respaldes otra base por nombre supuesto.
+3. Restaura con `pg_restore` en una base y proyecto Compose desechables separados,
+   con puertos distintos. Ejecuta primero la migración allí con la nueva imagen.
+4. Comprueba variables, conexiones, pools y demás registros que uses, arranque de
+   los tres procesos, acceso autenticado y rechazo sin token. Ejecuta una tarea
+   sintética por scheduler y Execution API; un health check no prueba su ejecución.
+5. Ensaya la recuperación restaurando el respaldo previo en otra base desechable
+   y usando la imagen y lock anteriores. Verifica sus registros antes de adoptar
+   la actualización. Cambiar solo la imagen no revierte el esquema de metadatos.
+6. Solo después de revisar ese resultado adopta la copia migrada y reanuda
+   escritores. Si falla, mantén los escritores detenidos y recupera el respaldo
+   previo con la versión anterior; conserva la copia fallida para diagnóstico.
+
+La guía de [dependencias](dependency-maintenance.md) registra el alcance de los
+ensayos automatizados. Ningún ensayo desechable actualiza la base de trabajo ni
+prueba DAGs de negocio futuros. No ejecutes `make clean` como mecanismo de rollback.

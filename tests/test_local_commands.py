@@ -77,3 +77,19 @@ def test_unavailable_docker_daemon_is_actionable() -> None:
         message in result.stderr
         for message in ("Docker CLI is unavailable", "Docker daemon is unavailable")
     )
+
+
+def test_old_airflow_image_is_rejected_before_startup(tmp_path: Path) -> None:
+    environment = tmp_path / ".env"
+    environment.write_text(
+        (ROOT / ".env.example")
+        .read_text(encoding="utf-8")
+        .replace("apache/airflow:3.3.2-python3.12", "apache/airflow:2.11.2-python3.12"),
+        encoding="utf-8",
+    )
+
+    result = run_local("up-airflow", env_file=environment)
+
+    assert result.returncode == 1
+    assert "migration/backup" in result.stderr
+    assert "local_only_change_me" not in result.stderr

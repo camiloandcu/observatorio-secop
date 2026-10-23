@@ -98,3 +98,57 @@ jobs:
           path: reports/security/${{ matrix.control }}.json
           retention-days: 7
           if-no-files-found: warn
+
+  optional-runtimes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: '0.12.0'
+          python-version: '3.12'
+          enable-cache: false
+
+      - name: Install all declared runtime extras
+        run: uv sync --locked --all-extras
+
+      - name: Prepare previous locked runtime for metadata recovery checks
+        run: |
+          mkdir -p "$RUNNER_TEMP/runtime-baseline"
+          git show 1ed08ebce37a421bd38a94d6450192a05a2103f9:pyproject.toml > "$RUNNER_TEMP/runtime-baseline/pyproject.toml"
+          git show 1ed08ebce37a421bd38a94d6450192a05a2103f9:uv.lock > "$RUNNER_TEMP/runtime-baseline/uv.lock"
+          UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/runtime-baseline-env" uv sync --directory "$RUNNER_TEMP/runtime-baseline" --locked --all-extras --no-install-project
+
+      - name: Verify mixed runtime APIs on disposable state
+        run: uv run --locked --all-extras python scripts/check_optional_runtimes.py
+
+      - name: Prepare migration images
+        run: |
+          docker pull postgres:16.4-alpine
+          docker pull apache/airflow:2.11.2-python3.12
+          docker pull apache/airflow:3.3.2-python3.12
+
+      - name: Verify metadata migration, recovery and task execution
+        run: uv run --locked --all-extras python scripts/check_airflow_migration.py
+
+      - name: Verify actual Compose lifecycle and PostgreSQL MLflow
+        run: uv run --locked --all-extras python scripts/check_local_airflow_profile.py --summary reports/optional/compose-profile.json --baseline-python "$RUNNER_TEMP/runtime-baseline-env/bin/python"
+
+      - name: Upload sanitized optional runtime evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: optional-runtime-evidence
+          path: |
+            reports/optional/runtime-smoke.json
+            reports/optional/airflow-migration.json
+            reports/optional/compose-profile.json
+          retention-days: 7
+          if-no-files-found: warn

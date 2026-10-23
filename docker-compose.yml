@@ -6,14 +6,21 @@ x-airflow-common: &airflow-common
   user: "${AIRFLOW_UID:?AIRFLOW_UID is required}:0"
   environment: &airflow-environment
     AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
-    AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__AUTH_MANAGER: airflow.api_fastapi.auth.managers.simple.simple_auth_manager.SimpleAuthManager
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "admin:admin"
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "false"
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: /opt/airflow/local-state/passwords.json
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-api-server:8080/execution/
+    AIRFLOW__API_AUTH__JWT_SECRET_CMD: cat /opt/airflow/local-state/jwt-secret
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
       postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${AIRFLOW_DB:?AIRFLOW_DB is required}
-    AIRFLOW__SCHEDULER__PARSING_PROCESSES: "1"
-    AIRFLOW__WEBSERVER__WEB_SERVER_MASTER_TIMEOUT: "300"
-    AIRFLOW__WEBSERVER__WORKERS: "1"
+    AIRFLOW__DAG_PROCESSOR__PARSING_PROCESSES: "1"
+    AIRFLOW__API__WORKERS: "1"
+    AIRFLOW__CORE__PARALLELISM: "2"
   volumes:
+    - airflow_local_state:/opt/airflow
     - ./dags:/opt/airflow/dags:ro
   depends_on:
     postgres:
@@ -43,11 +50,35 @@ services:
 
   airflow-init:
     <<: *airflow-common
-    command: ["bash", "-c", "airflow db migrate"]
+    command:
+      - bash
+      - -ec
+      - |
+        python - <<'PYTHON'
+        import json
+        import os
+        from pathlib import Path
+        import secrets
 
-  airflow-webserver:
+        state = Path("/opt/airflow/local-state")
+        state.mkdir(mode=0o700, exist_ok=True)
+        for name, value in (
+            ("jwt-secret", secrets.token_urlsafe(48)),
+            ("passwords.json", json.dumps({"admin": secrets.token_urlsafe(32)})),
+        ):
+            path = state / name
+            try:
+                descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            except FileExistsError:
+                continue
+            with os.fdopen(descriptor, "w") as stream:
+                stream.write(value)
+        PYTHON
+        exec airflow db migrate
+
+  airflow-api-server:
     <<: *airflow-common
-    command: ["webserver"]
+    command: ["api-server"]
     ports:
       - "127.0.0.1:${AIRFLOW_PORT:?AIRFLOW_PORT is required}:8080"
     depends_on:
@@ -56,7 +87,7 @@ services:
       airflow-init:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/health >/dev/null"]
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/api/v2/monitor/health >/dev/null"]
       interval: 10s
       timeout: 10s
       retries: 20
@@ -75,6 +106,25 @@ services:
         [
           "CMD-SHELL",
           "airflow jobs check --job-type SchedulerJob --hostname $${HOSTNAME}",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: ["dag-processor"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "airflow jobs check --job-type DagProcessorJob --hostname $${HOSTNAME}",
         ]
       interval: 10s
       timeout: 10s
@@ -117,3 +167,4 @@ services:
 
 volumes:
   postgres_data:
+  airflow_local_state:
