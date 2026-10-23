@@ -1,7 +1,7 @@
 # Integración continua y seguridad
 
-El workflow ejecuta calidad e integración real en un job y dos controles de seguridad
-independientes. Un resultado aprobado exige los tres: las pruebas offline sin PostgreSQL
+El workflow ejecuta calidad e integración real, dos controles de seguridad
+independientes y un job de runtimes opcionales. Un resultado aprobado exige todos: las pruebas offline sin PostgreSQL
 no acreditan integración. El tipado actual cubre únicamente
 `src/observatorio_secop/warehouse`; formato, lint y pruebas tienen alcance más amplio.
 
@@ -164,3 +164,14 @@ No amplíes límites ni agregues excepciones silenciosamente.
 
 El build y smoke test de imagen API se incorporarán con el servicio API; este
 workflow no presenta los marcadores de ese servicio como una API funcional.
+
+## Compatibilidad de runtimes opcionales
+
+El job `optional-runtimes` instala los seis extras del lock y verifica APIs mixtas,
+migración/restauración Airflow con metadatos sintéticos, tarea por API de ejecución,
+autenticación y el lifecycle del Compose real con PostgreSQL MLflow. Usa únicamente
+proyectos, bases y contenedores desechables; los reportes saneados se conservan siete
+días. La política de 25 minutos cubre instalación y descargas sin caché; revisar
+duración real y margen con cada migración. Consulta comandos, alcance y límites en
+[mantenimiento de dependencias](dependency-maintenance.md). No se publican backups,
+logs de servicios, credenciales ni archivos de configuración privados.

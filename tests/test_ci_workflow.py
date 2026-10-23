@@ -66,6 +66,9 @@ def test_ci_limits_untrusted_pr_permissions_caches_and_artifacts() -> None:
         "reports/ci/outcomes.json",
         "reports/ci/resources.json",
         "reports/security/${{ matrix.control }}.json",
+        "reports/optional/runtime-smoke.json",
+        "reports/optional/airflow-migration.json",
+        "reports/optional/compose-profile.json",
     }
     for job in document["jobs"].values():
         assert "permissions" not in job
@@ -101,3 +104,16 @@ def test_uv_and_python_versions_are_declared_and_locked() -> None:
     assert pyproject["tool"]["uv"]["required-version"] == ">=0.12,<0.13"
     assert PYTHON_VERSION.read_text(encoding="utf-8").strip() == "3.12"
     assert 'requires-python = "==3.12.*"' in lockfile
+
+
+def test_optional_runtime_job_exercises_migrations_and_real_profile() -> None:
+    job = workflow()["jobs"]["optional-runtimes"]
+    assert 1 <= job["timeout-minutes"] <= 30
+    commands = "\n".join(step.get("run", "") for step in job["steps"])
+    assert "uv sync --locked --all-extras" in commands
+    for script in (
+        "check_optional_runtimes.py",
+        "check_airflow_migration.py",
+        "check_local_airflow_profile.py",
+    ):
+        assert script in commands

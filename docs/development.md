@@ -81,7 +81,9 @@ La cobertura de inventario reproduce un Parquet adicional con conteo total coher
 
 Consulta [actualización compatible de dependencias](dependency-maintenance.md) para
 verificar el grafo conjunto, las imágenes opcionales y migraciones de estado antes
-de actualizar servicios existentes. Los hallazgos residuales siguen bloqueando CI.
+de actualizar servicios existentes. Los hallazgos de los escáneres siguen bloqueando CI. La migración Airflow 3 exige
+el [ensayo de copia y restauración](operations.md#actualizar-o-recuperar-metadatos-airflow)
+antes de actualizar una base existente.
 
 ## Contrato de la fuente SECOP II
 

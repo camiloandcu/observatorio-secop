@@ -59,7 +59,9 @@ make up-mlflow
 make ps
 ```
 
-- Airflow queda disponible en `http://localhost:8080` y usa su propia base PostgreSQL. No contiene DAGs de negocio.
+- Airflow queda disponible en `http://localhost:8080` y usa su propia base PostgreSQL. Usa Airflow 3 con LocalExecutor y procesos separados de API, scheduler y DAG processor; no contiene DAGs de negocio. La cuenta local `admin` requiere la contraseña generada descrita en [operación](operations.md#airflow-3-acceso-y-estado-local).
 - MLflow queda disponible en `http://localhost:5000`, usa PostgreSQL como backend y escribe artefactos locales en `mlruns/`, que Git ignora.
 
 Los puertos se pueden cambiar en `.env` si ya están ocupados. Continúa con la [guía de desarrollo](development.md) o consulta la [guía de operación](operations.md).
+
+Si conservas una instalación Airflow 2, sigue el [ensayo y recuperación de metadatos](operations.md#actualizar-o-recuperar-metadatos-airflow) antes de iniciar la nueva imagen. No sobrescribas tu `.env` ni migres la base de trabajo para probar compatibilidad.

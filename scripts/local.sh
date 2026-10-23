@@ -127,7 +127,14 @@ case "${command_name}" in
   preflight) preflight ;;
   config) compose_config ;;
   up) up_postgres ;;
-  up-airflow) profiles_up airflow airflow-webserver airflow-scheduler ;;
+  up-airflow)
+    validate_env
+    if ! grep -Eq '^AIRFLOW_IMAGE=apache/airflow:3\.3\.2-python3\.12$' "${ENV_FILE}"; then
+      echo "Airflow requires the reviewed 3.3.2-python3.12 image. Follow docs/operations.md migration/backup steps before updating AIRFLOW_IMAGE; do not overwrite your .env." >&2
+      exit 1
+    fi
+    profiles_up airflow airflow-api-server airflow-scheduler airflow-dag-processor
+    ;;
   up-mlflow) profiles_up mlflow mlflow ;;
   health)
     preflight
@@ -151,7 +158,7 @@ case "${command_name}" in
   clean)
     validate_env
     if [[ "${CONFIRM_CLEAN:-}" != "yes" ]]; then
-      echo "Destructive cleanup refused. This removes project containers, PostgreSQL volumes, and mlruns/. Re-run with CONFIRM_CLEAN=yes." >&2
+      echo "Destructive cleanup refused. This removes project containers, PostgreSQL/Airflow volumes, and mlruns/. Re-run with CONFIRM_CLEAN=yes." >&2
       exit 1
     fi
     "${COMPOSE[@]}" -f "${ROOT_DIR}/docker-compose.yml" --profile airflow --profile mlflow down --volumes --remove-orphans

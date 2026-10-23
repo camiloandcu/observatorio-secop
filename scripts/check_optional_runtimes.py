@@ -30,7 +30,11 @@ def main():
             AIRFLOW_HOME=str(root / "airflow"),
             AIRFLOW__DATABASE__SQL_ALCHEMY_CONN="sqlite:///" + str(root / "airflow.db"),
             AIRFLOW__CORE__LOAD_EXAMPLES="False",
-            AIRFLOW__CORE__EXECUTOR="SequentialExecutor",
+            AIRFLOW__CORE__EXECUTOR="LocalExecutor",
+            AIRFLOW__CORE__AUTH_MANAGER=(
+                "airflow.api_fastapi.auth.managers.simple.simple_auth_manager.SimpleAuthManager"
+            ),
+            AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS="False",
             AIRFLOW__CORE__FERNET_KEY="",
         )
         commands = []
@@ -39,7 +43,7 @@ def main():
             ("db", "migrate"),
             ("db", "check"),
             ("config", "get-value", "core", "executor"),
-            ("users", "list", "--output", "json"),
+            ("config", "get-value", "core", "auth_manager"),
         ]:
             result = subprocess.run(
                 ["airflow", *args], env=env, capture_output=True, text=True, timeout=180
@@ -47,8 +51,10 @@ def main():
             (root / ("airflow-" + args[0] + ".log")).write_text(result.stdout + result.stderr)
             if result.returncode:
                 raise RuntimeError("Airflow smoke failed: " + str(args))
-            if args[0] == "config":
-                assert "SequentialExecutor" in result.stdout
+            if args[-1] == "executor":
+                assert "LocalExecutor" in result.stdout
+            if args[-1] == "auth_manager":
+                assert "SimpleAuthManager" in result.stdout
             commands.append({"command": ["airflow", *args], "exitstatus": result.returncode})
         import mlflow
         from mlflow.tracking import MlflowClient

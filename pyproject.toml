@@ -22,31 +22,31 @@ secop-warehouse = "observatorio_secop.warehouse.cli:main"
 [project.optional-dependencies]
 dev = [
   "mypy>=1.15,<2",
-  "pytest>=8.3,<9",
+  "pytest==9.1.1",
   "ruff>=0.11,<0.12",
   "types-pyyaml>=6,<7",
 ]
 data = [
   "pandera[pyspark]>=0.23,<0.24",
   "pyspark[connect]>=3.5,<3.6",
-  "setuptools>=75,<76",
+  "setuptools==84.2.1",
 ]
 warehouse = [
-  "dbt-core>=1.10,<1.11",
+  "dbt-core==1.11.16",
   "dbt-postgres>=1.9,<1.10",
   "psycopg[binary]>=3.2,<4",
-  "pyarrow>=19,<20",
+  "pyarrow>=23,<26",
 ]
 orchestration = [
-  "apache-airflow>=2.11.2,<2.12",
+  "apache-airflow==3.3.2",
 ]
 ml = [
   "mlflow>=3.17.2,<3.18",
   "scikit-learn>=1.6,<1.7",
 ]
 api = [
-  "fastapi>=0.160,<0.161",
-  "uvicorn[standard]>=0.34,<0.35",
+  "fastapi>=0.129,<0.137",
+  "uvicorn[standard]>=0.37,<1",
 ]
 
 [tool.hatch.build.targets.wheel]
