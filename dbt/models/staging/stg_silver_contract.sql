@@ -35,5 +35,6 @@ select
     source_url,
     source_updated_at,
     bronze_fetched_at_utc,
+    quality_warning_codes,
     payload_sha256
 from {{ source('silver', 'contract_current') }}

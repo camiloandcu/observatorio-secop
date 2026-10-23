@@ -30,6 +30,9 @@ models:
       +incremental_strategy: delete+insert
       +on_schema_change: fail
       +schema: analytics
+    marts:
+      +materialized: table
+      +schema: analytics
     facts:
       +materialized: incremental
       +incremental_strategy: delete+insert
@@ -39,3 +42,14 @@ models:
 vars:
   star_key_version: star_key_v1
   identity_key_version: platform_code_key_v1
+
+  gold_policy_version: gold-hhi-policy-v1
+  gold_min_count_coverage: 1
+  gold_min_value_coverage: 1
+  gold_catalog_sha256: bc1757e080215c38a6005a2b3612303299eb6f0954a7023451c7bfbeb83bfee5
+  gold_policy_sha256: eabc877d527133dd89f5184f77add49ddba56fcb2e82949bf31d658df66789f4
+
+on-run-start:
+  - "{{ gold_capture_build() }}"
+on-run-end:
+  - "{{ gold_verify_build() }}"
