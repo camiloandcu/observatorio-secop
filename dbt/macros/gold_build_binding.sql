@@ -10,19 +10,23 @@ jsonb_build_object(
 
 {% macro gold_capture_build() %}
 {% if execute and flags.WHICH in ['run','build'] %}
+{% set build_schema = generate_schema_name('analytics', none) | trim %}
 select case when (select count(*) from (select distinct silver_version_id,silver_manifest_sha256 from {{ source('silver','contract_current') }}) identities)=1
  then '1' else 'GOLD_MIXED_OR_EMPTY_SOURCE' end::integer;
-create schema if not exists analytics;
-create table if not exists analytics._gold_build_binding (invocation_id text primary key, binding jsonb not null);
-insert into analytics._gold_build_binding select '{{ invocation_id }}',{{ gold_source_binding() }}
+{% if var('publication_id', none) is none %}
+create schema if not exists {{ adapter.quote(build_schema) }};
+{% endif %}
+create table if not exists {{ adapter.quote(build_schema) }}._gold_build_binding (invocation_id text primary key, binding jsonb not null);
+insert into {{ adapter.quote(build_schema) }}._gold_build_binding select '{{ invocation_id }}',{{ gold_source_binding() }}
 on conflict(invocation_id) do update set binding=excluded.binding;
 {% else %}select 1;{% endif %}
 {% endmacro %}
 
 {% macro gold_verify_build() %}
 {% if execute and flags.WHICH in ['run','build'] %}
+{% set build_schema = generate_schema_name('analytics', none) | trim %}
 select case when binding = {{ gold_source_binding() }} then '1' else 'GOLD_INPUT_DRIFT' end::integer
-from analytics._gold_build_binding where invocation_id='{{ invocation_id }}';
-delete from analytics._gold_build_binding where invocation_id='{{ invocation_id }}';
+from {{ adapter.quote(build_schema) }}._gold_build_binding where invocation_id='{{ invocation_id }}';
+delete from {{ adapter.quote(build_schema) }}._gold_build_binding where invocation_id='{{ invocation_id }}';
 {% else %}select 1;{% endif %}
 {% endmacro %}

@@ -44,6 +44,11 @@ Silver con Spark real, verifican su inventario, cargan PostgreSQL y ejecutan dbt
 Comprueban precisión temporal, rutas, dinero decimal, identidad, población,
 reconstrucción, restauración A → B → A y fallos que conservan la versión válida.
 La restauración incluye reconstruir dbt y conciliar filas, monto y versión de A.
+La publicación añade construcción aislada y validada, roles reales de lectura,
+activación/limpieza concurrentes, lectura entre conexiones y recuperación de
+candidatos. Los tests de validación/lectores de publicación también son una
+familia crítica: no pueden omitirse aunque se encuentren fuera del directorio
+de integración relacional.
 No ejecutes dos suites relacionales contra la misma base ni uses ejecución paralela
 para estas fixtures: comparten schemas y salidas dbt.
 

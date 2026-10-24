@@ -58,8 +58,8 @@ def main(arguments: list[str] | None = None) -> int:
                 values = yaml.safe_load(raw)
                 if not isinstance(values, dict):
                     raise ValueError("dbt vars must be a mapping")
-                if any(str(key).startswith("gold_") for key in values):
-                    raise ValueError("Reviewed Gold variables cannot be overridden")
+                if any(str(key).startswith(("gold_", "publication_")) for key in values):
+                    raise ValueError("Reviewed Gold/publication variables cannot be overridden")
         executable = shutil.which("dbt")
         if executable is None:
             raise ValueError("dbt executable is unavailable")

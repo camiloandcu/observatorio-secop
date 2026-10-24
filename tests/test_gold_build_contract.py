@@ -45,6 +45,7 @@ def test_catalog_tamper_and_policy_divergence_block_build(tmp_path: Path) -> Non
     [
         ["build", "--vars", "{gold_min_count_coverage: 0}"],
         ["build", "--vars={gold_policy_sha256: forged}"],
+        ["build", "--vars={publication_id: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}"],
     ],
 )
 def test_policy_override_is_rejected_before_dbt(monkeypatch, arguments):

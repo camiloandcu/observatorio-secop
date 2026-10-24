@@ -18,6 +18,7 @@ secop-source-profile = "observatorio_secop.source_profile.cli:main"
 secop-ingest = "observatorio_secop.ingestion.cli:main"
 secop-silver = "observatorio_secop.processing.silver.cli:main"
 secop-warehouse = "observatorio_secop.warehouse.cli:main"
+secop-publication = "observatorio_secop.publication.cli:main"
 
 [project.optional-dependencies]
 dev = [
