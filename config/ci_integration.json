@@ -386,7 +386,18 @@
     "tests/warehouse/test_publication_security.py::test_matching_namespace_is_not_a_publication_authorization[view-unregistered]",
     "tests/warehouse/test_publication_security.py::test_matching_namespace_is_not_a_publication_authorization[view-sealed]",
     "tests/warehouse/test_publication_security.py::test_harmless_invoker_function_does_not_block_publication",
-    "tests/warehouse/test_publication_capture.py::test_captured_graph_survives_warehouse_a_b_a_and_builds_only_a"
+    "tests/warehouse/test_publication_capture.py::test_captured_graph_survives_warehouse_a_b_a_and_builds_only_a",
+    "tests/warehouse/test_quality_bundle.py::test_current_quality_fails_closed[arithmetic]",
+    "tests/warehouse/test_quality_bundle.py::test_current_quality_fails_closed[bool]",
+    "tests/warehouse/test_quality_bundle.py::test_current_quality_fails_closed[corrupt]",
+    "tests/warehouse/test_quality_bundle.py::test_current_quality_fails_closed[denominator]",
+    "tests/warehouse/test_quality_bundle.py::test_current_quality_fails_closed[different_results]",
+    "tests/warehouse/test_quality_bundle.py::test_current_quality_fails_closed[missing_counts]",
+    "tests/warehouse/test_quality_bundle.py::test_current_quality_fails_closed[missing_file]",
+    "tests/warehouse/test_quality_bundle.py::test_current_quality_fails_closed[partial_legacy]",
+    "tests/warehouse/test_quality_bundle.py::test_current_quality_fails_closed[unknown_writer]",
+    "tests/warehouse/test_quality_bundle.py::test_legacy_absent_evidence_is_not_zero",
+    "tests/warehouse/test_quality_bundle.py::test_observations_are_not_unique_contracts_and_payload_is_sanitized"
   ],
   "contracts": [
     "real Spark \u2192 PostgreSQL \u2192 dbt",
