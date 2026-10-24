@@ -105,3 +105,6 @@ sources:
           - {name: contract_key, description: Contrato relacionado.}
           - {name: link_id, description: Identidad determinística del enlace.}
           - {name: evidence, description: Localizadores y motivos validados sin payload rechazado crudo.}
+
+      - name: contract_current_quality
+        description: Verified snapshot-bound scalar acquisition quality evidence.

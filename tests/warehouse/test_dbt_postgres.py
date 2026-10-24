@@ -31,6 +31,11 @@ STAR_TABLES = (
     "dim_modality",
     "dim_date",
     "fact_contract",
+    "mart_contract_detail",
+    "mart_contract_overview",
+    "mart_entity_monthly",
+    "mart_supplier_concentration",
+    "mart_data_quality",
 )
 
 
@@ -67,6 +72,11 @@ def test_incremental_full_refresh_quality_and_docs_are_reproducible(tmp_path: Pa
         _dbt(environment, "build")
         assert _logical_hashes() == first_hashes
         _assert_star_contract()
+        with psycopg.connect(TEST_DSN) as database:
+            assert database.execute(
+                "SELECT sum(contract_value_cop) FROM analytics.mart_entity_monthly "
+                "WHERE signing_month='2026-01-01'"
+            ).fetchone() == (200,)
 
         write_bundle(
             config.silver_root,
@@ -95,6 +105,16 @@ def test_incremental_full_refresh_quality_and_docs_are_reproducible(tmp_path: Pa
         assert (result.inserted_rows, result.updated_rows, result.deleted_rows) == (1, 2, 0)
         _dbt(environment, "build")
         incremental_hashes = _logical_hashes()
+        # A later observation revises the already observed signing month.
+        with psycopg.connect(TEST_DSN) as database:
+            assert database.execute(
+                "SELECT sum(contract_value_cop),min(silver_version_id),max(silver_version_id) "
+                "FROM analytics.mart_entity_monthly WHERE signing_month='2026-01-01'"
+            ).fetchone() == (325, "version-2", "version-2")
+            assert database.execute(
+                "SELECT contract_value_cop FROM analytics.mart_contract_detail "
+                "WHERE contract_id='CO1.PCCNTR.1'"
+            ).fetchone() == (125,)
 
         _dbt(environment, "build", "--full-refresh")
         assert _logical_hashes() == incremental_hashes
@@ -220,8 +240,13 @@ def _logical_hashes() -> dict[str, str]:
     result = {}
     with psycopg.connect(TEST_DSN) as database:
         for table in STAR_TABLES:
-            rows = database.execute(f"SELECT * FROM analytics.{table} ORDER BY 1").fetchall()
-            content = json.dumps(rows, default=str, ensure_ascii=False, separators=(",", ":"))
+            rows = database.execute(
+                f"SELECT to_jsonb(t) - 'candidate_built_at_utc' FROM analytics.{table} t"
+            ).fetchall()
+            rows = sorted(rows, key=lambda row: json.dumps(row, sort_keys=True, default=str))
+            content = json.dumps(
+                rows, default=str, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+            )
             result[table] = hashlib.sha256(content.encode()).hexdigest()
     return result
 

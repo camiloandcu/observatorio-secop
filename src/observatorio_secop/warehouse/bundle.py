@@ -99,6 +99,7 @@ class VerifiedSilverBundle:
     condition_summaries: list[dict[str, Any]] = field(default_factory=list)
     condition_links: list[dict[str, Any]] = field(default_factory=list)
     selection_mode: str | None = None
+    quality_summary: dict[str, Any] | None = None
 
 
 def verify_current_bundle(root: Path) -> VerifiedSilverBundle:
@@ -195,6 +196,9 @@ def verify_manifest_bundle(
         )
     elif verify_refresh:
         _verify_refresh(table, manifest, manifest_path)
+    from observatorio_secop.warehouse.quality import verify_quality_summary
+
+    quality_summary = verify_quality_summary(manifest, manifest_path.parent)
     return VerifiedSilverBundle(
         version_id=version_id,
         manifest_path=manifest_path,
@@ -208,6 +212,7 @@ def verify_manifest_bundle(
         condition_summaries=summaries,
         condition_links=links,
         selection_mode=manifest.get("selection_mode"),
+        quality_summary=quality_summary,
     )
 
 

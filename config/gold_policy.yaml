@@ -1,0 +1,32 @@
+schema_version: gold-policy-v1
+policy_version: gold-hhi-policy-v1
+approved_on: '2026-10-22'
+base_cohort: ALL_VALID_OBSERVED
+hhi:
+  scale:
+  - 0
+  - 1
+  minimum_count_identity_coverage: 1.0
+  minimum_value_identity_coverage: 1.0
+  threshold_comparison: greater_than_or_equal
+  change_requires_explicit_approval: true
+status:
+  normalization: lower_trim
+  profile_version: bounded-observed-status-v1
+  profiled_labels:
+  - en aprobación
+  - terminado
+  - borrador
+  - modificado
+  - cerrado
+  missing_bucket: __MISSING__
+  unprofiled_behavior: include_and_report
+source_process_link:
+  schemes:
+  - https
+  hosts:
+  - community.secop.gov.co
+  - www.community.secop.gov.co
+gold_policy_version: gold-hhi-policy-v1
+gold_min_count_coverage: 1
+gold_min_value_coverage: 1

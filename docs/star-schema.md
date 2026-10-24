@@ -263,3 +263,7 @@ Si las filas actuales tienen una sola versión/hash/`loaded_at` y coinciden con 
 Con tablas actuales vacías no se infiere una versión activa desde la auditoría histórica: la solicitud verificada se aplica para establecer estado conocido. Si hay versiones/hashes mezclados, registro ausente, conteos/fechas incompatibles o metadatos parcialmente presentes, la carga falla sin confirmar cambios. Conserva el error y los respaldos; inspecciona las identidades y conteos con las consultas anteriores. Recupera el bundle elegido en un schema nuevo mediante un YAML separado y las mismas órdenes `verify`/`load`; valida el resultado antes de cambiar consumidores. No elimines evidencia ni repares los registros para forzar la migración.
 
 Un fallo de migración revierte automáticamente sus cambios. Para volver a un binario anterior, detén escritores y recupera un respaldo coherente previo en otra base/schema bajo control del operador; conserva la evidencia nueva. El cargador antiguo no entiende activaciones y no sirve como procedimiento de restauración A → B → A.
+
+## Analítica Gold
+
+Los cinco marts y las consultas gobernadas se describen en [indicadores Gold](gold-analytics.md). Conservan snapshot/scope y evidencia verificada de calidad; la publicación y los permisos de consumidores requieren el mecanismo de activación posterior.

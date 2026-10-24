@@ -17,6 +17,7 @@ from observatorio_secop.warehouse.errors import WarehouseConflictError, Warehous
 from observatorio_secop.warehouse.logging import log_event
 from observatorio_secop.warehouse.migration import migrate_identity
 from observatorio_secop.warehouse.population import PopulationStore
+from observatorio_secop.warehouse.quality import QualityStore
 
 
 @dataclass(frozen=True)
@@ -108,6 +109,7 @@ class WarehouseLoader:
                 population = PopulationStore(self.config)
                 population.ensure(cursor)
                 population.adopt(cursor, bundle, record)
+                QualityStore(self.config).persist(cursor, bundle)
         except psycopg.Error as error:
             raise WarehouseLoadError(
                 f"PostgreSQL adoption failed ({error.__class__.__name__})"
@@ -158,6 +160,7 @@ class WarehouseLoader:
                 restore=restore,
                 expected_current=expected_current,
             )
+            QualityStore(self.config).persist(cursor, bundle)
             if active == identity:
                 population.persist(cursor, bundle)
                 return LoadResult(bundle.version_id, "noop", bundle.row_count, 0, 0, 0)

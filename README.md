@@ -62,7 +62,9 @@ La priorización es una ayuda para ordenar la revisión. Una señal alta NO demu
 
 El repositorio cuenta con una base local reproducible, ingesta Bronze incremental acotada, una capa Silver tipificada con PySpark, carga y restauración de snapshots en PostgreSQL y un modelo estrella con dbt. La identidad de entidades y proveedores se conserva entre estas capas, con estados desconocidos explícitos y trazabilidad.
 
-Los marts e indicadores Gold, la publicación analítica validada para consumidores, la orquestación de negocio con Airflow, la priorización con MLflow, la API FastAPI, el dashboard Power BI y la exportación acotada a AWS están pendientes. Su avance puede seguirse en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).
+Los cinco [marts e indicadores Gold](docs/gold-analytics.md) están implementados como candidatos verificables, con catálogo de métricas, filtros gobernados y evidencia de calidad. Su construcción local no activa acceso de consumidores.
+
+La publicación analítica validada para consumidores, la orquestación de negocio con Airflow, la priorización con MLflow, la API FastAPI, el dashboard Power BI y la exportación acotada a AWS están pendientes. Su avance puede seguirse en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).
 
 ## Principios
 

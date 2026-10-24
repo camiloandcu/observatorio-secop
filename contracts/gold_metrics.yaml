@@ -1,0 +1,303 @@
+schema_version: gold-metrics-v1
+time_semantics:
+  series: latest observed contract by signing date; earlier periods may revise
+  source_clock: calendar timestamp without declared zone
+  acquisition: UTC instant
+geography: entity registration; not execution or expenditure location
+rounding: presentation only; no intermediate rounding
+null_signature: separate nullable monthly bucket; finite intervals exclude null dates
+filters:
+  allowed: &id001
+  - entity_keys
+  - municipality_keys
+  - modality_keys
+  - statuses
+  - exclude_statuses
+  - start_date
+  - end_date
+  - missing_signatures
+  - selected_supplier
+  interval: '[start_date,end_date)'
+  contradictions:
+  - missing_signatures=true with finite signing interval
+  invalid_keys: reject against same snapshot
+  unknown_members: explicit surrogate keys
+  supplier_selection: filters detail/selected-supplier share, never HHI reference
+    or reference coverage
+metrics:
+  contract_count:
+    formula: count(distinct contract_key)
+    output_type: bigint
+    unit: observed_contract
+    denominator: null
+    null_states: []
+    base_cohort: ALL_VALID_OBSERVED
+    filters: *id001
+    source_dependencies: &id002
+    - mart_contract_detail
+    recomputation: Always recompute from selected distinct contracts for selections
+      not preserved in stored grain.
+    formula_version: gold-v1
+    output_column: contract_count
+    grain: selected contract population
+  contract_value_cop:
+    formula: coalesce(sum(contract_value_cop),0.00)
+    output_type: numeric
+    unit: COP_NOMINAL_OBSERVED
+    denominator: null
+    null_states: []
+    base_cohort: ALL_VALID_OBSERVED
+    filters: *id001
+    source_dependencies: *id002
+    recomputation: Always recompute from selected distinct contracts for selections
+      not preserved in stored grain.
+    formula_version: gold-v1
+    output_column: contract_value_cop
+    grain: selected contract population
+  value_p25_cop:
+    formula: Numeric continuous linear interpolation at p=0.25; exclude null amounts
+    output_type: numeric
+    unit: COP_NOMINAL_OBSERVED
+    denominator: non-null contract amounts
+    null_states:
+    - NO_CONTRACTS
+    - NO_NON_NULL_VALUES
+    base_cohort: ALL_VALID_OBSERVED
+    filters: *id001
+    source_dependencies: *id002
+    recomputation: Always recompute from selected distinct contracts for selections
+      not preserved in stored grain.
+    formula_version: gold-v1
+    output_column: value_p25_cop
+    grain: selected contract population
+  value_median_cop:
+    formula: Numeric continuous linear interpolation at p=0.50; exclude null amounts
+    output_type: numeric
+    unit: COP_NOMINAL_OBSERVED
+    denominator: non-null contract amounts
+    null_states:
+    - NO_CONTRACTS
+    - NO_NON_NULL_VALUES
+    base_cohort: ALL_VALID_OBSERVED
+    filters: *id001
+    source_dependencies: *id002
+    recomputation: Always recompute from selected distinct contracts for selections
+      not preserved in stored grain.
+    formula_version: gold-v1
+    output_column: value_median_cop
+    grain: selected contract population
+  value_p75_cop:
+    formula: Numeric continuous linear interpolation at p=0.75; exclude null amounts
+    output_type: numeric
+    unit: COP_NOMINAL_OBSERVED
+    denominator: non-null contract amounts
+    null_states:
+    - NO_CONTRACTS
+    - NO_NON_NULL_VALUES
+    base_cohort: ALL_VALID_OBSERVED
+    filters: *id001
+    source_dependencies: *id002
+    recomputation: Always recompute from selected distinct contracts for selections
+      not preserved in stored grain.
+    formula_version: gold-v1
+    output_column: value_p75_cop
+    grain: selected contract population
+  hhi:
+    formula: sum((known_supplier_value / known_value_cop)^2)
+    output_type: numeric
+    unit: ratio_0_1
+    denominator: known_value_cop
+    null_states:
+    - POLICY_UNCONFIGURED
+    - NO_CONTRACTS
+    - UNKNOWN_ENTITY
+    - NO_KNOWN_SUPPLIERS
+    - ZERO_TOTAL_VALUE
+    - ZERO_KNOWN_VALUE
+    - INSUFFICIENT_IDENTITY_COVERAGE
+    base_cohort: ALL_VALID_OBSERVED
+    filters: *id001
+    source_dependencies: *id002
+    recomputation: Always recompute from selected distinct contracts for selections
+      not preserved in stored grain.
+    formula_version: gold-v1
+    output_column: hhi
+    grain: selected reference entity/period/cohort
+  count_identity_coverage:
+    formula: known_contract_count / total_contract_count
+    output_type: numeric
+    unit: ratio
+    denominator: all reference contracts
+    null_states:
+    - NO_CONTRACTS
+    base_cohort: ALL_VALID_OBSERVED
+    filters: *id001
+    source_dependencies: *id002
+    recomputation: Always recompute from selected distinct contracts for selections
+      not preserved in stored grain.
+    formula_version: gold-v1
+    output_column: count_identity_coverage
+    grain: selected reference entity/period/cohort
+  value_identity_coverage:
+    formula: known_value_cop / total_value_cop
+    output_type: numeric
+    unit: ratio
+    denominator: all reference observed value
+    null_states:
+    - ZERO_TOTAL_VALUE
+    base_cohort: ALL_VALID_OBSERVED
+    filters: *id001
+    source_dependencies: *id002
+    recomputation: Always recompute from selected distinct contracts for selections
+      not preserved in stored grain.
+    formula_version: gold-v1
+    output_column: value_identity_coverage
+    grain: selected reference entity/period/cohort
+  selected_supplier_reference_share:
+    formula: selected known supplier value / known_value_cop
+    output_type: numeric
+    unit: ratio
+    denominator: known reference supplier value; unaffected by supplier selection
+    null_states:
+    - NO_KNOWN_SUPPLIERS
+    - ZERO_KNOWN_VALUE
+    - NO_SELECTED_KNOWN_SUPPLIER
+    base_cohort: ALL_VALID_OBSERVED
+    filters: *id001
+    source_dependencies: *id002
+    recomputation: Always recompute from selected distinct contracts for selections
+      not preserved in stored grain.
+    formula_version: gold-v1
+    output_column: selected_supplier_reference_share
+    grain: selected reference entity/period/cohort
+  contract_count_share:
+    formula: group contract_count / selected population contract_count
+    output_type: numeric
+    unit: ratio
+    denominator: selected contract count
+    null_states:
+    - ZERO_DENOMINATOR
+    base_cohort: ALL_VALID_OBSERVED
+    filters: *id001
+    source_dependencies: *id002
+    recomputation: Always recompute from selected distinct contracts for selections
+      not preserved in stored grain.
+    formula_version: gold-v1
+    output_column: contract_count_share
+    grain: selected contract population
+  contract_value_share:
+    formula: group contract_value_cop / selected population contract_value_cop
+    output_type: numeric
+    unit: ratio
+    denominator: selected nominal COP
+    null_states:
+    - ZERO_DENOMINATOR
+    base_cohort: ALL_VALID_OBSERVED
+    filters: *id001
+    source_dependencies: *id002
+    recomputation: Always recompute from selected distinct contracts for selections
+      not preserved in stored grain.
+    formula_version: gold-v1
+    output_column: contract_value_share
+    grain: selected contract population
+quality:
+  global_filters:
+  - silver_version_id
+  - silver_manifest_sha256
+  - scope_id
+  - control_id
+  attributable_filters: *id001
+  observation_equation: input_observations = output_contracts + rejected_observations
+    + exact_duplicates + superseded_valid_observations
+  accepted_equation: accepted_valid_observations = input_observations - rejected_observations
+  legacy: UNAVAILABLE_LEGACY with null counts
+  denominators:
+  - OBSERVATION
+  - UNIQUE_CONTRACT
+  rejections: global unless explicitly attributable; never join many rejection links
+    into detail
+marts:
+  mart_contract_detail:
+    grain:
+    - silver_version_id
+    - silver_manifest_sha256
+    - scope_id
+    - contract_key
+    relationships:
+      entity_sk: many-to-one dim_entity.entity_sk
+      supplier_sk: many-to-one dim_supplier.supplier_sk
+      municipality_sk: many-to-one dim_municipality.municipality_sk
+      modality_sk: many-to-one dim_modality.modality_sk
+      signing_date_sk: many-to-one dim_date.date_sk
+    query_macro: gold_detail_query
+    missing_members: explicit unknown dimension member; null signature has date_sk=0
+  mart_contract_overview:
+    grain:
+    - snapshot_scope
+    - signing_month_nullable
+    - municipality_sk
+    - modality_sk
+    - status_bucket
+    query_macro: gold_overview_query
+    metrics:
+    - contract_count
+    - contract_value_cop
+    - value_p25_cop
+    - value_median_cop
+    - value_p75_cop
+    - contract_count_share
+    - contract_value_share
+    rollup: recompute distributions and shares from detail; never sum stored percentiles
+  mart_entity_monthly:
+    grain:
+    - snapshot_scope
+    - entity_sk
+    - signing_month_nullable
+    query_macro: gold_entity_monthly_query
+    status_distribution: JSON normalized status bucket to selected unique contract
+      count; no semantic merging
+    rollup: recompute from detail for cross-grain filters
+  mart_supplier_concentration:
+    grain:
+    - snapshot_scope
+    - entity_sk
+    - signing_month_nullable
+    - base_cohort
+    query_macro: gold_concentration_query
+    metrics:
+    - hhi
+    - count_identity_coverage
+    - value_identity_coverage
+    - selected_supplier_reference_share
+    rollup: recompute pooled supplier sums; never average monthly HHI
+  mart_data_quality:
+    grain:
+    - snapshot_scope
+    - control_id
+    - evaluation_grain
+    global_filters:
+    - snapshot
+    - scope
+    - control_id
+    attributable_query_macro: gold_quality_query
+    global_behavior: Global observations unchanged by contract filters; acquisition
+      lane controls carry their own grain
+    availability: legacy null counters with UNAVAILABLE_LEGACY; required current evidence
+      failure blocks load
+metadata:
+  snapshot_scope:
+  - silver_version_id
+  - silver_manifest_sha256
+  - scope_id
+  digests:
+  - catalog_sha256
+  - policy_sha256
+  candidate_time: candidate_built_at_utc is construction time, not activation
+  coverage: sample/partial/complete bounded scope, sanitized acquisitions/completion/truncation
+    and limitations
+  publication: No publication activation identity supplied by this item; downstream
+    validated publication required
+  lineage: sanitized run IDs, hashes, row ordinals and retained-condition evidence;
+    no local page paths
+  supplier_selection: selection_metadata includes selected_supplier; reference_metadata
+    excludes it
