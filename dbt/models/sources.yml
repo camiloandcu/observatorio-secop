@@ -3,7 +3,7 @@ version: 2
 sources:
   - name: silver
     description: Snapshot relacional verificado de la versión Silver publicada.
-    schema: silver
+    schema: "{{ 'candidate_' ~ var('publication_id') ~ '_input' if var('publication_id', '') else 'silver' }}"
     meta:
       owner: analytics-engineering
       trust_boundary: verified-silver-bundle
