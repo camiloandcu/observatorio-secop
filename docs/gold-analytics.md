@@ -142,7 +142,8 @@ sus claves/dimensiones y metadatos de identidad, población, observación y
 catálogo/política. BI y API usarán roles de solo lectura sobre esa publicación.
 La activación, schemas/roles concretos, denegación de escritura y candidatos,
 retención, rollback y vinculación coherente de un refresh de varias consultas
-pertenecen al mecanismo de publicación. Esta entrega no concede permisos ni prueba
-ese lifecycle. BI debe conciliar sus medidas y filtros con estas consultas; API
+se operan con [publicación analítica](analytical-publication.md). La construcción
+de desarrollo por sí sola no concede permisos ni activa ese lifecycle. BI debe
+conciliar sus medidas y filtros con estas consultas; API
 debe parametrizar valores y rechazar filtros incompatibles; features debe conservar
 las condiciones de observación e interpretar su elegibilidad por separado.

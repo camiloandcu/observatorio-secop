@@ -16,5 +16,7 @@ Este directorio reúne las guías públicas del Observatorio SECOP. Elige el pun
 - [Cobertura y recuperación acotada](population-recovery.md): población por firma, presupuestos, evidencia, adopción y restauración.
 - [Transformación y calidad Silver](silver-quality.md): esquema tipado, deduplicación, rechazos, controles y publicación atómica.
 - [Modelo estrella con dbt](star-schema.md): carga Silver en PostgreSQL, dimensiones, hecho, pruebas, reconstrucción y catálogo.
+- [Indicadores y marts Gold](gold-analytics.md): granos, fórmulas, filtros, calidad y linaje analítico.
+- [Publicación analítica](analytical-publication.md): aislamiento, activación, lectores fijados, permisos, retención y recuperación.
 
-La documentación sobre indicadores, priorización, API y dashboard se añadirá con las historias que implementen esas capacidades.
+La documentación sobre priorización, API y dashboard se añadirá con las historias que implementen esas capacidades.

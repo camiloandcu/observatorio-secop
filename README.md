@@ -64,7 +64,7 @@ El repositorio cuenta con una base local reproducible, ingesta Bronze incrementa
 
 Los cinco [marts e indicadores Gold](docs/gold-analytics.md) están implementados como candidatos verificables, con catálogo de métricas, filtros gobernados y evidencia de calidad. Su construcción local no activa acceso de consumidores.
 
-La publicación analítica validada para consumidores, la orquestación de negocio con Airflow, la priorización con MLflow, la API FastAPI, el dashboard Power BI y la exportación acotada a AWS están pendientes. Su avance puede seguirse en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).
+La [publicación analítica](docs/analytical-publication.md) construye en aislamiento, valida antes de activar y ofrece lecturas fijadas a una versión, permisos restringidos y recuperación. La orquestación de negocio con Airflow, la priorización con MLflow, la API FastAPI, el dashboard Power BI y la exportación acotada a AWS están pendientes. Su avance puede seguirse en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).
 
 ## Principios
 

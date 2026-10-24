@@ -33,7 +33,7 @@ Los equivalentes sin Make son:
 ```bash
 uv run --locked --extra dev --extra data --extra warehouse ruff format --check .
 uv run --locked --extra dev --extra data --extra warehouse ruff check .
-uv run --locked --extra dev --extra data --extra warehouse mypy src/observatorio_secop/warehouse
+uv run --locked --extra dev --extra data --extra warehouse mypy src/observatorio_secop/warehouse src/observatorio_secop/publication
 uv run --locked --extra dev --extra data --extra warehouse pytest
 uv run --locked --extra dev --extra data --extra warehouse python scripts/check_tracked_files.py
 ```
