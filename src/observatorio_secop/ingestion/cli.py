@@ -51,6 +51,8 @@ def parser() -> argparse.ArgumentParser:
     reconcile.add_argument("--page-size", type=int)
     reconcile.add_argument("--baseline", type=Path, help="Pinned verified Silver manifest")
     reconcile.add_argument("--resume", help="Resume identical campaign with a new bounded grant")
+    reconcile.add_argument("--campaign-id", help="Reserve or resume an exact named campaign")
+    reconcile.add_argument("--invocation-key", help="Idempotent named grant; retry does not refill")
     inspect_campaign = subcommands.add_parser(
         "inspect-campaign",
         help="Verify and inspect durable population progress without source calls",
@@ -91,6 +93,8 @@ def main(argv: list[str] | None = None) -> int:
                     grant_requests=args.grant_requests,
                     baseline_path=args.baseline,
                     resume=args.resume,
+                    campaign_id=args.campaign_id,
+                    invocation_key=args.invocation_key,
                 )
             except (OSError, ValueError, SilverBundleError) as error:
                 raise IngestionError(f"Invalid population campaign: {error}") from error
