@@ -247,6 +247,32 @@ def test_serialized_scheduler_evidence_requires_a_queued_run_without_effects():
         gate.require_serialized_run(case | {"status": "skipped"})
 
 
+def test_queued_run_task_instances_must_have_no_state_or_start_end_time():
+    gate.require_unstarted_tasks(
+        [{"task_id": "validate", "state": None, "start_date": None, "end_date": None}]
+    )
+    for task in (
+        {"task_id": "validate", "state": "skipped", "start_date": None, "end_date": None},
+        {"task_id": "validate", "state": "deferred", "start_date": None, "end_date": None},
+        {"task_id": "validate", "state": "future-state", "start_date": None, "end_date": None},
+        {
+            "task_id": "validate",
+            "state": None,
+            "start_date": "2026-10-25T12:00:00Z",
+            "end_date": None,
+        },
+        {
+            "task_id": "validate",
+            "state": None,
+            "start_date": None,
+            "end_date": "2026-10-25T12:00:01Z",
+        },
+        {"task_id": "validate", "start_date": None, "end_date": None},
+    ):
+        with pytest.raises(gate.GateError, match="SERIALIZATION_SECOND_TASK_STARTED"):
+            gate.require_unstarted_tasks([task])
+
+
 def test_exact_restoration_preserves_original_contents_with_one_new_event():
     original = {
         "publication_id": "a" * 32,

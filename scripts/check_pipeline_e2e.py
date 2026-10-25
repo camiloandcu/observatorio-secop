@@ -424,23 +424,7 @@ print('true' if exists else 'false')
             if second.get("state") != "queued":
                 raise GateError("PIPELINE_E2E_SERIALIZATION_SECOND_RUN_NOT_QUEUED")
             maximum_instances = max(maximum_instances, len(second_tasks))
-            started = [
-                row
-                for row in second_tasks
-                if row.get("start_date") is not None
-                or row.get("state")
-                in {
-                    "queued",
-                    "scheduled",
-                    "running",
-                    "success",
-                    "failed",
-                    "up_for_retry",
-                    "upstream_failed",
-                }
-            ]
-            if started:
-                raise GateError("PIPELINE_E2E_SERIALIZATION_SECOND_TASK_STARTED")
+            require_unstarted_tasks(second_tasks)
             if self.receipt_exists(second_run):
                 raise GateError("PIPELINE_E2E_SERIALIZATION_SECOND_RECEIPT_EXISTS")
             observations += 1
@@ -631,6 +615,12 @@ def require_serialized_run(case: dict[str, Any]) -> None:
         or case.get("publication_unchanged") is not True
     ):
         raise GateError("PIPELINE_E2E_SERIALIZATION_NOT_ENFORCED")
+
+
+def require_unstarted_tasks(rows: list[dict[str, Any]]) -> None:
+    fields = ("state", "start_date", "end_date")
+    if any(any(field not in row or row[field] is not None for field in fields) for row in rows):
+        raise GateError("PIPELINE_E2E_SERIALIZATION_SECOND_TASK_STARTED")
 
 
 def require_restoration(
