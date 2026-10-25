@@ -47,10 +47,12 @@ pipeline_compose exec -T airflow-api-server airflow dags list-import-errors
 pipeline_compose exec -T airflow-api-server airflow dags unpause secop_pipeline
 ```
 
-El pool tiene un solo escritor, igual que el límite de una ejecución activa del
-DAG. Los locks de los productores y la generación de publicación siguen siendo
-necesarios frente a comandos manuales. No ejecutes simultáneamente otro escritor
-sobre las mismas raíces/base. Para acceder a la UI autenticada local, sigue
+El pool tiene un solo escritor y el DAG admite una sola ejecución activa. Si se
+dispara otro DagRun mientras el actual sigue activo, Airflow lo deja en cola y no
+programa sus tareas hasta que se libere el slot. Los locks de los productores y la
+generación de publicación siguen siendo necesarios frente a comandos manuales. No
+ejecutes simultáneamente otro escritor sobre las mismas raíces/base. Para acceder a
+la UI autenticada local, sigue
 [la sección de acceso Airflow](operations.md); no copies su contraseña a capturas.
 
 ## Disparar y observar

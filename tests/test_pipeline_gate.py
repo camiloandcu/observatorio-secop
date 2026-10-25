@@ -220,6 +220,31 @@ def test_every_commit_boundary_retry_must_execute_exactly_twice():
         gate.require_retries(receipt | {"invocations": 2})
 
 
+def test_serialized_scheduler_evidence_requires_a_queued_run_without_effects():
+    case = {
+        "status": "passed",
+        "queued_observations": 4,
+        "second_task_instances_before_release": 0,
+        "second_receipt_before_release": False,
+        "second_validate_started_after_first_finished": True,
+        "second_failed_validation_without_receipt": True,
+        "publication_unchanged": True,
+    }
+    gate.require_serialized_run(case)
+    for field, value in (
+        ("queued_observations", 2),
+        ("second_task_instances_before_release", 1),
+        ("second_receipt_before_release", True),
+        ("second_validate_started_after_first_finished", False),
+        ("second_failed_validation_without_receipt", False),
+        ("publication_unchanged", False),
+    ):
+        with pytest.raises(gate.GateError, match="SERIALIZATION_NOT_ENFORCED"):
+            gate.require_serialized_run(case | {field: value})
+    with pytest.raises(gate.GateError, match="SERIALIZATION_NOT_ENFORCED"):
+        gate.require_serialized_run(case | {"status": "skipped"})
+
+
 def test_exact_restoration_preserves_original_contents_with_one_new_event():
     original = {
         "publication_id": "a" * 32,

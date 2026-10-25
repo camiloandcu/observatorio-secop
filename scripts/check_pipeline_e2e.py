@@ -23,6 +23,7 @@ STAGES = {"validate", "acquire", "silver", "warehouse", "candidate", "activate",
 RECOVERY_STAGES = ("acquire", "silver", "warehouse", "candidate", "activate")
 REQUIRED_CASES = {
     "cold_scheduler_replay",
+    "serialized_scheduler_runs",
     "committed_stage_retries",
     "rejected_publication",
     "exact_restoration",
@@ -330,28 +331,105 @@ for p in sorted(root.glob('*/*.log'))[-30:]:
         self.healthy()
 
     def trigger(self, label: str, conf: dict[str, Any], *, failed: bool = False) -> str:
+        run_id = self.submit(label, conf)
+        self.wait_terminal(
+            run_id,
+            expected_state="failed" if failed else "success",
+            failed_stage="candidate" if failed else None,
+        )
+        return run_id
+
+    def submit(self, label: str, conf: dict[str, Any]) -> str:
         run_id = "e2e-" + label + "-" + secrets.token_hex(6)
         self.api_request(
             "/api/v2/dags/secop_pipeline/dagRuns",
             {"dag_run_id": run_id, "logical_date": datetime.now(UTC).isoformat(), "conf": conf},
         )
+        return run_id
+
+    def dag_run(self, run_id: str) -> dict[str, Any]:
+        return self.api_request("/api/v2/dags/secop_pipeline/dagRuns/" + run_id)
+
+    def task_instances(self, run_id: str) -> list[dict[str, Any]]:
+        return self.api_request("/api/v2/dags/secop_pipeline/dagRuns/" + run_id + "/taskInstances")[
+            "task_instances"
+        ]
+
+    def wait_for_task_state(self, run_id: str, task_id: str, state: str) -> dict[str, Any]:
+        end = min(self.deadline, time.monotonic() + 120)
+        while time.monotonic() < end:
+            run = self.dag_run(run_id)
+            rows = self.task_instances(run_id)
+            task = next((row for row in rows if row.get("task_id") == task_id), None)
+            if task and task.get("state") == state:
+                if run.get("state") != "running":
+                    raise GateError("PIPELINE_E2E_SERIALIZATION_FIRST_RUN_NOT_ACTIVE")
+                return run
+            if run.get("state") in ("success", "failed"):
+                raise GateError("PIPELINE_E2E_SERIALIZATION_RETRY_WINDOW_MISSED")
+            time.sleep(0.5)
+        raise GateError("PIPELINE_E2E_SERIALIZATION_RETRY_WINDOW_TIMEOUT")
+
+    def wait_terminal(
+        self,
+        run_id: str,
+        *,
+        expected_state: str,
+        failed_stage: str | None = None,
+    ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         end = min(self.deadline, time.monotonic() + 1200)
         while time.monotonic() < end:
-            run = self.api_request("/api/v2/dags/secop_pipeline/dagRuns/" + run_id)
+            run = self.dag_run(run_id)
             if run["state"] in ("success", "failed"):
-                if run["state"] != ("failed" if failed else "success"):
+                if run["state"] != expected_state:
                     raise GateError("PIPELINE_E2E_UNEXPECTED_RUN_STATE")
-                rows = self.api_request(
-                    "/api/v2/dags/secop_pipeline/dagRuns/" + run_id + "/taskInstances"
-                )["task_instances"]
-                require_tasks(rows, "candidate" if failed else None)
+                rows = self.task_instances(run_id)
+                require_tasks(rows, failed_stage if expected_state == "failed" else None)
                 self.task_outcomes[run_id] = [
                     {key: row.get(key) for key in ("task_id", "state", "try_number", "duration")}
                     for row in rows
                 ]
-                return run_id
+                return run, rows
             time.sleep(2)
         raise GateError("PIPELINE_E2E_DAGRUN_TIMEOUT")
+
+    def receipt_exists(self, run_id: str) -> bool:
+        code = """
+import sys
+from observatorio_secop.orchestration.models import Runtime,execution_id
+from observatorio_secop.orchestration.receipts import Receipts
+r=Runtime.environment()
+exists=Receipts(r.state,execution_id('secop_pipeline',sys.argv[1])).path.exists()
+print('true' if exists else 'false')
+"""
+        return (
+            self.command(["exec", "-T", "airflow-api-server", "python", "-c", code, run_id])
+            == "true"
+        )
+
+    def observe_serialized_run(self, first_run: str, second_run: str) -> dict[str, Any]:
+        observations = 0
+        end = min(self.deadline, time.monotonic() + 8)
+        while time.monotonic() < end and observations < 4:
+            first = self.dag_run(first_run)
+            first_tasks = self.task_instances(first_run)
+            second = self.dag_run(second_run)
+            second_tasks = self.task_instances(second_run)
+            acquire = next((row for row in first_tasks if row.get("task_id") == "acquire"), None)
+            if (
+                first.get("state") != "running"
+                or acquire is None
+                or acquire.get("state") != "up_for_retry"
+                or second.get("state") != "queued"
+                or second_tasks
+                or self.receipt_exists(second_run)
+            ):
+                raise GateError("PIPELINE_E2E_SERIALIZATION_NOT_ENFORCED")
+            observations += 1
+            time.sleep(1)
+        if observations < 3:
+            raise GateError("PIPELINE_E2E_SERIALIZATION_EVIDENCE_INSUFFICIENT")
+        return {"queued_observations": observations, "second_task_instances_before_release": 0}
 
     def receipt(self, run_id: str) -> dict[str, Any]:
         code = """
@@ -517,6 +595,20 @@ def require_retries(receipt: dict[str, Any]) -> None:
         raise GateError("PIPELINE_E2E_FIXED_INPUT_RETRY_FAILED")
 
 
+def require_serialized_run(case: dict[str, Any]) -> None:
+    if (
+        case.get("status") != "passed"
+        or type(case.get("queued_observations")) is not int
+        or case["queued_observations"] < 3
+        or case.get("second_task_instances_before_release") != 0
+        or case.get("second_receipt_before_release") is not False
+        or case.get("second_validate_started_after_first_finished") is not True
+        or case.get("second_failed_validation_without_receipt") is not True
+        or case.get("publication_unchanged") is not True
+    ):
+        raise GateError("PIPELINE_E2E_SERIALIZATION_NOT_ENFORCED")
+
+
 def require_restoration(
     original: dict[str, Any], before: dict[str, Any], restored: dict[str, Any]
 ) -> None:
@@ -608,9 +700,45 @@ def probe(summary: Path, *, build: bool = False, timeout: int = 2400) -> dict[st
             report["resource_samples"].append(runtime.resources())
             runtime.fault(",".join(stage + ":after_effect" for stage in RECOVERY_STAGES))
             case_started = time.monotonic()
-            run_b = runtime.trigger("retry-b", parameters("demo-b", a["stages"]["silver"]))
+            retry_input = parameters("demo-b", a["stages"]["silver"])
+            run_b = runtime.submit("retry-b", retry_input)
+            runtime.wait_for_task_state(run_b, "acquire", "up_for_retry")
+            run_waiting = runtime.submit("queued-invalid", {})
+            queued = runtime.observe_serialized_run(run_b, run_waiting)
+            first_run, _ = runtime.wait_terminal(run_b, expected_state="success")
+            second_run, second_tasks = runtime.wait_terminal(
+                run_waiting, expected_state="failed", failed_stage="validate"
+            )
             b = runtime.receipt(run_b)
             snapshot_b = runtime.snapshot()
+            validate_task = next(row for row in second_tasks if row.get("task_id") == "validate")
+            try:
+                first_end = datetime.fromisoformat(first_run["end_date"].replace("Z", "+00:00"))
+                second_start = datetime.fromisoformat(
+                    validate_task["start_date"].replace("Z", "+00:00")
+                )
+            except (KeyError, TypeError, ValueError):
+                raise GateError("PIPELINE_E2E_SERIALIZATION_TIMESTAMP_MISSING") from None
+            if (
+                second_start < first_end
+                or runtime.receipt_exists(run_waiting)
+                or snapshot_b != runtime.snapshot()
+            ):
+                raise GateError("PIPELINE_E2E_SERIALIZATION_SIDE_EFFECT")
+            serialized = {
+                "status": "passed",
+                **queued,
+                "second_receipt_before_release": False,
+                "second_validate_started_after_first_finished": second_start >= first_end,
+                "second_failed_validation_without_receipt": second_run["state"] == "failed"
+                and not runtime.receipt_exists(run_waiting),
+                "publication_unchanged": True,
+                "first_task_outcomes": runtime.task_outcomes[run_b],
+                "second_task_outcomes": runtime.task_outcomes[run_waiting],
+                "elapsed_seconds": round(time.monotonic() - case_started, 2),
+            }
+            require_serialized_run(serialized)
+            report["cases"]["serialized_scheduler_runs"] = serialized
             require_retries(b)
             if (
                 (snapshot_b["rows"], snapshot_b["total"]) != (3, "400.00")
@@ -680,7 +808,7 @@ def probe(summary: Path, *, build: bool = False, timeout: int = 2400) -> dict[st
             }
             report["resource_samples"].append(runtime.resources())
             report["stage"] = "safe_operational_surfaces"
-            audit = runtime.audit([run_a, run_b, run_c], a["publication_id"])
+            audit = runtime.audit([run_a, run_b, run_waiting, run_c], a["publication_id"])
             require_safe_surfaces(audit)
             report["cases"]["safe_operational_surfaces"] = {"status": "passed", **audit}
             require_cases(report["cases"])
