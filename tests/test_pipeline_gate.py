@@ -224,7 +224,8 @@ def test_serialized_scheduler_evidence_requires_a_queued_run_without_effects():
     case = {
         "status": "passed",
         "queued_observations": 4,
-        "second_task_instances_before_release": 0,
+        "second_task_instances_before_release": 7,
+        "second_tasks_started_before_release": 0,
         "second_receipt_before_release": False,
         "second_validate_started_after_first_finished": True,
         "second_failed_validation_without_receipt": True,
@@ -233,7 +234,8 @@ def test_serialized_scheduler_evidence_requires_a_queued_run_without_effects():
     gate.require_serialized_run(case)
     for field, value in (
         ("queued_observations", 2),
-        ("second_task_instances_before_release", 1),
+        ("second_task_instances_before_release", -1),
+        ("second_tasks_started_before_release", 1),
         ("second_receipt_before_release", True),
         ("second_validate_started_after_first_finished", False),
         ("second_failed_validation_without_receipt", False),

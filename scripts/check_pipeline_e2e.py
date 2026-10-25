@@ -410,26 +410,48 @@ print('true' if exists else 'false')
     def observe_serialized_run(self, first_run: str, second_run: str) -> dict[str, Any]:
         observations = 0
         end = min(self.deadline, time.monotonic() + 8)
+        maximum_instances = 0
         while time.monotonic() < end and observations < 4:
             first = self.dag_run(first_run)
             first_tasks = self.task_instances(first_run)
             second = self.dag_run(second_run)
             second_tasks = self.task_instances(second_run)
             acquire = next((row for row in first_tasks if row.get("task_id") == "acquire"), None)
-            if (
-                first.get("state") != "running"
-                or acquire is None
-                or acquire.get("state") != "up_for_retry"
-                or second.get("state") != "queued"
-                or second_tasks
-                or self.receipt_exists(second_run)
-            ):
-                raise GateError("PIPELINE_E2E_SERIALIZATION_NOT_ENFORCED")
+            if first.get("state") != "running":
+                raise GateError("PIPELINE_E2E_SERIALIZATION_FIRST_RUN_NOT_RUNNING")
+            if acquire is None or acquire.get("state") != "up_for_retry":
+                raise GateError("PIPELINE_E2E_SERIALIZATION_FIRST_RUN_NOT_RETRYING")
+            if second.get("state") != "queued":
+                raise GateError("PIPELINE_E2E_SERIALIZATION_SECOND_RUN_NOT_QUEUED")
+            maximum_instances = max(maximum_instances, len(second_tasks))
+            started = [
+                row
+                for row in second_tasks
+                if row.get("start_date") is not None
+                or row.get("state")
+                in {
+                    "queued",
+                    "scheduled",
+                    "running",
+                    "success",
+                    "failed",
+                    "up_for_retry",
+                    "upstream_failed",
+                }
+            ]
+            if started:
+                raise GateError("PIPELINE_E2E_SERIALIZATION_SECOND_TASK_STARTED")
+            if self.receipt_exists(second_run):
+                raise GateError("PIPELINE_E2E_SERIALIZATION_SECOND_RECEIPT_EXISTS")
             observations += 1
             time.sleep(1)
         if observations < 3:
             raise GateError("PIPELINE_E2E_SERIALIZATION_EVIDENCE_INSUFFICIENT")
-        return {"queued_observations": observations, "second_task_instances_before_release": 0}
+        return {
+            "queued_observations": observations,
+            "second_task_instances_before_release": maximum_instances,
+            "second_tasks_started_before_release": 0,
+        }
 
     def receipt(self, run_id: str) -> dict[str, Any]:
         code = """
@@ -600,7 +622,9 @@ def require_serialized_run(case: dict[str, Any]) -> None:
         case.get("status") != "passed"
         or type(case.get("queued_observations")) is not int
         or case["queued_observations"] < 3
-        or case.get("second_task_instances_before_release") != 0
+        or type(case.get("second_task_instances_before_release")) is not int
+        or case["second_task_instances_before_release"] < 0
+        or case.get("second_tasks_started_before_release") != 0
         or case.get("second_receipt_before_release") is not False
         or case.get("second_validate_started_after_first_finished") is not True
         or case.get("second_failed_validation_without_receipt") is not True
