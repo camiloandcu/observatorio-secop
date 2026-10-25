@@ -1,9 +1,18 @@
 name: ${COMPOSE_PROJECT_NAME:?COMPOSE_PROJECT_NAME is required}
 
 x-airflow-common: &airflow-common
-  image: ${AIRFLOW_IMAGE:?AIRFLOW_IMAGE is required}
+  image: observatorio-secop-airflow:local
+  build:
+    context: .
+    dockerfile: infra/docker/airflow/Dockerfile
+    args:
+      AIRFLOW_IMAGE: ${AIRFLOW_IMAGE:?AIRFLOW_IMAGE is required}
   profiles: ["airflow"]
   user: "${AIRFLOW_UID:?AIRFLOW_UID is required}:0"
+  working_dir: /opt/secop
+  read_only: true
+  tmpfs:
+    - /tmp:mode=1777,exec,size=512m
   environment: &airflow-environment
     AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -16,12 +25,28 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
       postgresql+psycopg2://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${AIRFLOW_DB:?AIRFLOW_DB is required}
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN_ASYNC: >-
+      postgresql+psycopg://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${AIRFLOW_DB:?AIRFLOW_DB is required}
     AIRFLOW__DAG_PROCESSOR__PARSING_PROCESSES: "1"
     AIRFLOW__API__WORKERS: "1"
     AIRFLOW__CORE__PARALLELISM: "2"
+    JAVA_TOOL_OPTIONS: "-Xss512k -XX:ActiveProcessorCount=2"
+    SECOP_PIPELINE_ROOT: /opt/secop-data/orchestration
+    SECOP_REPORT_ROOT: /opt/secop-reports
+    SECOP_RUNTIME_MODE: ${SECOP_RUNTIME_MODE:-demo}
+    BRONZE_ROOT: /opt/secop-data/bronze
+    SILVER_ROOT: /opt/secop-data/silver/secop_contracts
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+    POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    SOCRATA_APP_TOKEN: ${SOCRATA_APP_TOKEN:-}
   volumes:
     - airflow_local_state:/opt/airflow
     - ./dags:/opt/airflow/dags:ro
+    - pipeline_data:/opt/secop-data
+    - pipeline_reports:/opt/secop-reports
   depends_on:
     postgres:
       condition: service_healthy
@@ -60,6 +85,13 @@ services:
         from pathlib import Path
         import secrets
 
+        for root in (Path("/opt/secop-data"), Path("/opt/secop-reports")):
+            probe = root / ".write-probe"
+            try:
+                probe.touch(exist_ok=False)
+                probe.unlink()
+            except OSError:
+                raise SystemExit("Pipeline writable-root preflight failed; check UID/group permissions") from None
         state = Path("/opt/airflow/local-state")
         state.mkdir(mode=0o700, exist_ok=True)
         for name, value in (
@@ -104,8 +136,11 @@ services:
     healthcheck:
       test:
         [
-          "CMD-SHELL",
-          "airflow jobs check --job-type SchedulerJob --hostname $${HOSTNAME}",
+          "CMD",
+          "python",
+          "/opt/secop/scripts/airflow_health.py",
+          "--job-type",
+          "SchedulerJob",
         ]
       interval: 10s
       timeout: 10s
@@ -123,8 +158,11 @@ services:
     healthcheck:
       test:
         [
-          "CMD-SHELL",
-          "airflow jobs check --job-type DagProcessorJob --hostname $${HOSTNAME}",
+          "CMD",
+          "python",
+          "/opt/secop/scripts/airflow_health.py",
+          "--job-type",
+          "DagProcessorJob",
         ]
       interval: 10s
       timeout: 10s
@@ -168,3 +206,5 @@ services:
 volumes:
   postgres_data:
   airflow_local_state:
+  pipeline_data:
+  pipeline_reports:

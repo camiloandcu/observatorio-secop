@@ -152,3 +152,32 @@ jobs:
             reports/optional/compose-profile.json
           retention-days: 7
           if-no-files-found: warn
+
+  pipeline-e2e:
+    needs: [quality, optional-runtimes]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: '0.12.0'
+          python-version: '3.12'
+          enable-cache: false
+
+      - name: Require actual scheduler replay and recovery
+        run: make pipeline-e2e
+
+      - name: Upload sanitized pipeline evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pipeline-e2e-evidence
+          path: reports/orchestration/e2e.json
+          retention-days: 7
+          if-no-files-found: error

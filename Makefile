@@ -135,3 +135,7 @@ down:
 
 clean:
 	CONFIRM_CLEAN=yes ./scripts/local.sh clean
+
+.PHONY: pipeline-e2e
+pipeline-e2e:
+	$(UV) run --locked python scripts/check_pipeline_e2e.py --build --summary reports/orchestration/e2e.json
