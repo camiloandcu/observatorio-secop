@@ -69,3 +69,17 @@ uv run secop-warehouse restore --version TARGET --manifest-sha256 TARGET_HASH \
 Los valores `CURRENT` pueden diferir entre almacenes. Si otro escritor cambió la selección, inspecciona el estado antes de repetir; no sustituyas automáticamente la identidad esperada. Una restauración no modifica el alcance persistente ni convierte una ausencia de fuente en eliminación.
 
 Los consumidores dbt disponen de `staging.stg_population_coverage`, `staging.stg_contract_observation_condition` y `staging.stg_contract_observation_link`. Los dos últimos mantienen separados el resumen 1:1 y la evidencia 1:N. Consulta [el modelo estrella](star-schema.md) para configurar PostgreSQL y dbt.
+
+## Reservas estables para orquestación
+
+Un scheduler puede perder la respuesta de una tarea después de que la adquisición guardó páginas o comprometió la campaña. Para recuperar esa misma identidad, reserva `--campaign-id` y `--invocation-key` antes de llamar al productor:
+
+```bash
+uv run secop-ingest reconcile --signing-from 2026-01-01 --signing-to 2026-02-01 \
+  --total-rows 1000 --total-requests 30 --grant-rows 500 --grant-requests 15 \
+  --page-size 100 --campaign-id CAMPAIGN --invocation-key GRANT_1
+```
+
+Ambos identificadores son obligatorios juntos y admiten letras ASCII, dígitos, guion y guion bajo. Repetirlos reutiliza la campaña y el saldo del mismo grant; no añade otra invocación ni recarga filas/solicitudes. Las reservas inciertas tras una interrupción conservan su cargo. Cambiar límites del mismo grant, alcance, baseline, contrato o techos falla antes de continuar. El productor verifica las páginas y sus hashes antes de reanudar; una campaña comprometida idéntica es un no-op. Los identificadores y grants quedan en la evidencia durable antes de enviar solicitudes.
+
+Un grant agotado deja la campaña pausada. Para ampliarlo deliberadamente, el operador inspecciona primero la campaña y proporciona una **nueva** `--invocation-key` sobre el mismo `--campaign-id`, con una asignación dentro de los techos restantes. La clave previa queda sustituida y no puede reactivarse. Ampliar los techos totales requiere un plan nuevo. El `--resume` legado sigue solicitando una nueva asignación explícita para campañas legadas; un scheduler debe usar las reservas con nombre. No hay búsqueda automática de la campaña más reciente ni modificación del checkpoint incremental.

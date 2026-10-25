@@ -2,7 +2,7 @@
 
 ## Contrato operativo
 
-La ruta soportada es Ubuntu en WSL2, con el checkout dentro del filesystem Linux y Docker Desktop como motor. PostgreSQL es el servicio mínimo. Airflow y MLflow son perfiles optativos y no ejecutan lógica de negocio en US-00.
+La ruta soportada es Ubuntu en WSL2, con el checkout dentro del filesystem Linux y Docker Desktop como motor. PostgreSQL es el servicio mínimo. Airflow y MLflow son perfiles optativos; el perfil Airflow instala el runtime del pipeline y el servicio base no inicia sus tareas.
 
 Los puertos solo se publican en `127.0.0.1`. La configuración falla antes del arranque si falta una variable obligatoria. `down` conserva el estado y `clean` elimina únicamente el estado local descrito en su advertencia.
 
@@ -38,7 +38,8 @@ separado: no modifica el checkpoint incremental ni permite publicar solo el subs
 
 - PostgreSQL usa `pg_isready` y una consulta confirma las bases de aplicación, Airflow y MLflow.
 - El API server de Airflow consulta `/api/v2/monitor/health`. Esta sonda de disponibilidad no sustituye la prueba de autenticación.
-- El scheduler y el DAG processor separado usan `airflow jobs check`.
+- El scheduler y el DAG processor consultan su heartbeat en PostgreSQL con una sonda
+  pequeña que no importa Airflow; cada conexión y consulta tienen límites de tiempo.
 - MLflow consulta `/health` con la biblioteca estándar de Python.
 - `make ps` muestra estado y health; `make logs SERVICE=<nombre>` limita la salida a las últimas 200 líneas.
 
@@ -52,7 +53,7 @@ Un servicio en estado `unhealthy`, `exited` o `dead` hace fallar la espera inmed
 make clean
 ```
 
-**Advertencia:** `make clean` elimina contenedores, los volúmenes PostgreSQL y Airflow del proyecto y `mlruns/`. No elimina archivos fuente, `.env`, datos fuera del proyecto ni imágenes Docker.
+**Advertencia:** `make clean` elimina contenedores, los volúmenes PostgreSQL, Airflow, datos y reportes del pipeline del proyecto y `mlruns/`. No elimina archivos fuente, `.env`, datos fuera del proyecto ni imágenes Docker.
 
 ## Diagnóstico
 
@@ -153,3 +154,78 @@ la migración: `airflow-init` ejecuta `airflow db migrate`. Actualiza el pin
 La guía de [dependencias](dependency-maintenance.md) registra el alcance de los
 ensayos automatizados. Ningún ensayo desechable actualiza la base de trabajo ni
 prueba DAGs de negocio futuros. No ejecutes `make clean` como mecanismo de rollback.
+
+## Runtime del pipeline Airflow
+
+### Límites de recursos para el E2E
+
+El E2E desechable limita PostgreSQL a 256 MiB, el API a 512 MiB, el scheduler a
+1,5 GiB y el DAG processor a 256 MiB; también limita procesos por contenedor. El
+límite de swap igual a memoria evita que estos servicios trasladen presión a un
+swap lento. Si un servicio alcanza su límite, Docker puede terminarlo y el gate
+falla con diagnóstico privado y limpieza de sus propios volúmenes. Antes de
+construir o iniciar contenedores, el gate exige 2 GiB de memoria disponible en
+Linux para reservar margen al sistema; ejecuta un solo E2E a la vez.
+
+El runtime limita la JVM Spark ejecutada desde el scheduler a dos CPUs activas y
+pilas de hilo de 512 KiB; el límite de procesos del scheduler es 384. Estos topes
+acotan hilos auxiliares para un ensayo local pequeño.
+
+En Docker Desktop con backend WSL2, **Settings → Resources → WSL Integration** habilita
+la integración de la distribución; no configura por sí sola el límite de memoria de
+la VM WSL. Para fijar memoria, CPU o swap globales de WSL2, usa
+`%UserProfile%\.wslconfig` (`memory`, `processors`, `swap`). Esos límites aplican a
+todas las distribuciones WSL y requieren `wsl --shutdown` para tomar efecto. Ajusta
+los valores según la RAM física y las demás aplicaciones, conservando margen para
+Windows; el ensayo no modifica esta configuración global automáticamente.
+
+Si WSL deja de responder, guarda el trabajo de Windows y ejecuta `wsl --shutdown`
+desde PowerShell; después inicia Docker Desktop y Ubuntu de nuevo. Esto detiene
+todas las distribuciones WSL y contenedores que dependan de ese motor. Comprueba
+`docker ps` y `docker system df` antes de repetir el gate.
+
+`make up-airflow` construye la imagen local desde el pin `AIRFLOW_IMAGE`, instala
+los extras de datos, warehouse y orquestación de `uv.lock`, y luego inicia los
+procesos. Java 17, Python 3.12, Spark y dbt se instalan durante la construcción;
+las tareas no descargan paquetes. El primer build requiere red para dependencias;
+el replay preparado usa transporte sintético y no requiere Socrata ni AWS.
+
+El código y los recursos ejecutables están en `/opt/secop`, con la instalación
+editable fijada en `/opt/secop/.venv`; esto conserva la raíz que usa la validación
+de recetas de publicación. La imagen copia únicamente recursos permitidos y
+excluye planificación, `.env`, datos locales y reportes. No montes el checkout
+completo, el home ni el socket Docker dentro de los servicios.
+
+Los contenedores tienen filesystem de solo lectura, `/tmp` temporal con ejecución
+habilitada y tamaño máximo de 512 MiB (Spark requiere cargar allí su biblioteca
+nativa), y volúmenes escritos por el UID configurado y grupo 0:
+
+| Raíz | Uso y persistencia |
+|---|---|
+| `/opt/airflow` | Metadata de archivos, autenticación y logs locales |
+| `/opt/secop-data/bronze` | Campañas y páginas Bronze durables |
+| `/opt/secop-data/silver/secop_contracts` | Bundles y evidencia Silver |
+| `/opt/secop-data/orchestration` | Recibos e identidades de ejecución |
+| `/opt/secop-reports` | Diagnóstico privado y artefactos dbt |
+
+El inicio comprueba escritura en datos/reportes antes de migrar metadata. Un
+fallo de permisos detiene el arranque sin imprimir rutas ni credenciales. Revisa
+`AIRFLOW_UID`, la pertenencia al grupo 0 y los volúmenes de ese proyecto; no borres
+volúmenes como reparación automática. Las tareas leen conexiones mediante
+variables privadas y nunca reciben contraseñas en parámetros o XCom.
+
+`SECOP_RUNTIME_MODE=demo` es el valor inicial. Usa un proyecto Compose, base y
+volúmenes separados para un modo vivo gobernado; cambiar solo el parámetro del
+DAG no convierte una demo en adquisición autorizada. El servicio solo es para
+operadores locales de confianza; no aísla de administradores o autores de DAGs
+maliciosos. `make down` conserva las raíces; `make clean` elimina también los
+datos y reportes del pipeline y requiere la confirmación destructiva existente.
+
+Para volver a una imagen anterior, detén primero las tareas y conserva recibos,
+candidatos y volúmenes. Cambia la imagen y lock bajo revisión y recupera metadata
+con el procedimiento anterior si su esquema cambió. No confundas detener el DAG
+con restaurar Silver, warehouse o publicación: cada capa conserva su mecanismo
+de recuperación y su identidad propia.
+
+El [runbook del pipeline](pipeline-orchestration.md) detalla trigger, seguimiento,
+reintento con insumos fijados, grants y restauración por capa.

@@ -180,3 +180,28 @@ días. La política de 25 minutos cubre instalación y descargas sin caché; rev
 duración real y margen con cada migración. Consulta comandos, alcance y límites en
 [mantenimiento de dependencias](dependency-maintenance.md). No se publican backups,
 logs de servicios, credenciales ni archivos de configuración privados.
+
+
+## Replay real del pipeline
+
+`make pipeline-e2e` construye la imagen y ejecuta el gate sobre un proyecto Compose,
+metadata Airflow y warehouse desechables propios. El job `pipeline-e2e` espera los
+jobs de calidad y runtimes opcionales para evitar su superposición pesada. Comprueba
+el scheduler y Execution API con las siete tareas reales; el transporte fuente es
+sintético, mientras Spark, PostgreSQL, dbt y publicación ejecutan sus productores.
+No necesita Socrata ni AWS durante el replay preparado.
+
+El inventario obligatorio incluye reconstrucción fría con resultados conocidos,
+corte después del commit de adquisición con reintento del mismo grant y candidata
+rechazada que conserva la publicación válida. Importar el DAG, pasar health checks
+o dejar casos/tareas omitidos no satisface ese inventario. El gate conserva límites
+finitos, inspecciona el candidato fallido antes de descartarlo explícitamente y
+comprueba la eliminación de sus recursos propios.
+
+Solo `reports/orchestration/e2e.json` se publica como evidencia saneada, con retención
+de siete días. Identifica imagen/código/lock/fixtures, estados e intentos por tarea,
+duraciones, resultados conocidos, alcance de la medición y cleanup. Los snapshots
+de recursos observados no se presentan como picos garantizados. Diagnósticos, logs,
+configuración, credenciales y artefactos detallados permanecen privados. Revisa el
+resultado real y sus limitaciones; tener el gate configurado no prueba su ejecución.
+El [runbook](pipeline-orchestration.md) explica la operación manual y recuperación.

@@ -1,0 +1,27 @@
+# Send only public executable resources, even when private files exist locally.
+**
+!pyproject.toml
+!uv.lock
+!README.md
+!src/
+!src/**
+!contracts/
+!contracts/**
+!config/
+!config/**
+!dbt/
+!dbt/**
+!scripts/
+!scripts/**
+!infra/
+!infra/docker/
+!infra/docker/airflow/
+!infra/docker/airflow/Dockerfile
+!infra/docker/airflow/Dockerfile.dockerignore
+**/__pycache__
+**/*.pyc
+**/.env
+**/.env.*
+dbt/target
+dbt/logs
+dbt/dbt_packages

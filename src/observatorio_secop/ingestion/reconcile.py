@@ -42,6 +42,8 @@ class PopulationReconciliation(BronzeIngestion):
         grant_requests: int,
         baseline_path: Path | None = None,
         resume: str | None = None,
+        campaign_id: str | None = None,
+        invocation_key: str | None = None,
     ) -> RunManifest:
         scope = PopulationScope(signing_from, signing_to)
         positive(total_rows, "total rows")
@@ -49,6 +51,12 @@ class PopulationReconciliation(BronzeIngestion):
         positive(grant_rows, "grant rows")
         positive(grant_requests, "grant requests")
         self._validate_id(resume)
+        self._validate_id(campaign_id)
+        self._validate_id(invocation_key)
+        if (campaign_id is None) != (invocation_key is None):
+            raise ResumeError("Named reservation requires campaign_id and invocation_key together")
+        if resume is not None and campaign_id is not None and resume != campaign_id:
+            raise ResumeError("Resume and reserved campaign identities disagree")
         baseline = baseline_binding(baseline_path, self.contract.dataset_id)
         parameters = {
             "scope": scope.as_dict(),
@@ -61,16 +69,26 @@ class PopulationReconciliation(BronzeIngestion):
             "contract_sha256": self.contract.contract_hash,
             "plan_version": "population-reconciliation-v1",
         }
+        if campaign_id is not None:
+            parameters["reservation_mode"] = "named-v1"
         parameters["plan_id"] = sha256_bytes(canonical_json(parameters))
         lock = self.storage.locks_root / f"{self.contract.dataset_id}.lock"
         with DatasetLock(lock):
             self.reconcile_prepared()
-            if resume and self.storage.run_path(resume).exists():
-                manifest = self.storage.load_published(self.storage.run_path(resume))
-                self._validate_resume(manifest, parameters, self.storage.run_path(resume))
+            selected_id = campaign_id or resume
+            if selected_id and self.storage.run_path(selected_id).exists():
+                manifest = self.storage.load_published(self.storage.run_path(selected_id))
+                self._validate_resume(manifest, parameters, self.storage.run_path(selected_id))
+                self._check_named_grant(manifest, invocation_key, grant_rows, grant_requests)
                 return manifest
-            manifest = self.storage.load_staging(resume) if resume else self._start(parameters)
+            if selected_id and self.storage.staging_path(selected_id).exists():
+                manifest = self.storage.load_staging(selected_id)
+            elif resume and campaign_id is None:
+                manifest = self.storage.load_staging(resume)
+            else:
+                manifest = self._start(parameters, campaign_id=campaign_id)
             self._validate_resume(manifest, parameters, self.storage.staging_path(manifest.run_id))
+            self._check_named_grant(manifest, invocation_key, grant_rows, grant_requests)
             # Terminal pages may survive a crash before prepare/commit. Finish them
             # without another invocation grant or source observation.
             if manifest.range_complete:
@@ -79,7 +97,7 @@ class PopulationReconciliation(BronzeIngestion):
                 return self._finish_campaign(manifest, "acquired")
             ledger = CampaignLedger(manifest, self.storage)
             try:
-                ledger.grant(grant_rows, grant_requests, self._now())
+                self._grant_or_resume(ledger, invocation_key, grant_rows, grant_requests)
                 manifest.status = "extracting"
                 manifest.truncated = False
                 pop = progress(manifest)
@@ -111,6 +129,36 @@ class PopulationReconciliation(BronzeIngestion):
             finally:
                 self.transport.before_attempt = None
 
+    @staticmethod
+    def _check_named_grant(
+        manifest: RunManifest, invocation_key: str | None, rows: int, attempts: int
+    ) -> dict[str, Any] | None:
+        if invocation_key is None:
+            return None
+        invocations = progress(manifest)["invocations"]
+        matches = [i for i in invocations if i.get("reservation_key") == invocation_key]
+        if not matches:
+            return None
+        if len(matches) != 1:
+            raise ResumeError("Named invocation reservation is duplicated")
+        invocation = matches[0]
+        if invocation["grant_rows"] != rows or invocation["grant_attempts"] != attempts:
+            raise ResumeError("Cannot reuse named invocation with changed grant limits")
+        if invocation is not invocations[-1]:
+            raise ResumeError("Cannot resume a superseded invocation reservation")
+        return invocation
+
+    def _grant_or_resume(
+        self, ledger: CampaignLedger, invocation_key: str | None, rows: int, attempts: int
+    ) -> None:
+        invocation = self._check_named_grant(ledger.manifest, invocation_key, rows, attempts)
+        if invocation is None:
+            ledger.grant(rows, attempts, self._now())
+            if invocation_key is not None:
+                progress(ledger.manifest)["invocations"][-1]["reservation_key"] = invocation_key
+        # A matching named invocation reuses its original grant and reservations.
+        # The subsequent persist updates its state without changing allowance.
+
     def inspect_campaign(self, campaign_id: str) -> dict[str, Any]:
         self._validate_id(campaign_id)
         lock = self.storage.locks_root / f"{self.contract.dataset_id}.lock"
@@ -135,13 +183,15 @@ class PopulationReconciliation(BronzeIngestion):
 
     @staticmethod
     def _validate_id(value: str | None) -> None:
-        if value is not None and not re.fullmatch(r"[A-Za-z0-9_-]+", value):
+        if value is not None and (
+            not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", value)
+        ):
             raise ResumeError("Campaign ID must be a single safe identifier")
 
-    def _start(self, parameters: dict[str, Any]) -> RunManifest:
+    def _start(self, parameters: dict[str, Any], *, campaign_id: str | None = None) -> RunManifest:
         baseline = parameters["baseline"]
         manifest = RunManifest(
-            run_id=str(self.uuid_factory()),
+            run_id=campaign_id or str(self.uuid_factory()),
             dataset_id=self.contract.dataset_id,
             contract_sha256=self.contract.contract_hash,
             parameters=parameters,

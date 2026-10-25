@@ -69,6 +69,7 @@ def test_ci_limits_untrusted_pr_permissions_caches_and_artifacts() -> None:
         "reports/optional/runtime-smoke.json",
         "reports/optional/airflow-migration.json",
         "reports/optional/compose-profile.json",
+        "reports/orchestration/e2e.json",
     }
     for job in document["jobs"].values():
         assert "permissions" not in job

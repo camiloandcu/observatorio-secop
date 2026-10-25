@@ -12,3 +12,14 @@ mlruns
 __pycache__
 .pytest_cache
 .ruff_cache
+
+# Private planning and generated diagnostics must never enter image contexts.
+openspec
+reports
+.agents
+.aws
+.env.*
+.dbt
+dbt/target
+dbt/logs
+dbt/dbt_packages

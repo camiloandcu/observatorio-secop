@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, cast
 
@@ -189,7 +190,20 @@ def verify_population_run(
         ]
         if len(metadata_responses) != int(pop["metadata_verified"]):
             raise ResumeError("Campaign metadata proof lacks its response receipt")
+        named_keys: set[str] = set()
         for invocation_id, invocation in enumerate(pop["invocations"], 1):
+            key = invocation.get("reservation_key")
+            named = params.get("reservation_mode") == "named-v1"
+            if named:
+                if (
+                    not isinstance(key, str)
+                    or not re.fullmatch(r"[A-Za-z0-9_-]+", key)
+                    or key in named_keys
+                ):
+                    raise ResumeError("Campaign named invocation reservation is invalid")
+                named_keys.add(key)
+            elif key is not None:
+                raise ResumeError("Legacy campaign cannot contain named invocation reservations")
             usage = consumed(manifest, invocation_id)
             if (
                 invocation["invocation_id"] != invocation_id
