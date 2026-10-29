@@ -1,0 +1,727 @@
+[
+  {
+    "tableName": "Indicadores",
+    "name": "Selection State",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _ModeIsAmbiguous = ISFILTERED ( 'DateMode' ) && NOT HASONEVALUE ( 'DateMode'[mode] )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nRETURN\n    SWITCH ( TRUE (),\n        [Import State] <> \"AVAILABLE\", [Import State],\n        _ModeIsAmbiguous || NOT ( _Mode IN { \"ALL\", \"INTERVAL\", \"MISSING\" } ), \"INVALID_DATE_MODE\",\n        _Mode = \"INTERVAL\" && ( NOT HASONEVALUE ( 'DateStart'[Date] ) || NOT HASONEVALUE ( 'DateEnd'[Date] ) || _Start >= _End ), \"INVALID_DATE_INTERVAL\",\n        \"AVAILABLE\"\n    )",
+    "dataType": "String",
+    "displayFolder": "States",
+    "description": "Single date mode; INTERVAL requires single start/end and uses [start,end). Inactive date bounds are ignored.",
+    "isHidden": true
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Supplier Selection State",
+    "expression": "IF ( ISFILTERED ( 'SupplierFocus' ) && NOT HASONEVALUE ( 'SupplierFocus'[supplier_sk] ),\n        \"MULTIPLE_SUPPLIER_SELECTION\", \"AVAILABLE\" )",
+    "dataType": "String",
+    "displayFolder": "States",
+    "description": "A missing focus means all reference contracts; multiple focuses are invalid.",
+    "isHidden": true
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Policy State",
+    "expression": "VAR _Version = SELECTEDVALUE ( 'publication_metadata'[policy_version] )\nVAR _Digest = SELECTEDVALUE ( 'publication_metadata'[policy_sha256] )\nRETURN\n    SWITCH ( TRUE (),\n        ISBLANK ( _Version ) || ISBLANK ( _Digest ), \"POLICY_UNCONFIGURED\",\n        _Version <> \"gold-hhi-policy-v1\" || _Digest <> \"eabc877d527133dd89f5184f77add49ddba56fcb2e82949bf31d658df66789f4\", \"POLICY_MISMATCH\",\n        \"AVAILABLE\"\n    )",
+    "dataType": "String",
+    "displayFolder": "States",
+    "description": "Binds the reviewed gold-hhi-policy-v1 digest before applying its 100% count/value minima; no silent threshold fallback.",
+    "isHidden": true
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Contract Count",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\n\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", COALESCE ( COUNTROWS ( SUMMARIZE ( _Reference, 'mart_contract_detail'[contract_key] ) ), 0 ) )",
+    "dataType": "Int64",
+    "displayFolder": "Reference",
+    "description": "Distinct reference contracts; ignores connected supplier dimension only. Empty selection is zero.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Contract Value COP",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\n\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", CURRENCY ( COALESCE ( SUMX ( _Reference, 'mart_contract_detail'[contract_value_cop] ), 0 ) ) )",
+    "dataType": "Decimal",
+    "displayFolder": "Reference",
+    "description": "Observed nominal COP over reference contracts. Fixed decimal domain must be checked before Import; empty sum is zero.",
+    "isHidden": false,
+    "formatString": "#,0.00 \"COP\""
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Median Value COP",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\nVAR _Amounts = FILTER ( _Reference, NOT ISBLANK ( 'mart_contract_detail'[contract_value_cop] ) )\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", IF ( COUNTROWS ( _Amounts ) > 0, CURRENCY ( MEDIANX ( _Amounts, 'mart_contract_detail'[contract_value_cop] ) ) ) )",
+    "dataType": "Decimal",
+    "displayFolder": "Reference",
+    "description": "Continuous p50 over non-null selected amounts; preserves half-cent values and returns blank for empty/no-value populations.",
+    "isHidden": false,
+    "formatString": "#,0.#### \"COP\""
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Known Contract Count",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\n\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", COALESCE ( COUNTROWS ( SUMMARIZE ( FILTER ( _Reference, 'mart_contract_detail'[supplier_identity_status] = \"KNOWN\" ), 'mart_contract_detail'[contract_key] ) ), 0 ) )",
+    "dataType": "Int64",
+    "displayFolder": "Concentration",
+    "description": "Known-supplier identity count in the complete reference, unaffected by SupplierFocus.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Known Value COP",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\n\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", CURRENCY ( COALESCE ( SUMX ( FILTER ( _Reference, 'mart_contract_detail'[supplier_identity_status] = \"KNOWN\" ), 'mart_contract_detail'[contract_value_cop] ), 0 ) ) )",
+    "dataType": "Decimal",
+    "displayFolder": "Concentration",
+    "description": "HHI denominator: nominal observed value of every known supplier in the entity/reference.",
+    "isHidden": false,
+    "formatString": "#,0.00 \"COP\""
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Count Identity Coverage",
+    "expression": "IF ( [Selection State] = \"AVAILABLE\", DIVIDE ( [Known Contract Count], [Contract Count] ) )",
+    "dataType": "Double",
+    "displayFolder": "Concentration",
+    "description": "Known-contract count divided by all reference contracts; blank when reference count is zero.",
+    "isHidden": false,
+    "formatString": "0.00%"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Value Identity Coverage",
+    "expression": "IF ( [Selection State] = \"AVAILABLE\", DIVIDE ( [Known Value COP], [Contract Value COP] ) )",
+    "dataType": "Double",
+    "displayFolder": "Concentration",
+    "description": "Known observed COP divided by all reference observed COP; blank when total value is zero.",
+    "isHidden": false,
+    "formatString": "0.00%"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "HHI State",
+    "expression": "SWITCH ( TRUE (),\n        [Import State] <> \"AVAILABLE\", [Import State],\n        [Selection State] <> \"AVAILABLE\", [Selection State],\n        [Policy State] <> \"AVAILABLE\", [Policy State],\n        [Contract Count] = 0, \"NO_CONTRACTS\",\n        NOT HASONEVALUE ( 'dim_entity'[entity_sk] ), \"ENTITY_SELECTION_REQUIRED\",\n        SELECTEDVALUE ( 'dim_entity'[member_status] ) <> \"KNOWN\", \"UNKNOWN_ENTITY\",\n        [Known Contract Count] = 0, \"NO_KNOWN_SUPPLIERS\",\n        [Contract Value COP] = 0, \"ZERO_TOTAL_VALUE\",\n        [Known Value COP] = 0, \"ZERO_KNOWN_VALUE\",\n        [Count Identity Coverage] < 1 || [Value Identity Coverage] < 1, \"INSUFFICIENT_IDENTITY_COVERAGE\",\n        \"AVAILABLE\"\n    )",
+    "dataType": "String",
+    "displayFolder": "Concentration",
+    "description": "Gold null-reason priority plus explicit UI date, entity-selection and policy-mismatch states. Threshold equality qualifies.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "HHI",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\nVAR _Known = FILTER ( _Reference, 'mart_contract_detail'[supplier_identity_status] = \"KNOWN\" )\nVAR _SupplierValues = GROUPBY ( _Known, 'mart_contract_detail'[supplier_sk], \"__Value\", SUMX ( CURRENTGROUP (), 'mart_contract_detail'[contract_value_cop] ) )\nVAR _Denominator = [Known Value COP]\nRETURN\n    IF ( [HHI State] = \"AVAILABLE\", SUMX ( _SupplierValues, POWER ( DIVIDE ( [__Value], _Denominator ), 2 ) ) )",
+    "dataType": "Double",
+    "displayFolder": "Concentration",
+    "description": "Pooled supplier sums across the selected months; sum of squared known-value shares on scale0–1. Never averages monthly HHI.",
+    "isHidden": false,
+    "formatString": "0.000"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "HHI Display",
+    "expression": "VAR _ImportState = [Import State]\nRETURN SWITCH ( _ImportState,\n    \"NO_VALID_IMPORT\", \"Sin Import válido; ejecuta un refresh completo para cargar la publicación.\",\n    \"INCONSISTENT_IMPORT\", \"Import inconsistente; ejecuta un refresh completo. Si persiste, reconstruye el modelo desde una publicación verificada.\",\n    IF ( [HHI State] = \"AVAILABLE\", FORMAT ( [HHI], \"0.000\", \"es-CO\" ), \"No disponible\" )\n)",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Short numeric card; pair with HHI State Label for reason.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Selected Supplier Value COP",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\nVAR _HasFocus = ISFILTERED ( 'SupplierFocus' )\nVAR _Focus = SELECTEDVALUE ( 'SupplierFocus'[supplier_sk] )\nVAR _Selected = FILTER ( _Reference, NOT _HasFocus || 'mart_contract_detail'[supplier_sk] = _Focus )\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\" && [Supplier Selection State] = \"AVAILABLE\", CURRENCY ( COALESCE ( SUMX ( _Selected, 'mart_contract_detail'[contract_value_cop] ), 0 ) ) )",
+    "dataType": "Decimal",
+    "displayFolder": "Supplier focus",
+    "description": "Focus value; with no focus selection, the entire reference is shown. Unknown identity is not a real supplier.",
+    "isHidden": false,
+    "formatString": "#,0.00 \"COP\""
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Selected Supplier Contract Count",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\nVAR _HasFocus = ISFILTERED ( 'SupplierFocus' )\nVAR _Focus = SELECTEDVALUE ( 'SupplierFocus'[supplier_sk] )\nVAR _Selected = FILTER ( _Reference, NOT _HasFocus || 'mart_contract_detail'[supplier_sk] = _Focus )\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\" && [Supplier Selection State] = \"AVAILABLE\", COALESCE ( COUNTROWS ( SUMMARIZE ( _Selected, 'mart_contract_detail'[contract_key] ) ), 0 ) )",
+    "dataType": "Int64",
+    "displayFolder": "Supplier focus",
+    "description": "Distinct contracts for focused supplier/unknown member; no focus returns reference count.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Selected Supplier Share",
+    "expression": "IF ( [Selection State] = \"AVAILABLE\" && [Supplier Selection State] = \"AVAILABLE\"\n        && ISFILTERED ( 'SupplierFocus' ) && HASONEVALUE ( 'SupplierFocus'[supplier_sk] )\n        && SELECTEDVALUE ( 'SupplierFocus'[member_status] ) = \"KNOWN\",\n        DIVIDE ( [Selected Supplier Value COP], [Known Value COP] ) )",
+    "dataType": "Double",
+    "displayFolder": "Supplier focus",
+    "description": "Selected known supplier value / full known reference value. Blank for absent/unknown focus or zero denominator; partial reference may still expose known-supplier share.",
+    "isHidden": false,
+    "formatString": "0.00%"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Show Selected Contract",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\nVAR _HasFocus = ISFILTERED ( 'SupplierFocus' )\nVAR _Focus = SELECTEDVALUE ( 'SupplierFocus'[supplier_sk] )\nVAR _Selected = FILTER ( _Reference, NOT _HasFocus || 'mart_contract_detail'[supplier_sk] = _Focus )\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\" && [Supplier Selection State] = \"AVAILABLE\", IF ( COUNTROWS ( _Selected ) > 0, 1, 0 ) )",
+    "dataType": "Int64",
+    "displayFolder": "Supplier focus",
+    "description": "Apply as visual-level =1 to contract tables. Preserves explicit contract/fact row filters while applying the disconnected focus.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Missing Signature Count",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\n\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", COALESCE ( COUNTROWS ( SUMMARIZE ( FILTER ( _Reference, ISBLANK ( 'mart_contract_detail'[signing_date] ) ), 'mart_contract_detail'[contract_key] ) ), 0 ) )",
+    "dataType": "Int64",
+    "displayFolder": "Selected-contract quality",
+    "description": "Reference contracts with absent signatures; no date imputation.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Unknown Supplier Count",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\n\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", COALESCE ( COUNTROWS ( SUMMARIZE ( FILTER ( _Reference, 'mart_contract_detail'[supplier_identity_status] <> \"KNOWN\" ), 'mart_contract_detail'[contract_key] ) ), 0 ) )",
+    "dataType": "Int64",
+    "displayFolder": "Selected-contract quality",
+    "description": "Reference contracts without usable supplier identity; not a ranked supplier.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Missing Source Update Count",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\n\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", COALESCE ( COUNTROWS ( SUMMARIZE ( FILTER ( _Reference, ISBLANK ( 'mart_contract_detail'[source_updated_at] ) ), 'mart_contract_detail'[contract_key] ) ), 0 ) )",
+    "dataType": "Int64",
+    "displayFolder": "Selected-contract quality",
+    "description": "Reference contracts without a source-clock update value; not pipeline freshness.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Retained Observation Count",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\n\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", COALESCE ( COUNTROWS ( SUMMARIZE ( FILTER ( _Reference, 'mart_contract_detail'[condition_state] = \"LATER_INVALID_OBSERVED\" ), 'mart_contract_detail'[contract_key] ) ), 0 ) )",
+    "dataType": "Int64",
+    "displayFolder": "Selected-contract quality",
+    "description": "Earlier valid observation retained after later attributable invalid observation.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Indeterminate Observation Count",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\n\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", COALESCE ( COUNTROWS ( SUMMARIZE ( FILTER ( _Reference, 'mart_contract_detail'[condition_state] = \"TEMPORAL_ORDER_INDETERMINATE\" ), 'mart_contract_detail'[contract_key] ) ), 0 ) )",
+    "dataType": "Int64",
+    "displayFolder": "Selected-contract quality",
+    "description": "Reference contracts whose invalid-observation temporal order is indeterminate.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Legacy Unassessed Count",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\n\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", COALESCE ( COUNTROWS ( SUMMARIZE ( FILTER ( _Reference, 'mart_contract_detail'[condition_state] = \"LEGACY_UNASSESSED\" ), 'mart_contract_detail'[contract_key] ) ), 0 ) )",
+    "dataType": "Int64",
+    "displayFolder": "Selected-contract quality",
+    "description": "Legacy reference contracts without assessed retained-observation evidence.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Unknown Entity Count",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\n\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", COALESCE ( COUNTROWS ( SUMMARIZE ( FILTER ( _Reference, 'mart_contract_detail'[entity_identity_status] <> \"KNOWN\" ), 'mart_contract_detail'[contract_key] ) ), 0 ) )",
+    "dataType": "Int64",
+    "displayFolder": "Selected-contract quality",
+    "description": "Reference contracts without usable entity identity.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Missing Status Count",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\n\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", COALESCE ( COUNTROWS ( SUMMARIZE ( FILTER ( _Reference, 'mart_contract_detail'[status_profile_state] = \"MISSING\" ), 'mart_contract_detail'[contract_key] ) ), 0 ) )",
+    "dataType": "Int64",
+    "displayFolder": "Selected-contract quality",
+    "description": "Reference contracts with missing contractual status.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Unprofiled Status Count",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\n\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", COALESCE ( COUNTROWS ( SUMMARIZE ( FILTER ( _Reference, 'mart_contract_detail'[status_profile_state] = \"UNPROFILED\" ), 'mart_contract_detail'[contract_key] ) ), 0 ) )",
+    "dataType": "Int64",
+    "displayFolder": "Selected-contract quality",
+    "description": "Included reference contracts whose status is outside the reviewed label profile.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Missing Value Count",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\n\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\", COALESCE ( COUNTROWS ( SUMMARIZE ( FILTER ( _Reference, ISBLANK ( 'mart_contract_detail'[contract_value_cop] ) ), 'mart_contract_detail'[contract_key] ) ), 0 ) )",
+    "dataType": "Int64",
+    "displayFolder": "Selected-contract quality",
+    "description": "Reference contracts with absent value; distinct from observed zero.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Ranking Supplier Value COP",
+    "expression": "VAR _RowSuppliers = VALUES ( 'dim_supplier'[supplier_sk] )\nVAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\nVAR _SupplierRows = FILTER ( _Reference, 'mart_contract_detail'[supplier_identity_status] = \"KNOWN\" && CONTAINS ( _RowSuppliers, 'dim_supplier'[supplier_sk], 'mart_contract_detail'[supplier_sk] ) )\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\" && COUNTROWS ( _SupplierRows ) > 0, CURRENCY ( SUMX ( _SupplierRows, 'mart_contract_detail'[contract_value_cop] ) ) )",
+    "dataType": "Decimal",
+    "displayFolder": "Ranking",
+    "description": "Known supplier row value/count, independent of disconnected focus. Unknown rows stay blank; table sorting must use value then stable supplier key.",
+    "isHidden": false,
+    "formatString": "#,0.00 \"COP\""
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Ranking Supplier Contract Count",
+    "expression": "VAR _RowSuppliers = VALUES ( 'dim_supplier'[supplier_sk] )\nVAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Start = SELECTEDVALUE ( 'DateStart'[Date] )\nVAR _End = SELECTEDVALUE ( 'DateEnd'[Date] )\nVAR _Reference =\n    FILTER (\n        CALCULATETABLE ( 'mart_contract_detail', REMOVEFILTERS ( 'dim_supplier' ) ),\n        _Mode = \"ALL\"\n            || ( _Mode = \"MISSING\" && ISBLANK ( 'mart_contract_detail'[signing_date] ) )\n            || ( _Mode = \"INTERVAL\" && NOT ISBLANK ( 'mart_contract_detail'[signing_date] )\n                && 'mart_contract_detail'[signing_date] >= _Start && 'mart_contract_detail'[signing_date] < _End )\n    )\nVAR _SupplierRows = FILTER ( _Reference, 'mart_contract_detail'[supplier_identity_status] = \"KNOWN\" && CONTAINS ( _RowSuppliers, 'dim_supplier'[supplier_sk], 'mart_contract_detail'[supplier_sk] ) )\nRETURN\n    IF ( [Selection State] = \"AVAILABLE\" && COUNTROWS ( _SupplierRows ) > 0, COUNTROWS ( SUMMARIZE ( _SupplierRows, 'mart_contract_detail'[contract_key] ) ) )",
+    "dataType": "Int64",
+    "displayFolder": "Ranking",
+    "description": "Known supplier row value/count, independent of disconnected focus. Unknown rows stay blank; table sorting must use value then stable supplier key.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Ranking Supplier Share",
+    "expression": "DIVIDE ( [Ranking Supplier Value COP], [Known Value COP] )",
+    "dataType": "Double",
+    "displayFolder": "Ranking",
+    "description": "Known supplier row value / full reference known value; denominator never truncated to top10.",
+    "isHidden": false,
+    "formatString": "0.00%"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Supplier Row Selected",
+    "expression": "IF ( ISFILTERED ( 'SupplierFocus' ) && HASONEVALUE ( 'SupplierFocus'[supplier_sk] )\n        && HASONEVALUE ( 'dim_supplier'[supplier_sk] )\n        && SELECTEDVALUE ( 'SupplierFocus'[supplier_sk] ) = SELECTEDVALUE ( 'dim_supplier'[supplier_sk] ), 1, 0 )",
+    "dataType": "Int64",
+    "displayFolder": "Ranking",
+    "description": "Highlight indicator for ranking rows; accompany color with selected-row text.",
+    "isHidden": false,
+    "formatString": "\"Destacado\";\"\";\"\""
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Scope Label",
+    "expression": "VAR _From = SELECTEDVALUE ( 'publication_metadata'[scope_signing_from] )\nVAR _To = SELECTEDVALUE ( 'publication_metadata'[scope_signing_to] )\nVAR _StartDate = IFERROR ( DATE ( VALUE ( LEFT ( _From, 4 ) ), VALUE ( MID ( _From, 6, 2 ) ), VALUE ( RIGHT ( _From, 2 ) ) ), BLANK () )\nVAR _EndDate = IFERROR ( DATE ( VALUE ( LEFT ( _To, 4 ) ), VALUE ( MID ( _To, 6, 2 ) ), VALUE ( RIGHT ( _To, 2 ) ) ), BLANK () )\nVAR _Missing = SELECTEDVALUE ( 'publication_metadata'[scope_missing_signing] )\nRETURN \"Registro en Antioquia. Firma: \" & IF ( ISBLANK ( _StartDate ), \"inicio sin definir\", FORMAT ( _StartDate, \"d mmm yyyy\", \"es-CO\" ) ) & \" a \" & IF ( ISBLANK ( _EndDate ), \"fin sin definir\", FORMAT ( _EndDate, \"d mmm yyyy\", \"es-CO\" ) ) & \" (fin excluido). \" & IF ( _Missing = \"excluded\", \"Sin fecha excluidos.\", \"Sin fecha: \" & COALESCE ( _Missing, \"sin definir\" ) )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Frozen publication scope, not current slicer interval or execution geography.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Coverage Label",
+    "expression": "VAR _Known = SELECTEDVALUE ( 'publication_metadata'[coverage_known], FALSE () )\nVAR _State = SELECTEDVALUE ( 'publication_metadata'[coverage_state] )\nRETURN\n    IF ( NOT _Known, \"Cobertura no determinada\",\n        SWITCH ( _State, \"sample\", \"Muestra\", \"partial\", \"Parcial\", \"complete\", \"Completa dentro del alcance\", \"Cobertura no determinada\" ) )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Coverage label is independent of contract filters and never claims complete national/regional contracting.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Import Label",
+    "expression": "VAR _ImportState = [Import State]\nRETURN SWITCH ( _ImportState,\n    \"NO_VALID_IMPORT\", \"Sin Import válido; ejecuta un refresh completo para cargar la publicación.\",\n    \"INCONSISTENT_IMPORT\", \"Import inconsistente; ejecuta un refresh completo. Si persiste, reconstruye el modelo desde una publicación verificada.\",\n    VAR _Started = SELECTEDVALUE ( 'ImportContext'[import_started_at_utc] )\nVAR _Observed = SELECTEDVALUE ( 'publication_metadata'[observed_at_utc] )\nRETURN \"Datos: \" & IF ( ISBLANK ( _Observed ), \"No disponible\", FORMAT ( _Observed, \"d mmm yyyy, HH:mm\", \"es-CO\" ) & \" (UTC)\" ) & UNICHAR ( 10 ) & \"Carga: \" & IF ( ISBLANK ( _Started ), \"No disponible\", FORMAT ( _Started, \"d mmm yyyy, HH:mm\", \"es-CO\" ) & \" (UTC)\" )\n)",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Frozen published observation clock and successful loaded Import start; neither is live freshness or completion.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Selection Label",
+    "expression": "VAR _ImportState = [Import State]\nRETURN SWITCH ( _ImportState,\n    \"NO_VALID_IMPORT\", \"Sin Import válido; ejecuta un refresh completo para cargar la publicación.\",\n    \"INCONSISTENT_IMPORT\", \"Import inconsistente; ejecuta un refresh completo. Si persiste, reconstruye el modelo desde una publicación verificada.\",\n    VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Entity = IF ( NOT ISFILTERED ( 'dim_entity' ), \"Todas las entidades\", SELECTEDVALUE ( 'dim_entity'[entity_name], \"Varias entidades\" ) )\nVAR _Dates = SWITCH ( _Mode,\n    \"MISSING\", \"Solo sin firma\",\n    \"INTERVAL\", FORMAT ( SELECTEDVALUE ( 'DateStart'[Date] ), \"d mmm yyyy\", \"es-CO\" ) & \" ≤ firma < \" & FORMAT ( SELECTEDVALUE ( 'DateEnd'[Date] ), \"d mmm yyyy\", \"es-CO\" ),\n    \"Todas las firmas de la publicación; incluye ausentes\" )\nVAR _Focus = IF ( NOT ISFILTERED ( 'SupplierFocus' ), \"Sin proveedor destacado\", SELECTEDVALUE ( 'SupplierFocus'[supplier_label], \"Selección de proveedor inválida\" ) )\nRETURN\n    IF ( [Selection State] <> \"AVAILABLE\", \"Revise el modo y el intervalo de firma\", _Entity & \"; \" & _Dates & \"; \" & _Focus )\n)",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Date and supplier context in Spanish; all-date mode only includes records within the already published population.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Input Observations",
+    "expression": "VAR _Control = FILTER ( ALL ( 'mart_data_quality' ), 'mart_data_quality'[control_id] = \"input_observations\" && 'mart_data_quality'[evaluation_grain] = \"OBSERVATION\" )\nRETURN\n    IF ( COUNTROWS ( _Control ) = 1 && MAXX ( _Control, 'mart_data_quality'[control_state] ) = \"AVAILABLE\", MAXX ( _Control, 'mart_data_quality'[numerator] ) )",
+    "dataType": "Int64",
+    "displayFolder": "Global quality",
+    "description": "Global publication evidence, unaffected by contract filters. Missing/legacy counters remain blank rather than zero; population is declared by the source control.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Accepted Observations",
+    "expression": "VAR _Control = FILTER ( ALL ( 'mart_data_quality' ), 'mart_data_quality'[control_id] = \"accepted_valid_observations\" && 'mart_data_quality'[evaluation_grain] = \"OBSERVATION\" )\nRETURN\n    IF ( COUNTROWS ( _Control ) = 1 && MAXX ( _Control, 'mart_data_quality'[control_state] ) = \"AVAILABLE\", MAXX ( _Control, 'mart_data_quality'[numerator] ) )",
+    "dataType": "Int64",
+    "displayFolder": "Global quality",
+    "description": "Global publication evidence, unaffected by contract filters. Missing/legacy counters remain blank rather than zero; population is declared by the source control.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Rejected Observations",
+    "expression": "VAR _Control = FILTER ( ALL ( 'mart_data_quality' ), 'mart_data_quality'[control_id] = \"rejected_observations\" && 'mart_data_quality'[evaluation_grain] = \"OBSERVATION\" )\nRETURN\n    IF ( COUNTROWS ( _Control ) = 1 && MAXX ( _Control, 'mart_data_quality'[control_state] ) = \"AVAILABLE\", MAXX ( _Control, 'mart_data_quality'[numerator] ) )",
+    "dataType": "Int64",
+    "displayFolder": "Global quality",
+    "description": "Global publication evidence, unaffected by contract filters. Missing/legacy counters remain blank rather than zero; population is declared by the source control.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Exact Duplicates",
+    "expression": "VAR _Control = FILTER ( ALL ( 'mart_data_quality' ), 'mart_data_quality'[control_id] = \"exact_duplicates\" && 'mart_data_quality'[evaluation_grain] = \"OBSERVATION\" )\nRETURN\n    IF ( COUNTROWS ( _Control ) = 1 && MAXX ( _Control, 'mart_data_quality'[control_state] ) = \"AVAILABLE\", MAXX ( _Control, 'mart_data_quality'[numerator] ) )",
+    "dataType": "Int64",
+    "displayFolder": "Global quality",
+    "description": "Global publication evidence, unaffected by contract filters. Missing/legacy counters remain blank rather than zero; population is declared by the source control.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Superseded Observations",
+    "expression": "VAR _Control = FILTER ( ALL ( 'mart_data_quality' ), 'mart_data_quality'[control_id] = \"superseded_valid_observations\" && 'mart_data_quality'[evaluation_grain] = \"OBSERVATION\" )\nRETURN\n    IF ( COUNTROWS ( _Control ) = 1 && MAXX ( _Control, 'mart_data_quality'[control_state] ) = \"AVAILABLE\", MAXX ( _Control, 'mart_data_quality'[numerator] ) )",
+    "dataType": "Int64",
+    "displayFolder": "Global quality",
+    "description": "Global publication evidence, unaffected by contract filters. Missing/legacy counters remain blank rather than zero; population is declared by the source control.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Output Contracts",
+    "expression": "VAR _Control = FILTER ( ALL ( 'mart_data_quality' ), 'mart_data_quality'[control_id] = \"output_contracts\" && 'mart_data_quality'[evaluation_grain] = \"OBSERVATION\" )\nRETURN\n    IF ( COUNTROWS ( _Control ) = 1 && MAXX ( _Control, 'mart_data_quality'[control_state] ) = \"AVAILABLE\", MAXX ( _Control, 'mart_data_quality'[numerator] ) )",
+    "dataType": "Int64",
+    "displayFolder": "Global quality",
+    "description": "Global publication evidence, unaffected by contract filters. Missing/legacy counters remain blank rather than zero; population is declared by the source control.",
+    "isHidden": false,
+    "formatString": "#,0"
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Observation Evidence State",
+    "expression": "VAR _Controls = FILTER ( ALL ( 'mart_data_quality' ), 'mart_data_quality'[evaluation_grain] = \"OBSERVATION\" )\nRETURN\n    SWITCH ( TRUE (),\n        COUNTROWS ( _Controls ) = 0, \"UNAVAILABLE\",\n        COUNTROWS ( FILTER ( _Controls, 'mart_data_quality'[control_state] = \"UNAVAILABLE_LEGACY\" ) ) > 0, \"UNAVAILABLE_LEGACY\",\n        COUNTROWS ( FILTER ( _Controls, 'mart_data_quality'[control_state] <> \"AVAILABLE\" ) ) > 0, \"UNAVAILABLE\",\n        \"AVAILABLE\" )",
+    "dataType": "String",
+    "displayFolder": "Global quality",
+    "description": "Evidence availability from global source controls; not a dynamic refresh-health signal.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Reconciliation State",
+    "expression": "VAR _Input = [Global Input Observations]\nVAR _Accepted = [Global Accepted Observations]\nVAR _Output = [Global Output Contracts]\nVAR _Rejected = [Global Rejected Observations]\nVAR _Duplicates = [Global Exact Duplicates]\nVAR _Superseded = [Global Superseded Observations]\nRETURN\n    SWITCH ( TRUE (),\n        ISBLANK ( _Input ) || ISBLANK ( _Accepted ) || ISBLANK ( _Output ) || ISBLANK ( _Rejected ) || ISBLANK ( _Duplicates ) || ISBLANK ( _Superseded ), \"UNAVAILABLE\",\n        _Input = _Output + _Rejected + _Duplicates + _Superseded && _Accepted = _Input - _Rejected, \"MATCH\",\n        \"MISMATCH\" )",
+    "dataType": "String",
+    "displayFolder": "Global quality",
+    "description": "Explicit observation accounting from six non-null source counters. No success inferred from refresh or absent evidence.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Selected Supplier Label",
+    "expression": "IF ( NOT ISFILTERED ( 'SupplierFocus' ), \"Sin proveedor destacado\",\n        IF ( NOT HASONEVALUE ( 'SupplierFocus'[supplier_sk] ), \"Selección de proveedor inválida\",\n            SELECTEDVALUE ( 'SupplierFocus'[supplier_label], \"Identidad de proveedor no disponible\" ) ) )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Visible disconnected supplier focus, including the explicit unknown-identity member.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Source Process URL",
+    "expression": "VAR _URL = SELECTEDVALUE ( 'mart_contract_detail'[source_process_url] )\nRETURN\n    IF ( HASONEVALUE ( 'mart_contract_detail'[contract_key] )\n        && SELECTEDVALUE ( 'mart_contract_detail'[source_link_state] ) = \"AVAILABLE\"\n        && NOT ISBLANK ( _URL ), _URL )",
+    "dataType": "String",
+    "displayFolder": "Evidence",
+    "description": "Only the existing sanitized publication URL for one contract with AVAILABLE link state. Publication enforces reviewed HTTPS/host allowlist; no URL is constructed.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Detail Contract Label",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "isHidden": false,
+    "expression": "IF ( NOT HASONEVALUE ( 'mart_contract_detail'[contract_key] ), \"Seleccione un contrato\",\n    \"Contrato \" & COALESCE ( SELECTEDVALUE ( 'mart_contract_detail'[contract_reference] ), \"No disponible\" ) & UNICHAR ( 10 ) & \"ID: \" & COALESCE ( SELECTEDVALUE ( 'mart_contract_detail'[contract_id] ), \"No disponible\" ) & \"; Proceso: \" & COALESCE ( SELECTEDVALUE ( 'mart_contract_detail'[process_id] ), \"No disponible\" ) )",
+    "description": "Published contract identifiers; preserves source text and leading zeros."
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Detail Entity Label",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "isHidden": false,
+    "expression": "IF ( NOT HASONEVALUE ( 'mart_contract_detail'[contract_key] ), \"Seleccione un contrato\",\n    VAR _MunicipalityKey = SELECTEDVALUE ( 'mart_contract_detail'[municipality_sk] )\nVAR _Municipality = LOOKUPVALUE ( 'dim_municipality'[municipality_name], 'dim_municipality'[municipality_sk], _MunicipalityKey )\nRETURN COALESCE ( SELECTEDVALUE ( 'mart_contract_detail'[entity_name] ), \"Entidad sin nombre\" ) & \"; \" & COALESCE ( SELECTEDVALUE ( 'mart_contract_detail'[entity_code] ), \"Código no disponible\" ) & UNICHAR ( 10 ) & \"Identidad: \" & IF ( SELECTEDVALUE ( 'mart_contract_detail'[entity_identity_status] ) = \"KNOWN\", \"conocida\", \"no utilizable\" ) & \"; Municipio registrado: \" & COALESCE ( _Municipality, \"No disponible\" ) )",
+    "description": "Entity identity and registered municipality, not execution location."
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Detail Supplier Label",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "isHidden": false,
+    "expression": "IF ( NOT HASONEVALUE ( 'mart_contract_detail'[contract_key] ), \"Seleccione un contrato\",\n    COALESCE ( SELECTEDVALUE ( 'mart_contract_detail'[supplier_name] ), \"Proveedor sin nombre\" ) & \"; \" & COALESCE ( SELECTEDVALUE ( 'mart_contract_detail'[supplier_code] ), \"Código no disponible\" ) & UNICHAR ( 10 ) & IF ( SELECTEDVALUE ( 'mart_contract_detail'[supplier_identity_status] ) = \"KNOWN\", \"Identidad conocida\", \"Sin identidad de proveedor utilizable\" ) )",
+    "description": "Supplier name/code and explicit identity usability."
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Detail Value Label",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "isHidden": false,
+    "expression": "IF ( NOT HASONEVALUE ( 'mart_contract_detail'[contract_key] ), \"Seleccione un contrato\",\n    IF ( ISBLANK ( SELECTEDVALUE ( 'mart_contract_detail'[contract_value_cop] ) ), \"Valor no disponible\", FORMAT ( SELECTEDVALUE ( 'mart_contract_detail'[contract_value_cop] ), \"#,0.00\", \"es-CO\" ) & \" COP\" ) )",
+    "description": "Source amount formatted from fixed decimal without arithmetic conversion."
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Detail Status Label",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "isHidden": false,
+    "expression": "IF ( NOT HASONEVALUE ( 'mart_contract_detail'[contract_key] ), \"Seleccione un contrato\",\n    \"Estado de fuente: \" & COALESCE ( SELECTEDVALUE ( 'mart_contract_detail'[status_raw] ), \"Sin estado\" ) & UNICHAR ( 10 ) & \"Perfil: \" & SWITCH ( SELECTEDVALUE ( 'mart_contract_detail'[status_profile_state] ), \"PROFILED\", \"catalogado\", \"MISSING\", \"sin estado\", \"no catalogado\" ) )",
+    "description": "Raw source status retained; profile state translated without treating raw states as errors."
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Detail Dates Label",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "isHidden": false,
+    "expression": "IF ( NOT HASONEVALUE ( 'mart_contract_detail'[contract_key] ), \"Seleccione un contrato\",\n    \"Firma: \" & IF ( ISBLANK ( SELECTEDVALUE ( 'mart_contract_detail'[signing_date] ) ), \"No disponible\", FORMAT ( SELECTEDVALUE ( 'mart_contract_detail'[signing_date] ), \"d mmm yyyy\", \"es-CO\" ) ) & UNICHAR ( 10 ) & \"Inicio: \" & IF ( ISBLANK ( SELECTEDVALUE ( 'mart_contract_detail'[start_date] ) ), \"No disponible\", FORMAT ( SELECTEDVALUE ( 'mart_contract_detail'[start_date] ), \"d mmm yyyy\", \"es-CO\" ) ) & UNICHAR ( 10 ) & \"Fin: \" & IF ( ISBLANK ( SELECTEDVALUE ( 'mart_contract_detail'[end_date] ) ), \"No disponible\", FORMAT ( SELECTEDVALUE ( 'mart_contract_detail'[end_date] ), \"d mmm yyyy\", \"es-CO\" ) ) )",
+    "description": "Calendar dates, without invented timezone conversions."
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Detail Observation Label",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "isHidden": false,
+    "expression": "IF ( NOT HASONEVALUE ( 'mart_contract_detail'[contract_key] ), \"Seleccione un contrato\",\n    \"Adquisición: \" & IF ( ISBLANK ( SELECTEDVALUE ( 'mart_contract_detail'[acquisition_observed_at_utc] ) ), \"No disponible\", FORMAT ( SELECTEDVALUE ( 'mart_contract_detail'[acquisition_observed_at_utc] ), \"d mmm yyyy, HH:mm:ss\", \"es-CO\" ) & \" UTC\" ) & UNICHAR ( 10 ) & \"Actualización fuente: \" & IF ( ISBLANK ( SELECTEDVALUE ( 'mart_contract_detail'[source_updated_at] ) ), \"No disponible\", FORMAT ( SELECTEDVALUE ( 'mart_contract_detail'[source_updated_at] ), \"d mmm yyyy, HH:mm:ss\", \"es-CO\" ) & \"; zona no declarada\" ) & UNICHAR ( 10 ) & \"Pipeline: \" & IF ( ISBLANK ( SELECTEDVALUE ( 'mart_contract_detail'[pipeline_completed_at_utc] ) ), \"No disponible\", FORMAT ( SELECTEDVALUE ( 'mart_contract_detail'[pipeline_completed_at_utc] ), \"d mmm yyyy, HH:mm:ss\", \"es-CO\" ) & \" UTC\" ) )",
+    "description": "Three distinct clocks; source timestamp has no declared timezone."
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Detail Condition Label",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "isHidden": false,
+    "expression": "VAR _Condition = IF ( NOT HASONEVALUE ( 'mart_contract_detail'[contract_key] ), \"Seleccione un contrato\",\n    SWITCH ( SELECTEDVALUE ( 'mart_contract_detail'[condition_state] ), \"LATER_INVALID_OBSERVED\", \"Versión válida retenida: se observó después una versión inválida atribuible. No equivale a irregularidad contractual.\", \"TEMPORAL_ORDER_INDETERMINATE\", \"Orden temporal indeterminado: no puede afirmarse cuál observación es posterior.\", \"LEGACY_UNASSESSED\", \"Histórico sin evaluación de condición: evidencia no disponible.\", \"NO_LATER_INVALID_OBSERVED\", \"Sin observación inválida posterior atribuible dentro de la evidencia disponible.\", \"Condición no disponible\" ) )\nRETURN IF ( HASONEVALUE ( 'mart_contract_detail'[contract_key] ), _Condition & UNICHAR ( 10 ) & COALESCE ( SELECTEDVALUE ( 'mart_contract_detail'[Condition Presentation] ), \"Conteos no disponibles\" ), _Condition )",
+    "description": "Spanish condition reasons; no inference beyond observed evidence."
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Detail Source State Label",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "isHidden": false,
+    "expression": "IF ( NOT HASONEVALUE ( 'mart_contract_detail'[contract_key] ), \"Seleccione un contrato\",\n    IF ( SELECTEDVALUE ( 'mart_contract_detail'[source_link_state] ) = \"AVAILABLE\" && NOT ISBLANK ( [Source Process URL] ), \"Enlace del proceso disponible; abrir SECOP\", \"Enlace del proceso no disponible o no permitido\" ) )",
+    "description": "Source-link availability only; existing Source Process URL is never reconstructed."
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Detail Publication Label",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "isHidden": false,
+    "expression": "IF ( NOT HASONEVALUE ( 'mart_contract_detail'[contract_key] ), \"Seleccione un contrato\",\n    \"Publicación: \" & COALESCE ( SELECTEDVALUE ( 'mart_contract_detail'[publication_id] ), \"No disponible\" ) & UNICHAR ( 10 ) & \"Versión Silver: \" & COALESCE ( SELECTEDVALUE ( 'mart_contract_detail'[silver_version_id] ), \"No disponible\" ) )",
+    "description": "Complete pinned identifiers; designed for wrapping across lines."
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "HHI State Label",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "isHidden": false,
+    "expression": "VAR _ImportState = [Import State]\nRETURN SWITCH ( _ImportState,\n    \"NO_VALID_IMPORT\", \"Sin Import válido; ejecuta un refresh completo para cargar la publicación.\",\n    \"INCONSISTENT_IMPORT\", \"Import inconsistente; ejecuta un refresh completo. Si persiste, reconstruye el modelo desde una publicación verificada.\",\n    SWITCH ( [HHI State],\n\"AVAILABLE\", \"Disponible: identidad conocida cubre el 100 % de contratos y valor observado.\",\n\"NO_CONTRACTS\", \"No disponible: no hay contratos en la referencia seleccionada.\",\n\"ENTITY_SELECTION_REQUIRED\", \"Seleccione una sola entidad para calcular concentración.\",\n\"UNKNOWN_ENTITY\", \"No disponible: la entidad no tiene identidad utilizable.\",\n\"NO_KNOWN_SUPPLIERS\", \"No disponible: no hay proveedores con identidad conocida.\",\n\"ZERO_TOTAL_VALUE\", \"No disponible: el valor total observado es cero.\",\n\"ZERO_KNOWN_VALUE\", \"No disponible: el valor de proveedores conocidos es cero.\",\n\"INSUFFICIENT_IDENTITY_COVERAGE\", \"No disponible: la identidad conocida no cubre el 100 % de contratos y valor observado.\",\n\"POLICY_UNCONFIGURED\", \"No disponible: falta la política de concentración publicada.\",\n\"POLICY_MISMATCH\", \"No disponible: la política publicada no coincide con la versión revisada.\",\n\"INVALID_DATE_MODE\", \"Seleccione un solo modo de fechas.\",\n\"INVALID_DATE_INTERVAL\", \"Seleccione inicio y fin exclusivo; el inicio debe ser anterior al fin.\",\n\"Estado de concentración no disponible\" )\n)",
+    "description": "Full Spanish reason independent of short numeric HHI Display."
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Coverage Summary Label",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "isHidden": false,
+    "expression": "VAR _Summary = SELECTEDVALUE ( 'publication_metadata'[coverage_summary] )\nRETURN IF ( ISBLANK ( _Summary ) || _Summary = \"\", \"Resumen de cobertura no disponible\", SUBSTITUTE ( _Summary, \" · \", \"; \" ) )",
+    "description": "Published acquisition coverage summary; unavailable remains explicit."
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Import State",
+    "expression": "VAR _Metadata = ALL ( 'publication_metadata' )\nVAR _Context = ALL ( 'ImportContext' )\nVAR _MetadataCount = COUNTROWS ( _Metadata )\nVAR _ContextCount = COUNTROWS ( _Context )\nVAR _MetadataID = MAXX ( _Metadata, 'publication_metadata'[publication_id] )\nVAR _ContextID = MAXX ( _Context, 'ImportContext'[publication_id] )\nRETURN SWITCH ( TRUE (),\n    _MetadataCount = 0 && _ContextCount = 0, \"NO_VALID_IMPORT\",\n    _MetadataCount = 1 && _ContextCount = 1\n        && NOT ISBLANK ( _MetadataID ) && _MetadataID <> \"\"\n        && NOT ISBLANK ( _ContextID ) && _ContextID <> \"\"\n        && _MetadataID = _ContextID, \"AVAILABLE\",\n    \"INCONSISTENT_IMPORT\" )",
+    "dataType": "String",
+    "displayFolder": "States",
+    "description": "Frozen imported metadata/context identity consistency. Valid empty publication remains available; no wall-clock or descriptor-expiry test.",
+    "isHidden": true
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Input Display",
+    "expression": "VAR _Count = [Global Input Observations]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Count ), FORMAT ( _Count, \"#,0\", \"es-CO\" ) & \" observaciones\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Snapshot-wide count with explicit unit; unavailable imported evidence stays blank.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Output Display",
+    "expression": "VAR _Count = [Global Output Contracts]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Count ), FORMAT ( _Count, \"#,0\", \"es-CO\" ) & \" contratos\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Snapshot-wide count with explicit unit; unavailable imported evidence stays blank.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Accepted Display",
+    "expression": "VAR _Count = [Global Accepted Observations]\nVAR _Input = [Global Input Observations]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Count ) && NOT ISBLANK ( _Input ), FORMAT ( _Count, \"#,0\", \"es-CO\" ) & \" / \" & FORMAT ( _Input, \"#,0\", \"es-CO\" ) & \" observaciones de entrada\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Snapshot-wide numerator / input-observation denominator; unavailable evidence stays blank, including legacy.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Rejected Display",
+    "expression": "VAR _Count = [Global Rejected Observations]\nVAR _Input = [Global Input Observations]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Count ) && NOT ISBLANK ( _Input ), FORMAT ( _Count, \"#,0\", \"es-CO\" ) & \" / \" & FORMAT ( _Input, \"#,0\", \"es-CO\" ) & \" observaciones de entrada\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Snapshot-wide numerator / input-observation denominator; unavailable evidence stays blank, including legacy.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Duplicates Display",
+    "expression": "VAR _Count = [Global Exact Duplicates]\nVAR _Input = [Global Input Observations]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Count ) && NOT ISBLANK ( _Input ), FORMAT ( _Count, \"#,0\", \"es-CO\" ) & \" / \" & FORMAT ( _Input, \"#,0\", \"es-CO\" ) & \" observaciones de entrada\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Snapshot-wide numerator / input-observation denominator; unavailable evidence stays blank, including legacy.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Superseded Display",
+    "expression": "VAR _Count = [Global Superseded Observations]\nVAR _Input = [Global Input Observations]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Count ) && NOT ISBLANK ( _Input ), FORMAT ( _Count, \"#,0\", \"es-CO\" ) & \" / \" & FORMAT ( _Input, \"#,0\", \"es-CO\" ) & \" observaciones de entrada\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Snapshot-wide numerator / input-observation denominator; unavailable evidence stays blank, including legacy.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Global Quality Label",
+    "expression": "SWITCH ( TRUE (),\n    [Import State] = \"NO_VALID_IMPORT\", \"Sin Import válido; ejecuta un refresh completo para cargar la publicación.\",\n    [Import State] <> \"AVAILABLE\", \"Import inconsistente; ejecuta un refresh completo desde una publicación verificada.\",\n    [Global Observation Evidence State] = \"UNAVAILABLE_LEGACY\", \"Histórico sin evidencia de observaciones; no es posible reconciliar los conteos.\",\n    [Global Observation Evidence State] <> \"AVAILABLE\", \"Evidencia global de observaciones no disponible; no es posible reconciliar los conteos.\",\n    [Global Reconciliation State] = \"MATCH\", \"Conteos reconciliados: entrada = contratos + rechazadas + duplicadas + sustituidas; aceptadas = entrada − rechazadas.\",\n    [Global Reconciliation State] = \"MISMATCH\", \"Conteos no reconciliados: las ecuaciones de observaciones no coinciden. Requiere revisión de la publicación.\",\n    \"Reconciliación no disponible: falta al menos un conteo de observaciones.\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Spanish evidence and reconciliation status; independent of successful refresh claims.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Supplier Focus Count Display",
+    "expression": "VAR _Value = [Selected Supplier Contract Count]\nRETURN IF ( [Import State] = \"AVAILABLE\" && ISFILTERED ( 'SupplierFocus' ) && HASONEVALUE ( 'SupplierFocus'[supplier_sk] ) && NOT ISBLANK ( _Value ), FORMAT ( _Value, \"#,0\", \"es-CO\" ) & \" contratos\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Only an explicit singleton disconnected supplier focus is presented; reference fallback is not shown as focus.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Supplier Focus Value Display",
+    "expression": "VAR _Value = [Selected Supplier Value COP]\nRETURN IF ( [Import State] = \"AVAILABLE\" && ISFILTERED ( 'SupplierFocus' ) && HASONEVALUE ( 'SupplierFocus'[supplier_sk] ) && NOT ISBLANK ( _Value ), FORMAT ( _Value, \"#,0.00\", \"es-CO\" ) & \" COP\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Only an explicit singleton disconnected supplier focus is presented; reference fallback is not shown as focus.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Supplier Focus Share Display",
+    "expression": "VAR _Share = [Selected Supplier Share]\nRETURN IF ( [Import State] = \"AVAILABLE\" && ISFILTERED ( 'SupplierFocus' ) && HASONEVALUE ( 'SupplierFocus'[supplier_sk] ) && NOT ISBLANK ( _Share ), FORMAT ( _Share, \"0.00%\", \"es-CO\" ) )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Display a known supplier share only after an explicit single supplier focus; no-focus and unknown identity remain blank."
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Median Value Display",
+    "expression": "VAR _Value = [Median Value COP]\nVAR _Format = IF ( _Value = TRUNC ( _Value ), \"#,0\", IF ( _Value = ROUND ( _Value, 2 ), \"#,0.00\", \"#,0.0000\" ) )\nRETURN IF ( NOT ISBLANK ( _Value ), FORMAT ( _Value, _Format, \"es-CO\" ) & \" COP\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Exact median presentation in Colombian notation, without automatic scaling; integer values have no decimal tail, half-cent results retain four decimals.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Detail Evidence Label",
+    "expression": "IF ( NOT HASONEVALUE ( 'mart_contract_detail'[contract_key] ), \"Seleccione un contrato\", COALESCE ( SELECTEDVALUE ( 'mart_contract_detail'[Evidence Presentation] ), \"Evidencia no disponible\" ) )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Allowlisted published evidence parsed as structured JSON in M; all links retained at one contract grain, no raw payload or paths.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Detail Warnings Label",
+    "expression": "IF ( NOT HASONEVALUE ( 'mart_contract_detail'[contract_key] ), \"Seleccione un contrato\", COALESCE ( SELECTEDVALUE ( 'mart_contract_detail'[Warnings Presentation] ), \"Evidencia no disponible\" ) )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Allowlisted published evidence parsed as structured JSON in M; all links retained at one contract grain, no raw payload or paths.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Detail Identity Reasons Label",
+    "expression": "VAR _Entity = SELECTEDVALUE ( 'mart_contract_detail'[entity_identity_reason] )\nVAR _Supplier = SELECTEDVALUE ( 'mart_contract_detail'[supplier_identity_reason] )\nVAR _EntityText = SWITCH ( _Entity, \"LEGACY_PROJECTION\", \"proyección histórica sin código evaluable\", \"MISSING_CODE\", \"código ausente\", \"PLACEHOLDER_CODE\", \"código marcador no utilizable\", \"INVALID_CODE\", \"formato de código inválido\", IF ( ISBLANK ( _Entity ), IF ( SELECTEDVALUE ( 'mart_contract_detail'[entity_identity_status] ) = \"KNOWN\", \"identidad conocida por código\", \"motivo no disponible\" ), \"Motivo publicado: \" & _Entity ) )\nVAR _SupplierText = SWITCH ( _Supplier, \"LEGACY_PROJECTION\", \"proyección histórica sin código evaluable\", \"MISSING_CODE\", \"código ausente\", \"PLACEHOLDER_CODE\", \"código marcador no utilizable\", \"INVALID_CODE\", \"formato de código inválido\", IF ( ISBLANK ( _Supplier ), IF ( SELECTEDVALUE ( 'mart_contract_detail'[supplier_identity_status] ) = \"KNOWN\", \"identidad conocida por código\", \"motivo no disponible\" ), \"Motivo publicado: \" & _Supplier ) )\nRETURN IF ( NOT HASONEVALUE ( 'mart_contract_detail'[contract_key] ), \"Seleccione un contrato\", \"Entidad: \" & _EntityText & UNICHAR ( 10 ) & \"Proveedor: \" & _SupplierText )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Reason translations from platform-code-v1; no name-based identity inference.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Date Mode Label",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nRETURN IF ( ISFILTERED ( 'DateMode' ) && NOT HASONEVALUE ( 'DateMode'[mode] ), \"Seleccione un modo de fechas\", SELECTEDVALUE ( 'DateMode'[mode_label], IF ( _Mode = \"ALL\", \"Todas las fechas\", \"Modo de fechas no disponible\" ) ) )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Safe scalar Spanish mode label; absent selection means ALL, ambiguous selections remain explicit.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Reference Context Label",
+    "expression": "IF ( [Import State] <> \"AVAILABLE\", [Import Label],\n    \"Referencia R | \" & IF ( NOT ISFILTERED ( 'dim_entity' ), \"Todas las entidades\", SELECTEDVALUE ( 'dim_entity'[Entity Label], \"Varias entidades\" ) )\n    & \" | \" & [Date Mode Label]\n    & IF ( SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" ) = \"INTERVAL\", \" | \" & FORMAT ( SELECTEDVALUE ( 'DateStart'[Date] ), \"d mmm yyyy\", \"es-CO\" ) & \" ≤ firma < \" & FORMAT ( SELECTEDVALUE ( 'DateEnd'[Date] ), \"d mmm yyyy\", \"es-CO\" ), \"\" )\n )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Read-only reference entity/date context; distinguishes R from disconnected supplier focus.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Supplier Context Label",
+    "expression": "IF ( [Import State] <> \"AVAILABLE\", [Import Label],\n    \"Selección S | \" & IF ( NOT ISFILTERED ( 'SupplierFocus' ), \"Sin proveedor destacado\", IF ( HASONEVALUE ( 'SupplierFocus'[supplier_sk] ), SELECTEDVALUE ( 'SupplierFocus'[supplier_label] ), \"Seleccione un solo proveedor\" ) )\n )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Read-only disconnected supplier context without changing reference math.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Unknown Supplier Value COP",
+    "expression": "IF ( [Selection State] = \"AVAILABLE\", CURRENCY ( [Contract Value COP] - [Known Value COP] ) )",
+    "dataType": "Decimal",
+    "displayFolder": "Reference",
+    "description": "Observed reference COP with unusable supplier identity; total less known value preserves identical R filters.",
+    "isHidden": false,
+    "formatString": "#,0.00 \"COP\""
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Reference Context Full Label",
+    "expression": "VAR _Entity = IF ( NOT ISFILTERED ( 'dim_entity' ), \"Todas\", CONCATENATEX ( VALUES ( 'dim_entity'[Entity Label] ), 'dim_entity'[Entity Label], \"; \", 'dim_entity'[Entity Label], ASC ) )\nVAR _Municipality = IF ( NOT ISFILTERED ( 'dim_municipality' ), \"Todos\", CONCATENATEX ( VALUES ( 'dim_municipality'[Municipality Label] ), 'dim_municipality'[Municipality Label], \"; \", 'dim_municipality'[Municipality Label], ASC ) )\nVAR _Modality = IF ( NOT ISFILTERED ( 'dim_modality' ), \"Todas\", CONCATENATEX ( VALUES ( 'dim_modality'[Modality Label] ), 'dim_modality'[Modality Label], \"; \", 'dim_modality'[Modality Label], ASC ) )\nVAR _Status = IF ( NOT ISFILTERED ( 'mart_contract_detail'[Status Label] ) && NOT ISFILTERED ( 'mart_contract_detail'[status_raw] ), \"Todos\", CONCATENATEX ( VALUES ( 'mart_contract_detail'[Status Label] ), 'mart_contract_detail'[Status Label], \"; \", 'mart_contract_detail'[Status Label], ASC ) )\nVAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Dates = [Date Mode Label] & IF ( _Mode = \"INTERVAL\", \" | Inicio inclusivo: \" & IF ( HASONEVALUE ( 'DateStart'[Date] ), FORMAT ( SELECTEDVALUE ( 'DateStart'[Date] ), \"d mmm yyyy\", \"es-CO\" ), \"Seleccione una fecha\" ) & \" | Fin exclusivo: \" & IF ( HASONEVALUE ( 'DateEnd'[Date] ), FORMAT ( SELECTEDVALUE ( 'DateEnd'[Date] ), \"d mmm yyyy\", \"es-CO\" ), \"Seleccione una fecha\" ), \"\" )\nRETURN IF ( [Import State] <> \"AVAILABLE\", [Import Label],\n    \"Referencia R\" & UNICHAR ( 10 ) & \"Entidades: \" & COALESCE ( _Entity, \"Sin valores visibles\" )\n    & UNICHAR ( 10 ) & \"Municipios de registro: \" & COALESCE ( _Municipality, \"Sin valores visibles\" )\n    & UNICHAR ( 10 ) & \"Modalidades: \" & COALESCE ( _Modality, \"Sin valores visibles\" )\n    & UNICHAR ( 10 ) & \"Estados observados: \" & COALESCE ( _Status, \"Sin valores visibles\" )\n    & UNICHAR ( 10 ) & \"Fechas: \" & _Dates )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Read-only full selected R labels with date bounds. Lists are untruncated for wrapped scrolling presentation; not a fact population count.",
+    "isHidden": false
+  }
+]
