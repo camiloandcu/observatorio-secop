@@ -230,7 +230,9 @@ WarningsText = (raw as nullable text) as text => let values = Parse(raw, type li
     if values = null then "Advertencias no evaluadas" else if List.IsEmpty(values)
     then "Sin advertencias publicadas" else Codes(values),
 ConditionText = (raw as nullable text) as text => let value = Parse(raw, type record) in
-    if value = null then "Conteos de condición no disponibles" else
+    if value = null then "Conteos de condición no disponibles"
+    else if Record.Field(value, "state") = "LEGACY_UNASSESSED" then
+        "Condición histórica sin evaluar; conteos no disponibles" else
     let later = Record.Field(value, "later_invalid_count"),
         equal = Record.Field(value, "equal_invalid_count") in
     if not Value.Is(later, type number) or not Value.Is(equal, type number)

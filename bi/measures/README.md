@@ -4,7 +4,8 @@
 `Indicadores`. Expressions use the supported Gold catalog and the reviewed
 `gold-hhi-policy-v1` binding. They contain definitions, not imported data or
 credentials. Report labels are Spanish; measure names remain stable English
-identifiers for report bindings and reconciliation queries.
+identifiers for report bindings and reconciliation queries. The current layer
+contains 77 measures.
 
 ## Required model
 
@@ -70,6 +71,18 @@ median retains its precision, for example `15,0150 COP`. The underlying numerica
 measure continues to support reconciliation and calculations.
 `Source Process URL` returns only the existing sanitized URL for one contract
 whose published link state is `AVAILABLE`; it never constructs a process URL.
+
+Detail presentation parses published JSON in M before loading derived text
+columns. Only temporal relation, rejection codes and observation time from each
+attributable link are displayed; raw payloads, local paths and storage locators
+are excluded. Multiple links remain attached to one contract. Malformed
+structures fail the Import rather than becoming a reassuring empty message.
+Legacy unassessed conditions retain unavailable counts.
+
+`Date Mode Label` defaults to all dates consistently with the numerical measures.
+Compact reference and supplier labels support the header;
+`Reference Context Full Label` exposes actual selected entity, municipality,
+modality, status and date values in a wrapped read-only table.
 
 Authoritative executable definitions: [metric catalog](../../contracts/gold_metrics.yaml),
 [policy](../../config/gold_policy.yaml), [governed SQL](../../dbt/macros/gold_queries.sql).

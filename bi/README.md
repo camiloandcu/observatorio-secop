@@ -66,6 +66,19 @@ measures and disconnected supplier/date controls. Five active single-direction
 relationships filter detail from its dimensions; global evidence and supplier
 focus remain disconnected.
 
+The analytical layer contains 77 measures. Alternate views on the same pages
+expose monthly tables, municipalities, entity summaries and quality diagnostics.
+The **Gráficos / Tablas**, **Proveedores / Entidades**,
+**Publicación / Diagnóstico** and **Contrato / Evidencia** buttons use scoped
+display-only bookmarks; their definitions do not capture slicer data.
+Native filter preservation and keyboard behavior require separate verification.
+
+Contract evidence uses structured parsing of published, sanitized fields.
+The detail view retains one row per contract, lists all attributable rejection
+links, and provides wrapped tables for full filter context and warnings.
+Identity reasons remain explicit. Legacy unassessed conditions show unavailable
+counts rather than treating their structural zeros as evaluated evidence.
+
 - Reference **R** is entity, registered municipality, modality, contractual
   status, calendar and explicit signing mode. All observed valid statuses remain
   eligible; the report does not silently reinterpret them as awards.
@@ -112,6 +125,11 @@ for the current environment and keep a recoverable saved copy.
 2. For permission errors, have the operator restore the required publication
    read privileges. For expiry/unavailable errors, explicitly choose a retained
    publication and resolve a new descriptor. Never extend the old deadline.
+   A generic Desktop message such as “The change you were making failed to
+   apply” does not identify its cause. Inspect available error details and verify
+   the descriptor, server availability and reader privileges before retrying.
+   Preserve the saved Import while diagnosing; the message alone is not proof
+   that expiry occurred.
 3. Update the shared `PublicationDescriptor` literal in the existing model;
    keep it fixed for the entire next native Refresh. Retain the reader/server
    constants unless the intended connection actually changes.
@@ -155,6 +173,13 @@ ROW (
 Apply equivalent `TREATAS` entity/date/focus filters for each scenario. Compare
 money exactly; compare HHI/ratios with absolute tolerance1e-12. Do not compare
 large currency through a JSON client's floating-point number representation.
+
+Native synthetic-publication checks retained a large value of
+`90071992547409.93 COP`, a total of `90071992547639.96 COP` and an even-population
+median of `15.0150 COP`, exactly matching PostgreSQL. Separate native controls
+accepted individual/aggregate fixed-decimal boundaries and rejected overflows,
+including cancellation between positive and negative amounts. These checks
+establish measured numerical behavior, not real procurement values or capacity.
 
 Native verification includes publication activation during refresh, failure and
 retry, expiry, large cent-bearing values, half-cent median, empty/zero/missing

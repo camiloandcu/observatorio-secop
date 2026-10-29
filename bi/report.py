@@ -878,12 +878,6 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
     )
     r.contract_table(1, (28, 564, 1224, 108))
     r.button(1, "drill", "Ver contrato", "Drillthrough", (1050, 536, 202, 26), r.pages[3])
-    for target in r.visuals[1].values():
-        if target["name"] == rank["name"]:
-            continue
-        r.interactions[1].append(
-            {"source": rank["name"], "target": target["name"], "type": "NoFilter"}
-        )
     r.text(2, "global-label", "Observaciones de la publicación", (28, 282, 732, 28), 16)
     r.text(
         2,
@@ -1245,7 +1239,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         )
     r.display_views(3, ("Contrato", "Evidencia"), (primary, evidence_view))
     # Read-only comparison tables must not silently redefine the reference context.
-    for page, comparison in ((1, entities), (2, status), (2, identity), (3, context)):
+    for page, comparison in ((1, rank), (1, entities), (2, status), (2, identity), (3, context)):
         for target in r.visuals[page].values():
             if target["name"] != comparison["name"]:
                 r.interactions[page].append(
