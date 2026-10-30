@@ -491,7 +491,7 @@ class Report:
         start["isHidden"] = end["isHidden"] = True
         self.date_controls[page] = {"mode": hidden, "start": start, "end": end}
         for mode, title, x, width in (
-            ("ALL", "Todas las fechas", 28, 120),
+            ("ALL", "Todas", 28, 120),
             ("INTERVAL", "Intervalo", 158, 105),
             ("MISSING", "Solo sin firma", 273, 133),
         ):
