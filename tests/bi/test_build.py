@@ -82,3 +82,28 @@ def test_native_array_is_serialized_before_text_import():
     query = detail["partitions"][0]["source"]["expression"]
     assert '[name = "quality_warning_codes", kind = "json"]' in query
     assert "CAST(to_json(" in query
+
+
+def test_rejects_conflicting_native_measure_formats(tmp_path, monkeypatch):
+    import json
+
+    from bi import analytics
+
+    definitions = tmp_path / "measures"
+    definitions.mkdir()
+    (definitions / "analytics.json").write_text(
+        json.dumps(
+            [
+                {
+                    "tableName": "Indicadores",
+                    "name": "Money",
+                    "expression": "1",
+                    "formatString": "0.00",
+                    "formatStringDefinition": {"expression": '"0.00"'},
+                }
+            ]
+        )
+    )
+    monkeypatch.setattr(analytics, "ROOT", tmp_path)
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        analytics._measures()

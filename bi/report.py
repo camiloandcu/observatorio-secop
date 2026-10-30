@@ -358,7 +358,7 @@ class Report:
                 (DETAIL, "supplier_name", "Proveedor"),
                 (DETAIL, "signing_date", "Firma"),
                 (DETAIL, "Status Label", "Estado"),
-                (DETAIL, "contract_value_cop", "Valor (COP)"),
+                (METRICS, "Contract Row Value Display", "Valor (COP)", True),
                 (DETAIL, "contract_key", "ID"),
             ],
             bounds,
@@ -424,9 +424,9 @@ class Report:
         self.text(
             page,
             "footer",
-            ("Registros fabricados. Los importes no son reales. " if synthetic else "")
-            + "Valores nominales observados; municipio de registro y último estado conocido. "
-            "Los periodos anteriores pueden revisarse.",
+            ("Datos e importes de prueba. " if synthetic else "")
+            + "COP observados, sin ajuste por inflación. Municipio de registro. "
+            "Los periodos pueden revisarse.",
             (28, 686, 900, 25),
             9,
             MUTED,
@@ -700,7 +700,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         r.common(page, synthetic=synthetic)
     for key, name, title, x, width in (
         ("count", "Contract Count", "Contratos observados", 28, 286),
-        ("value", "Contract Value COP", "Valor contratado (COP)", 326, 450),
+        ("value", "Contract Value Display", "Valor contratado (COP)", 326, 450),
         ("median", "Median Value Display", "Mediana contractual (COP)", 788, 464),
     ):
         r.metric(0, key, name, title, (x, 282, width, 70))
@@ -774,7 +774,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             ("dim_modality", "Modality Label", "Modalidad"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value COP", "Valor (COP)", True),
+            (METRICS, "Contract Value Display", "Valor (COP)", True),
         ],
         (28, 538, 602, 134),
     )
@@ -783,7 +783,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
     r.button(0, "drill", "Ver contrato", "Drillthrough", (1050, 534, 202, 26), r.pages[3])
     for key, measure, title, x, width in (
         ("hhi", "HHI Display", "Concentración (HHI)", 28, 236),
-        ("known-value", "Known Value COP", "Valor conocido (COP)", 276, 352),
+        ("known-value", "Known Value Display", "Valor conocido (COP)", 276, 352),
         ("count-coverage", "Count Identity Coverage", "Cobertura por contratos", 640, 300),
         ("value-coverage", "Value Identity Coverage", "Cobertura por valor", 952, 300),
     ):
@@ -1055,7 +1055,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             (DETAIL, "signing_month", "Mes de firma"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value COP", "Valor (COP)", True),
+            (METRICS, "Contract Value Display", "Valor (COP)", True),
         ],
         (28, 282, 602, 244),
     )
@@ -1072,7 +1072,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             ("dim_municipality", "Municipality Label", "Municipio"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value COP", "Valor (COP)", True),
+            (METRICS, "Contract Value Display", "Valor (COP)", True),
         ],
         (650, 282, 602, 244),
     )
@@ -1113,7 +1113,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             ("dim_entity", "Entity Label", "Entidad"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value COP", "Valor (COP)", True),
+            (METRICS, "Contract Value Display", "Valor (COP)", True),
             (METRICS, "Count Identity Coverage", "Cobertura conocida", True),
         ],
         (28, 282, 756, 250),
@@ -1122,7 +1122,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
     r.metric(
         1,
         "unknown-value",
-        "Unknown Supplier Value COP",
+        "Unknown Supplier Value Display",
         "Valor sin identidad (COP)",
         (796, 282, 456, 78),
     )
@@ -1133,7 +1133,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             (DETAIL, "Supplier Reason Presentation", "Motivo"),
             (METRICS, "Unknown Supplier Count", "Contratos", True),
-            (METRICS, "Unknown Supplier Value COP", "Valor (COP)", True),
+            (METRICS, "Unknown Supplier Value Display", "Valor (COP)", True),
         ],
         (796, 372, 456, 160),
     )
@@ -1178,7 +1178,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             (DETAIL, "Status Label", "Estado fuente"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value COP", "Valor (COP)", True),
+            (METRICS, "Contract Value Display", "Valor (COP)", True),
         ],
         (28, 466, 602, 206),
     )
@@ -1190,7 +1190,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             (DETAIL, "Supplier Reason Presentation", "Motivo del proveedor"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value COP", "Valor (COP)", True),
+            (METRICS, "Contract Value Display", "Valor (COP)", True),
         ],
         (650, 466, 602, 206),
     )

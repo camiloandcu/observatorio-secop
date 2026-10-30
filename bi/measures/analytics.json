@@ -272,7 +272,9 @@
     "displayFolder": "Ranking",
     "description": "Known supplier row value/count, independent of disconnected focus. Unknown rows stay blank; table sorting must use value then stable supplier key.",
     "isHidden": false,
-    "formatString": "#,0.00 \"COP\""
+    "formatStringDefinition": {
+      "expression": "VAR _Value = [Ranking Supplier Value COP]\nRETURN IF ( NOT ISBLANK ( _Value ), UNICHAR ( 34 ) & FORMAT ( _Value, \"#,0.00\", \"es-CO\" ) & \" COP\" & UNICHAR ( 34 ), \"#,0.00\" )"
+    }
   },
   {
     "tableName": "Indicadores",
@@ -722,6 +724,51 @@
     "dataType": "String",
     "displayFolder": "Presentation",
     "description": "Read-only full selected R labels with date bounds. Lists are untruncated for wrapped scrolling presentation; not a fact population count.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Contract Value Display",
+    "expression": "VAR _Value = [Contract Value COP]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Value ), FORMAT ( _Value, \"#,0.00\", \"es-CO\" ) & \" COP\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Exact backend Currency formatting for cards/tables; prevents client numeric-to-JavaScript precision loss. Numeric metric remains unchanged.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Known Value Display",
+    "expression": "VAR _Value = [Known Value COP]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Value ), FORMAT ( _Value, \"#,0.00\", \"es-CO\" ) & \" COP\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Exact backend Currency formatting for cards/tables; prevents client numeric-to-JavaScript precision loss. Numeric metric remains unchanged.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Ranking Supplier Value Display",
+    "expression": "VAR _Value = [Ranking Supplier Value COP]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Value ), FORMAT ( _Value, \"#,0.00\", \"es-CO\" ) & \" COP\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Exact backend Currency formatting for cards/tables; prevents client numeric-to-JavaScript precision loss. Numeric metric remains unchanged.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Unknown Supplier Value Display",
+    "expression": "VAR _Value = [Unknown Supplier Value COP]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Value ), FORMAT ( _Value, \"#,0.00\", \"es-CO\" ) & \" COP\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Exact backend Currency formatting for cards/tables; prevents client numeric-to-JavaScript precision loss. Numeric metric remains unchanged.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Contract Row Value Display",
+    "expression": "VAR _Value = SELECTEDVALUE ( 'mart_contract_detail'[contract_value_cop] )\nRETURN IF ( [Import State] = \"AVAILABLE\" && HASONEVALUE ( 'mart_contract_detail'[contract_key] ) && NOT ISBLANK ( _Value ), FORMAT ( _Value, \"#,0.00\", \"es-CO\" ) & \" COP\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Exact observed Currency for one contract row; blank for missing amount or ambiguous contract context.",
     "isHidden": false
   }
 ]

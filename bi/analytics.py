@@ -125,8 +125,18 @@ def _measures() -> list[dict[str, Any]]:
     definitions = json.loads((ROOT / "measures/analytics.json").read_text())
     names: set[str] = set()
     measures = []
-    allowed = {"name", "description", "expression", "formatString", "displayFolder", "isHidden"}
+    allowed = {
+        "name",
+        "description",
+        "expression",
+        "formatString",
+        "displayFolder",
+        "isHidden",
+        "formatStringDefinition",
+    }
     for definition in definitions:
+        if "formatString" in definition and "formatStringDefinition" in definition:
+            raise ValueError("Fixed and dynamic measure formats are mutually exclusive")
         if definition.get("tableName") != "Indicadores" or definition["name"] in names:
             raise ValueError("Analytical measures must have unique names on Indicadores")
         names.add(definition["name"])

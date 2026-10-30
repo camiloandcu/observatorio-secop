@@ -66,7 +66,7 @@ measures and disconnected supplier/date controls. Five active single-direction
 relationships filter detail from its dimensions; global evidence and supplier
 focus remain disconnected.
 
-The analytical layer contains 77 measures. Alternate views on the same pages
+The analytical layer contains 82 measures. Alternate views on the same pages
 expose monthly tables, municipalities, entity summaries and quality diagnostics.
 The **Gráficos / Tablas**, **Proveedores / Entidades**,
 **Publicación / Diagnóstico** and **Contrato / Evidencia** buttons use scoped
@@ -191,3 +191,12 @@ Before relying on the report, a reviewer should complete Panorama → supplier
 comparison → highlighted contracts → detail → permitted source, then return and
 explain denominator, identity coverage, geography, COP and revisions. The native
 UI, accessibility and human journey still require their own evidence.
+
+For a keyboard review, use **Ctrl+F6** to move between the canvas and page tabs,
+then **Tab** to follow the report's focus order. **Ctrl+Right arrow** enters a
+visual or slicer; **Enter** selects and **Esc** exits its navigation levels.
+On page tabs, arrows/Tab and Enter or Space change pages. Use **Alt+Shift+F11**
+to inspect a visual's accessible data table. These are documented platform
+controls, not a claim that this report's keyboard journey has passed.
+See Microsoft's [accessible report navigation](https://learn.microsoft.com/en-us/power-bi/explore-reports/desktop-accessibility-consuming-tools)
+and [accessible report design](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-accessibility-creating-reports).
