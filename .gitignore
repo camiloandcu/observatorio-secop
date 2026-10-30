@@ -36,8 +36,9 @@ data/
 /models/
 mlruns/
 
-# Power BI binary workbooks remain local
+# Power BI binary workbooks and per-user project caches remain local
 *.pbix
+.pbi/
 
 # Local operating-system and editor files
 .DS_Store

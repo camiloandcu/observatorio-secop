@@ -1,0 +1,1824 @@
+{
+  "name": "observatorio-secop",
+  "compatibilityLevel": 1606,
+  "model": {
+    "culture": "en-US",
+    "dataAccessOptions": {
+      "legacyRedirects": true
+    },
+    "defaultPowerBIDataSourceVersion": "powerBI_V3",
+    "sourceQueryCulture": "es-CO",
+    "valueFilterBehavior": "independent",
+    "tables": [
+      {
+        "name": "mart_contract_detail",
+        "lineageTag": "6f6ba9a7-0a6a-4505-a86e-c12264af5099",
+        "columns": [
+          {
+            "name": "publication_id",
+            "dataType": "string",
+            "sourceColumn": "publication_id",
+            "lineageTag": "9d8b67c8-1f25-4554-9c1f-982b91fc2cf8",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "contract_sk",
+            "dataType": "string",
+            "sourceColumn": "contract_sk",
+            "lineageTag": "eb86b90d-ebdb-4889-8bcb-0bdc710eaefa",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "contract_key",
+            "dataType": "string",
+            "sourceColumn": "contract_key",
+            "lineageTag": "c03677ce-e75f-44f8-ba2f-6098437dbfe3",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "contract_id",
+            "dataType": "string",
+            "sourceColumn": "contract_id",
+            "lineageTag": "c0ef67ce-185e-4679-bf5d-a94da7bb3b47",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "contract_reference",
+            "dataType": "string",
+            "sourceColumn": "contract_reference",
+            "lineageTag": "feb43471-98d2-40f9-bb24-a47f3525b27c",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "process_id",
+            "dataType": "string",
+            "sourceColumn": "process_id",
+            "lineageTag": "8140a0d0-925b-49a4-9b2c-d99dbbd3fdab",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "entity_sk",
+            "dataType": "string",
+            "sourceColumn": "entity_sk",
+            "lineageTag": "3c76e99c-84b4-4b1a-b89c-20950bc9cb5e",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "entity_name",
+            "dataType": "string",
+            "sourceColumn": "entity_name",
+            "lineageTag": "ad55fc8e-7399-4fd0-93fe-ceb724db5832",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "entity_code",
+            "dataType": "string",
+            "sourceColumn": "entity_code",
+            "lineageTag": "9459a67b-f6a4-4bb0-87b6-2c50ca49fbeb",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "entity_identity_status",
+            "dataType": "string",
+            "sourceColumn": "entity_identity_status",
+            "lineageTag": "b035f43f-3b94-4396-935a-eef0d805416a",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "entity_identity_reason",
+            "dataType": "string",
+            "sourceColumn": "entity_identity_reason",
+            "lineageTag": "0bef2f00-913c-44c3-9b16-d11463c178a9",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "supplier_sk",
+            "dataType": "string",
+            "sourceColumn": "supplier_sk",
+            "lineageTag": "fa55891a-6b7d-40c2-a282-afa9da894462",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "supplier_name",
+            "dataType": "string",
+            "sourceColumn": "supplier_name",
+            "lineageTag": "2652dc6c-de4a-49d0-831d-05d932c77e3f",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "supplier_code",
+            "dataType": "string",
+            "sourceColumn": "supplier_code",
+            "lineageTag": "33ad1c31-1d15-4e77-9939-228afaceeb4e",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "supplier_identity_status",
+            "dataType": "string",
+            "sourceColumn": "supplier_identity_status",
+            "lineageTag": "7f251913-cb16-4bea-8967-9ce94d99a03d",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "supplier_identity_reason",
+            "dataType": "string",
+            "sourceColumn": "supplier_identity_reason",
+            "lineageTag": "1750f107-8dc4-4755-8526-46eee55af6d1",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "municipality_sk",
+            "dataType": "string",
+            "sourceColumn": "municipality_sk",
+            "lineageTag": "555e9fe4-307a-41f1-b6a6-cfcdf732057f",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "modality_sk",
+            "dataType": "string",
+            "sourceColumn": "modality_sk",
+            "lineageTag": "0d0b66ec-33a9-4153-b6f8-6d6f53ae9924",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "signing_date_sk",
+            "dataType": "int64",
+            "sourceColumn": "signing_date_sk",
+            "lineageTag": "db1bd1ae-9143-4e89-803c-4f4866fc94a9",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "integer"
+              }
+            ]
+          },
+          {
+            "name": "start_date_sk",
+            "dataType": "int64",
+            "sourceColumn": "start_date_sk",
+            "lineageTag": "c4891f4f-b80f-4df4-8151-f2d6e9c38190",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "integer"
+              }
+            ]
+          },
+          {
+            "name": "end_date_sk",
+            "dataType": "int64",
+            "sourceColumn": "end_date_sk",
+            "lineageTag": "aa91203e-ffd1-4966-b5a4-c5889265cdd8",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "integer"
+              }
+            ]
+          },
+          {
+            "name": "signing_date",
+            "dataType": "dateTime",
+            "sourceColumn": "signing_date",
+            "lineageTag": "f0473e58-8d2e-478b-a3b1-b0a72d1f29f1",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "date"
+              }
+            ],
+            "formatString": "d mmm yyyy"
+          },
+          {
+            "name": "start_date",
+            "dataType": "dateTime",
+            "sourceColumn": "start_date",
+            "lineageTag": "e27ff242-d930-4e27-a5c3-607650b64f2a",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "date"
+              }
+            ],
+            "formatString": "d mmm yyyy"
+          },
+          {
+            "name": "end_date",
+            "dataType": "dateTime",
+            "sourceColumn": "end_date",
+            "lineageTag": "aa60f313-1ae2-41fd-b2e9-55d0c6bc10c4",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "date"
+              }
+            ],
+            "formatString": "d mmm yyyy"
+          },
+          {
+            "name": "signing_month",
+            "dataType": "dateTime",
+            "sourceColumn": "signing_month",
+            "lineageTag": "dbb8e521-48d0-4d86-a321-d799be41ed9a",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "date"
+              }
+            ],
+            "formatString": "mmm yyyy"
+          },
+          {
+            "name": "contract_value_cop",
+            "dataType": "decimal",
+            "sourceColumn": "contract_value_cop",
+            "lineageTag": "1c663277-6e91-464f-855c-fc22e83a77e9",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "numeric(20,2)"
+              }
+            ]
+          },
+          {
+            "name": "duration_days",
+            "dataType": "int64",
+            "sourceColumn": "duration_days",
+            "lineageTag": "a590dea2-a70d-4612-a83a-c1fb62df1cef",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "integer"
+              }
+            ]
+          },
+          {
+            "name": "status_raw",
+            "dataType": "string",
+            "sourceColumn": "status_raw",
+            "lineageTag": "dc2b40b9-7b51-4ae8-8812-c87c43a83734",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "status_bucket",
+            "dataType": "string",
+            "sourceColumn": "status_bucket",
+            "lineageTag": "68008d18-a23e-4e5f-bffc-1e6b51e4ae91",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "status_profile_state",
+            "dataType": "string",
+            "sourceColumn": "status_profile_state",
+            "lineageTag": "cfa984f8-a160-4f22-b454-3b824043f5ee",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "base_cohort",
+            "dataType": "string",
+            "sourceColumn": "base_cohort",
+            "lineageTag": "e187c0d6-cf69-4218-99d6-cd2d02f57e7a",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "source_process_url",
+            "dataType": "string",
+            "sourceColumn": "source_process_url",
+            "lineageTag": "c4e92b62-397d-451a-86e8-a5eb72c8da74",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ],
+            "dataCategory": "WebUrl"
+          },
+          {
+            "name": "source_link_state",
+            "dataType": "string",
+            "sourceColumn": "source_link_state",
+            "lineageTag": "1dbb1457-bfd7-49d4-b99b-ac401ee21491",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "source_updated_at",
+            "dataType": "dateTime",
+            "sourceColumn": "source_updated_at",
+            "lineageTag": "02e04d7d-0237-40d6-8b6a-1af9005788d4",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "timestamp without time zone"
+              }
+            ]
+          },
+          {
+            "name": "acquisition_observed_at_utc",
+            "dataType": "dateTime",
+            "sourceColumn": "acquisition_observed_at_utc",
+            "lineageTag": "89872d93-9c04-432b-984a-56eed98d4d5c",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "timestamp without time zone"
+              }
+            ]
+          },
+          {
+            "name": "pipeline_completed_at_utc",
+            "dataType": "dateTime",
+            "sourceColumn": "pipeline_completed_at_utc",
+            "lineageTag": "34356bac-0f50-40b5-84e3-472244fc4fe7",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "timestamp with time zone"
+              }
+            ]
+          },
+          {
+            "name": "bronze_run_id",
+            "dataType": "string",
+            "sourceColumn": "bronze_run_id",
+            "lineageTag": "943b3914-bb50-470e-bec1-098c2485d22e",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "bronze_row_ordinal",
+            "dataType": "int64",
+            "sourceColumn": "bronze_row_ordinal",
+            "lineageTag": "ad71df5c-0442-49e0-bc5a-257ab1bb1ae3",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "bigint"
+              }
+            ]
+          },
+          {
+            "name": "payload_sha256",
+            "dataType": "string",
+            "sourceColumn": "payload_sha256",
+            "lineageTag": "d4c444bd-8dc4-4eb9-8213-70078c26ecf2",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "condition_state",
+            "dataType": "string",
+            "sourceColumn": "condition_state",
+            "lineageTag": "1b4b3380-1897-44e3-8b73-ad4b6bbd74ce",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "observation_condition",
+            "dataType": "string",
+            "sourceColumn": "observation_condition",
+            "lineageTag": "0f67a1e5-b1ef-4917-ad56-8b8b40b47cd5",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "jsonb"
+              }
+            ]
+          },
+          {
+            "name": "attributable_rejection_evidence",
+            "dataType": "string",
+            "sourceColumn": "attributable_rejection_evidence",
+            "lineageTag": "29305c0d-0180-4355-9211-9699ae04242d",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "jsonb"
+              }
+            ]
+          },
+          {
+            "name": "quality_warning_codes",
+            "dataType": "string",
+            "sourceColumn": "quality_warning_codes",
+            "lineageTag": "c3571d67-f9f8-4b9e-9653-9aa111a145f7",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "ARRAY"
+              }
+            ]
+          },
+          {
+            "name": "quality_evidence_sha256",
+            "dataType": "string",
+            "sourceColumn": "quality_evidence_sha256",
+            "lineageTag": "cb289783-97ab-42d0-a33f-3e540fee78b9",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "silver_version_id",
+            "dataType": "string",
+            "sourceColumn": "silver_version_id",
+            "lineageTag": "38f8a858-035a-4485-a818-a8e848da63b5",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "silver_manifest_sha256",
+            "dataType": "string",
+            "sourceColumn": "silver_manifest_sha256",
+            "lineageTag": "35297470-9258-4907-b0a8-c9bdab6ef30b",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "scope_id",
+            "dataType": "string",
+            "sourceColumn": "scope_id",
+            "lineageTag": "551d5db4-9bcf-4a44-bc46-4dbc12d962b9",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "coverage_state",
+            "dataType": "string",
+            "sourceColumn": "coverage_state",
+            "lineageTag": "ac9c12a1-51fb-4c22-b73c-e8fb566e5cce",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "coverage_known",
+            "dataType": "boolean",
+            "sourceColumn": "coverage_known",
+            "lineageTag": "f4958106-e60f-495e-a147-9b8963527d8e",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "coverage_metadata",
+            "dataType": "string",
+            "sourceColumn": "coverage_metadata",
+            "lineageTag": "f112b64e-654a-4c82-96e5-fd65ef9fb436",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "jsonb"
+              }
+            ]
+          },
+          {
+            "name": "catalog_sha256",
+            "dataType": "string",
+            "sourceColumn": "catalog_sha256",
+            "lineageTag": "e9f56189-a1fc-4e30-8b50-c46f7513ff5a",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "policy_sha256",
+            "dataType": "string",
+            "sourceColumn": "policy_sha256",
+            "lineageTag": "8f0768f2-51c4-46d7-9687-5512baad826f",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "policy_version",
+            "dataType": "string",
+            "sourceColumn": "policy_version",
+            "lineageTag": "e5114ce0-41e2-4a2f-b7a0-5da33e74c60e",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "candidate_built_at_utc",
+            "dataType": "dateTime",
+            "sourceColumn": "candidate_built_at_utc",
+            "lineageTag": "d6a1a87a-7ff8-47f1-a50f-c790f6e76a7d",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "timestamp with time zone"
+              }
+            ]
+          },
+          {
+            "name": "temporal_basis",
+            "dataType": "string",
+            "sourceColumn": "temporal_basis",
+            "lineageTag": "c0651c6b-db2d-438a-9e23-9f0a42bcd9eb",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "value_unit",
+            "dataType": "string",
+            "sourceColumn": "value_unit",
+            "lineageTag": "f3a1b541-c916-419c-8581-e84e26b385f5",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "source_time_basis",
+            "dataType": "string",
+            "sourceColumn": "source_time_basis",
+            "lineageTag": "b5372f5f-6e6d-45fc-a1e6-a408121e6d4c",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "mart_contract_detail",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let Source = ReadPublication(PublicationDescriptor, \"mart_contract_detail\", PublicationServer, PublicationDatabase), Typed = Table.TransformColumns(Source, {{\"signing_date\", each if _ = null then null else if Value.Is(_, type datetimezone) then DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_,0)) else DateTime.From(_), type nullable datetime}, {\"start_date\", each if _ = null then null else if Value.Is(_, type datetimezone) then DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_,0)) else DateTime.From(_), type nullable datetime}, {\"end_date\", each if _ = null then null else if Value.Is(_, type datetimezone) then DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_,0)) else DateTime.From(_), type nullable datetime}, {\"signing_month\", each if _ = null then null else if Value.Is(_, type datetimezone) then DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_,0)) else DateTime.From(_), type nullable datetime}, {\"contract_value_cop\", each if _ = null then null else Currency.From(_, \"en-US\"), Currency.Type}, {\"source_updated_at\", each if _ = null then null else if Value.Is(_, type datetimezone) then DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_,0)) else DateTime.From(_), type nullable datetime}, {\"acquisition_observed_at_utc\", each if _ = null then null else if Value.Is(_, type datetimezone) then DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_,0)) else DateTime.From(_), type nullable datetime}, {\"pipeline_completed_at_utc\", each if _ = null then null else if Value.Is(_, type datetimezone) then DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_,0)) else DateTime.From(_), type nullable datetime}, {\"observation_condition\", each if _ = null then null else if Value.Is(_, type text) then _ else Text.FromBinary(Json.FromValue(_)), type nullable text}, {\"attributable_rejection_evidence\", each if _ = null then null else if Value.Is(_, type text) then _ else Text.FromBinary(Json.FromValue(_)), type nullable text}, {\"coverage_metadata\", each if _ = null then null else if Value.Is(_, type text) then _ else Text.FromBinary(Json.FromValue(_)), type nullable text}, {\"candidate_built_at_utc\", each if _ = null then null else if Value.Is(_, type datetimezone) then DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_,0)) else DateTime.From(_), type nullable datetime}}) in Typed"
+            }
+          }
+        ]
+      },
+      {
+        "name": "dim_entity",
+        "lineageTag": "dde66d38-eafc-496a-b803-4e9bca7af147",
+        "columns": [
+          {
+            "name": "publication_id",
+            "dataType": "string",
+            "sourceColumn": "publication_id",
+            "lineageTag": "70bddf3f-f3ac-4181-9e50-05dcc2297593",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "entity_sk",
+            "dataType": "string",
+            "sourceColumn": "entity_sk",
+            "lineageTag": "2f25649d-dd8b-4830-afa7-35f87378ea32",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "entity_natural_key",
+            "dataType": "string",
+            "sourceColumn": "entity_natural_key",
+            "lineageTag": "217ccb71-af5e-4ebd-9c1f-78a5309da69a",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "source_dataset_id",
+            "dataType": "string",
+            "sourceColumn": "source_dataset_id",
+            "lineageTag": "f814108d-d5c1-40c3-bbeb-6c618defc500",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "entity_code",
+            "dataType": "string",
+            "sourceColumn": "entity_code",
+            "lineageTag": "f1761e2f-71bb-4e9c-9bca-4debd812c2c4",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "entity_name",
+            "dataType": "string",
+            "sourceColumn": "entity_name",
+            "lineageTag": "bc5beedd-8d12-41ee-beb1-c4b1b76265f9",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "member_status",
+            "dataType": "string",
+            "sourceColumn": "member_status",
+            "lineageTag": "8f44988b-4188-4d43-9cf8-8175f71bf915",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "dim_entity",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let Source = ReadPublication(PublicationDescriptor, \"dim_entity\", PublicationServer, PublicationDatabase) in Source"
+            }
+          }
+        ]
+      },
+      {
+        "name": "dim_supplier",
+        "lineageTag": "63b9522f-61d3-4dba-adcc-77014c5012fb",
+        "columns": [
+          {
+            "name": "publication_id",
+            "dataType": "string",
+            "sourceColumn": "publication_id",
+            "lineageTag": "88e07e43-7eca-4ae7-89d3-34cfd77eeb55",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "supplier_sk",
+            "dataType": "string",
+            "sourceColumn": "supplier_sk",
+            "lineageTag": "ec731e69-4b27-4dc7-b223-0c0daaf2d4b8",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "supplier_natural_key",
+            "dataType": "string",
+            "sourceColumn": "supplier_natural_key",
+            "lineageTag": "bed359d3-e6de-4b85-9827-2773d98301e8",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "source_dataset_id",
+            "dataType": "string",
+            "sourceColumn": "source_dataset_id",
+            "lineageTag": "306e77be-ba87-439e-be2f-f6fbf448a826",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "supplier_code",
+            "dataType": "string",
+            "sourceColumn": "supplier_code",
+            "lineageTag": "b1288d4d-3b9c-4e17-bfbb-c73e08f51965",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "supplier_name",
+            "dataType": "string",
+            "sourceColumn": "supplier_name",
+            "lineageTag": "c141422b-cf0c-4cff-bcf5-58c4c7c07149",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "member_status",
+            "dataType": "string",
+            "sourceColumn": "member_status",
+            "lineageTag": "63fc3162-b0f5-44d4-930d-1d3033eb2c1b",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "dim_supplier",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let Source = ReadPublication(PublicationDescriptor, \"dim_supplier\", PublicationServer, PublicationDatabase) in Source"
+            }
+          }
+        ]
+      },
+      {
+        "name": "dim_municipality",
+        "lineageTag": "10f2f7f0-67c8-44a4-bba5-09c604a61fbe",
+        "columns": [
+          {
+            "name": "publication_id",
+            "dataType": "string",
+            "sourceColumn": "publication_id",
+            "lineageTag": "e862f5e8-4be6-42b4-8af1-e4d6b3ee1e87",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "municipality_sk",
+            "dataType": "string",
+            "sourceColumn": "municipality_sk",
+            "lineageTag": "835852e3-7033-4a94-a02d-4ef09fae7e2f",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "municipality_natural_key",
+            "dataType": "string",
+            "sourceColumn": "municipality_natural_key",
+            "lineageTag": "bed3b5f5-b03e-47f7-98fd-f7bd45c82c92",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "municipality_name",
+            "dataType": "string",
+            "sourceColumn": "municipality_name",
+            "lineageTag": "4f6aadde-039f-4ae1-bfd6-e960d61f3436",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "member_status",
+            "dataType": "string",
+            "sourceColumn": "member_status",
+            "lineageTag": "13400fb3-4855-43bc-a876-479b91ba59f5",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "dim_municipality",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let Source = ReadPublication(PublicationDescriptor, \"dim_municipality\", PublicationServer, PublicationDatabase) in Source"
+            }
+          }
+        ]
+      },
+      {
+        "name": "dim_modality",
+        "lineageTag": "a67d1084-6198-4746-99b5-472cf50463f1",
+        "columns": [
+          {
+            "name": "publication_id",
+            "dataType": "string",
+            "sourceColumn": "publication_id",
+            "lineageTag": "e2b42aa1-cce9-4f04-a002-cb7750922bd8",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "modality_sk",
+            "dataType": "string",
+            "sourceColumn": "modality_sk",
+            "lineageTag": "050f6891-1619-45af-9c3e-47ed0721ed19",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "modality_natural_key",
+            "dataType": "string",
+            "sourceColumn": "modality_natural_key",
+            "lineageTag": "aeaaf4ca-f84d-4b59-b014-c8ff1c9b388a",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "modality_name",
+            "dataType": "string",
+            "sourceColumn": "modality_name",
+            "lineageTag": "4fc5a723-d4ed-4ac4-92f5-9624e87830f4",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "member_status",
+            "dataType": "string",
+            "sourceColumn": "member_status",
+            "lineageTag": "e4359b41-0976-42f5-8fb9-92345907e24f",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "dim_modality",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let Source = ReadPublication(PublicationDescriptor, \"dim_modality\", PublicationServer, PublicationDatabase) in Source"
+            }
+          }
+        ]
+      },
+      {
+        "name": "dim_date",
+        "lineageTag": "89421d04-34f0-4bb9-ad08-ccd1f3ca2d12",
+        "columns": [
+          {
+            "name": "publication_id",
+            "dataType": "string",
+            "sourceColumn": "publication_id",
+            "lineageTag": "99c136b1-f530-4052-8674-cb780636fc32",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "date_sk",
+            "dataType": "int64",
+            "sourceColumn": "date_sk",
+            "lineageTag": "17b2f1c7-5085-42c9-b049-5746fcecb031",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "integer"
+              }
+            ]
+          },
+          {
+            "name": "calendar_date",
+            "dataType": "dateTime",
+            "sourceColumn": "calendar_date",
+            "lineageTag": "01387e4a-ed5c-4ba9-a841-4f2b760f23c4",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "date"
+              }
+            ],
+            "formatString": "d mmm yyyy"
+          },
+          {
+            "name": "year",
+            "dataType": "int64",
+            "sourceColumn": "year",
+            "lineageTag": "c587a4f4-b8cf-4112-922e-774637a6031f",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "smallint"
+              }
+            ]
+          },
+          {
+            "name": "quarter",
+            "dataType": "int64",
+            "sourceColumn": "quarter",
+            "lineageTag": "ecf43439-3d2a-432b-a30a-d1381da78d1c",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "smallint"
+              }
+            ]
+          },
+          {
+            "name": "month",
+            "dataType": "int64",
+            "sourceColumn": "month",
+            "lineageTag": "baa33c87-e728-4573-aecb-85986a7aa3e1",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "smallint"
+              }
+            ]
+          },
+          {
+            "name": "month_name",
+            "dataType": "string",
+            "sourceColumn": "month_name",
+            "lineageTag": "5a5951d8-404c-4d7a-a4e0-109ea8936582",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "day_of_month",
+            "dataType": "int64",
+            "sourceColumn": "day_of_month",
+            "lineageTag": "3ebac09e-d937-419f-967a-3de2de876c07",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "smallint"
+              }
+            ]
+          },
+          {
+            "name": "day_of_week",
+            "dataType": "int64",
+            "sourceColumn": "day_of_week",
+            "lineageTag": "de5b1692-f872-4a02-b691-3488b110366a",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "smallint"
+              }
+            ]
+          },
+          {
+            "name": "day_name",
+            "dataType": "string",
+            "sourceColumn": "day_name",
+            "lineageTag": "9ec7101d-5eb3-42e9-a582-f001b3f7c15a",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "member_status",
+            "dataType": "string",
+            "sourceColumn": "member_status",
+            "lineageTag": "aef9807c-fa23-4b06-988d-f2fa2f6bbb4e",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "dim_date",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let Source = ReadPublication(PublicationDescriptor, \"dim_date\", PublicationServer, PublicationDatabase), Typed = Table.TransformColumns(Source, {{\"calendar_date\", each if _ = null then null else if Value.Is(_, type datetimezone) then DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_,0)) else DateTime.From(_), type nullable datetime}}) in Typed"
+            }
+          }
+        ]
+      },
+      {
+        "name": "mart_data_quality",
+        "lineageTag": "3b785635-4042-468e-9ce5-0cb355e18fd5",
+        "columns": [
+          {
+            "name": "publication_id",
+            "dataType": "string",
+            "sourceColumn": "publication_id",
+            "lineageTag": "2df33a64-ab7b-4fcb-820c-9dbf3fa43735",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "silver_version_id",
+            "dataType": "string",
+            "sourceColumn": "silver_version_id",
+            "lineageTag": "a93444fe-ab0e-43ef-88d4-9c8df18d9c79",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "silver_manifest_sha256",
+            "dataType": "string",
+            "sourceColumn": "silver_manifest_sha256",
+            "lineageTag": "cfaf6f1f-822e-4008-b312-fbd4e480efa4",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "scope_id",
+            "dataType": "string",
+            "sourceColumn": "scope_id",
+            "lineageTag": "715c3e77-541f-4d46-9157-a0a87b0de261",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "control_id",
+            "dataType": "string",
+            "sourceColumn": "control_id",
+            "lineageTag": "8582692a-1d01-404d-8bdc-4621f63e9e58",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "numerator",
+            "dataType": "int64",
+            "sourceColumn": "numerator",
+            "lineageTag": "efc61c47-d20b-4dff-85ba-88018ff4e50e",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "bigint"
+              }
+            ]
+          },
+          {
+            "name": "denominator",
+            "dataType": "int64",
+            "sourceColumn": "denominator",
+            "lineageTag": "8df84a4f-2925-417b-852c-480c6c86f92b",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "bigint"
+              }
+            ]
+          },
+          {
+            "name": "evaluation_grain",
+            "dataType": "string",
+            "sourceColumn": "evaluation_grain",
+            "lineageTag": "4582faa1-0e4c-4677-bd00-76777aba08d5",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "filter_applicability",
+            "dataType": "string",
+            "sourceColumn": "filter_applicability",
+            "lineageTag": "a6724020-a595-42ad-8a07-af3ee76deff5",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "control_state",
+            "dataType": "string",
+            "sourceColumn": "control_state",
+            "lineageTag": "48ae2b14-fa25-4cff-8cfe-0017505500c6",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "reason",
+            "dataType": "string",
+            "sourceColumn": "reason",
+            "lineageTag": "b7247dda-791e-4da2-bd6e-0d2ecebf57db",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "pipeline_completed_at_utc",
+            "dataType": "string",
+            "sourceColumn": "pipeline_completed_at_utc",
+            "lineageTag": "b8028a4c-4bf0-4d9c-afc0-b8bce8ddd1e3",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "evidence_sha256",
+            "dataType": "string",
+            "sourceColumn": "evidence_sha256",
+            "lineageTag": "95edc1ad-adc8-4522-83d1-f1f800f63b1d",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "catalog_sha256",
+            "dataType": "string",
+            "sourceColumn": "catalog_sha256",
+            "lineageTag": "4dfd3fc2-9fea-429b-8b4d-e9f1eb08e6d1",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "policy_sha256",
+            "dataType": "string",
+            "sourceColumn": "policy_sha256",
+            "lineageTag": "ba77d240-d7e4-4b54-b853-1686b1d5fa4c",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "mart_data_quality",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let Source = ReadPublication(PublicationDescriptor, \"mart_data_quality\", PublicationServer, PublicationDatabase) in Source"
+            }
+          }
+        ]
+      },
+      {
+        "name": "publication_metadata",
+        "isHidden": true,
+        "lineageTag": "b9fdffde-f567-4886-9c51-3e3020eb3982",
+        "columns": [
+          {
+            "name": "publication_id",
+            "dataType": "string",
+            "sourceColumn": "publication_id",
+            "lineageTag": "53c01b10-caeb-48f5-8532-618abbd0fe92",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "read_namespace",
+            "dataType": "string",
+            "sourceColumn": "read_namespace",
+            "lineageTag": "13a62716-1cd7-4088-9a17-5b588189e68e",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "metadata_schema_version",
+            "dataType": "string",
+            "sourceColumn": "metadata_schema_version",
+            "lineageTag": "be7e6b89-e708-4e79-b19d-28c58ddcf203",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "silver_version_id",
+            "dataType": "string",
+            "sourceColumn": "silver_version_id",
+            "lineageTag": "fa1bea8d-a9b3-4ea2-96c4-ebcba015de1b",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "silver_manifest_sha256",
+            "dataType": "string",
+            "sourceColumn": "silver_manifest_sha256",
+            "lineageTag": "12d69a00-540f-45f4-8cd7-d59ec0c246a9",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "scope_id",
+            "dataType": "string",
+            "sourceColumn": "scope_id",
+            "lineageTag": "f33d8ee3-01cb-4f69-8962-f66484de8fc5",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "scope",
+            "dataType": "string",
+            "sourceColumn": "scope",
+            "lineageTag": "f013102d-0e4e-4899-a609-e9af9ff156e1",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "jsonb"
+              }
+            ]
+          },
+          {
+            "name": "built_at",
+            "dataType": "dateTime",
+            "sourceColumn": "built_at",
+            "lineageTag": "37d60cd7-a406-47fc-8ae7-c7d78b2e7ed4",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "timestamp with time zone"
+              }
+            ]
+          },
+          {
+            "name": "observed_at_utc",
+            "dataType": "dateTime",
+            "sourceColumn": "observed_at_utc",
+            "lineageTag": "4f17ffa2-387b-44a5-895c-e60c667eb37f",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "timestamp with time zone"
+              }
+            ]
+          },
+          {
+            "name": "pipeline_completed_at_utc",
+            "dataType": "dateTime",
+            "sourceColumn": "pipeline_completed_at_utc",
+            "lineageTag": "d441fb86-ad95-40e2-847a-e13c79d0eaed",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "timestamp with time zone"
+              }
+            ]
+          },
+          {
+            "name": "coverage_state",
+            "dataType": "string",
+            "sourceColumn": "coverage_state",
+            "lineageTag": "4f6f361c-80f3-4c3c-8ed9-d50784e33827",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "coverage_known",
+            "dataType": "boolean",
+            "sourceColumn": "coverage_known",
+            "lineageTag": "8dec57ab-c11d-4000-8985-6be3c27862ba",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "source_dataset_id",
+            "dataType": "string",
+            "sourceColumn": "source_dataset_id",
+            "lineageTag": "53b8f486-8d46-40ef-9a7b-81cf4cf5a13c",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "catalog_sha256",
+            "dataType": "string",
+            "sourceColumn": "catalog_sha256",
+            "lineageTag": "5da38dae-033b-4cbe-9884-faca51093d42",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "dbt_graph_sha256",
+            "dataType": "string",
+            "sourceColumn": "dbt_graph_sha256",
+            "lineageTag": "317d3c13-1038-494d-b204-581b302db8f1",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "policy_sha256",
+            "dataType": "string",
+            "sourceColumn": "policy_sha256",
+            "lineageTag": "c5ee7c89-17cc-4889-b9a0-bef1772c08ed",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "policy_version",
+            "dataType": "string",
+            "sourceColumn": "policy_version",
+            "lineageTag": "19bc3924-9fb7-4996-925a-6d48158621a9",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "identity_rule_version",
+            "dataType": "string",
+            "sourceColumn": "identity_rule_version",
+            "lineageTag": "c9e23958-a363-429d-80a7-d3174fa0c277",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "source_schema_version",
+            "dataType": "int64",
+            "sourceColumn": "source_schema_version",
+            "lineageTag": "795b4195-41e2-4117-8010-a3afbf52d97f",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "integer"
+              }
+            ]
+          },
+          {
+            "name": "code_revision",
+            "dataType": "string",
+            "sourceColumn": "code_revision",
+            "lineageTag": "d66d6845-6f1d-4b68-9cd9-3183bffd02df",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "scoring_state",
+            "dataType": "string",
+            "sourceColumn": "scoring_state",
+            "lineageTag": "a394498e-da19-411c-bd2d-140bcef67e0c",
+            "annotations": [
+              {
+                "name": "Secop.SourceSqlType",
+                "value": "text"
+              }
+            ]
+          },
+          {
+            "name": "scope_signing_from",
+            "dataType": "string",
+            "isHidden": true,
+            "sourceColumn": "scope_signing_from",
+            "annotations": [
+              {
+                "name": "Secop.Derived",
+                "value": "scope.signing_from"
+              }
+            ]
+          },
+          {
+            "name": "scope_signing_to",
+            "dataType": "string",
+            "isHidden": true,
+            "sourceColumn": "scope_signing_to",
+            "annotations": [
+              {
+                "name": "Secop.Derived",
+                "value": "scope.signing_to"
+              }
+            ]
+          },
+          {
+            "name": "scope_missing_signing",
+            "dataType": "string",
+            "isHidden": true,
+            "sourceColumn": "scope_missing_signing",
+            "annotations": [
+              {
+                "name": "Secop.Derived",
+                "value": "scope.missing_signing"
+              }
+            ]
+          },
+          {
+            "name": "scope_source_clock",
+            "dataType": "string",
+            "isHidden": true,
+            "sourceColumn": "scope_source_clock",
+            "annotations": [
+              {
+                "name": "Secop.Derived",
+                "value": "scope.source_clock"
+              }
+            ]
+          },
+          {
+            "name": "coverage_metadata",
+            "dataType": "string",
+            "isHidden": true,
+            "sourceColumn": "coverage_metadata",
+            "annotations": [
+              {
+                "name": "Secop.Derived",
+                "value": "detail.coverage_metadata"
+              }
+            ]
+          },
+          {
+            "name": "coverage_summary",
+            "dataType": "string",
+            "isHidden": true,
+            "sourceColumn": "coverage_summary",
+            "annotations": [
+              {
+                "name": "Secop.Derived",
+                "value": "detail.coverage_summary"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "publication_metadata",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let Source = ReadPublication(PublicationDescriptor, \"publication_metadata\", PublicationServer, PublicationDatabase), Typed = Table.TransformColumns(Source, {{\"scope\", each if _ = null then null else if Value.Is(_, type text) then _ else Text.FromBinary(Json.FromValue(_)), type nullable text}, {\"built_at\", each if _ = null then null else if Value.Is(_, type datetimezone) then DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_,0)) else DateTime.From(_), type nullable datetime}, {\"observed_at_utc\", each if _ = null then null else if Value.Is(_, type datetimezone) then DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_,0)) else DateTime.From(_), type nullable datetime}, {\"pipeline_completed_at_utc\", each if _ = null then null else if Value.Is(_, type datetimezone) then DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_,0)) else DateTime.From(_), type nullable datetime}}) in Typed"
+            }
+          }
+        ]
+      },
+      {
+        "name": "ImportContext",
+        "isHidden": true,
+        "lineageTag": "f5c37dde-0cbd-407a-945f-369cae9857b1",
+        "columns": [
+          {
+            "name": "publication_id",
+            "dataType": "string",
+            "sourceColumn": "publication_id",
+            "lineageTag": "80b5d937-4079-4d15-9533-2bb6cb932cd2"
+          },
+          {
+            "name": "import_started_at_utc",
+            "dataType": "dateTime",
+            "sourceColumn": "import_started_at_utc",
+            "lineageTag": "29e8dbc8-60f5-42f4-8c95-6ec5045aa169"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "ImportContext",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": "let Imported = #table(type table [publication_id = text, import_started_at_utc = datetime], {{PublicationDescriptor[publication_id], DateTimeZone.RemoveZone(DateTimeZone.FixedUtcNow())}}) in Imported"
+            }
+          }
+        ]
+      }
+    ],
+    "cultures": [
+      {
+        "name": "en-US"
+      }
+    ],
+    "expressions": [
+      {
+        "name": "PublicationDescriptor",
+        "kind": "m",
+        "expression": "[publication_id = \"\", resolved_at = \"\", operation_expires_at = \"\"]",
+        "lineageTag": "2e8672f4-dd6d-4d07-9c49-d246e1841dd3"
+      },
+      {
+        "name": "PublicationServer",
+        "kind": "m",
+        "expression": "\"\"",
+        "lineageTag": "830f56ea-bbb7-4b7f-8ebd-5833f6b017c6"
+      },
+      {
+        "name": "PublicationDatabase",
+        "kind": "m",
+        "expression": "\"\"",
+        "lineageTag": "bc08f508-6c2e-4724-9413-1768ca3b24e1"
+      },
+      {
+        "name": "ReadPublication",
+        "kind": "m",
+        "expression": "error Error.Record(\"PUBLICATION_NOT_CONFIGURED\", \"Build this template with bi/build.py before opening it.\", null)",
+        "lineageTag": "2c47a026-713e-4700-917d-5d7c42bd6760"
+      }
+    ],
+    "annotations": [
+      {
+        "name": "__PBI_TimeIntelligenceEnabled",
+        "value": "0"
+      }
+    ]
+  }
+}
