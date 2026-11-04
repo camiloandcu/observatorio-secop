@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition"
 INK, BLUE, MUTED, BACKGROUND = "#183047", "#155E75", "#4B5D6B", "#F4F6F8"
 DETAIL, METRICS = "mart_contract_detail", "Indicadores"
-NAMES = ("Panorama", "Entidades y proveedores", "Calidad", "Detalle contractual")
+NAMES = ("Panorama", "Entidades y proveedores", "Calidad", "Detalle contractual", "Contratos")
 
 
 def identifier(value: str, length: int = 20) -> str:
@@ -96,8 +96,8 @@ class Report:
         self.page_schema = (
             page["$schema"] if existing.get("pageOrder") else f"{ROOT}/page/2.1.0/schema.json"
         )
-        self.visuals: dict[int, dict[str, dict]] = {i: {} for i in range(4)}
-        self.interactions: dict[int, list[dict]] = {i: [] for i in range(4)}
+        self.visuals: dict[int, dict[str, dict]] = {i: {} for i in range(len(NAMES))}
+        self.interactions: dict[int, list[dict]] = {i: [] for i in range(len(NAMES))}
         self.date_controls: dict[int, dict] = {}
         self.bookmarks: dict[str, dict] = {}
 
@@ -381,10 +381,20 @@ class Report:
     def common(self, page: int, *, synthetic: bool = False) -> None:
         self.text(page, "title", NAMES[page], (28, 16, 570, 40), 23)
         for index, (label, x, width) in enumerate(
-            (("Panorama", 660, 110), ("Entidades y proveedores", 780, 260), ("Calidad", 1050, 170))
+            (
+                ("Panorama", 600, 110),
+                ("Contratos", 720, 110),
+                ("Entidades y proveedores", 840, 240),
+                ("Calidad", 1090, 162),
+            )
         ):
             self.button(
-                page, f"nav-{index}", label, "PageNavigation", (x, 20, width, 34), self.pages[index]
+                page,
+                f"nav-{index}",
+                label,
+                "PageNavigation",
+                (x, 20, width, 34),
+                self.pages[(0, 4, 1, 2)[index]],
             )
         self.text(
             page,
@@ -679,7 +689,7 @@ class Report:
             self.definition / "pages/pages.json",
             {
                 "$schema": f"{ROOT}/pagesMetadata/1.1.0/schema.json",
-                "pageOrder": self.pages,
+                "pageOrder": [self.pages[i] for i in (0, 4, 1, 2, 3)],
                 "activePageName": self.pages[0],
             },
         )
@@ -696,7 +706,7 @@ class Report:
 
 def generate(folder: Path, *, synthetic: bool = False) -> None:
     r = Report(folder)
-    for page in range(4):
+    for page in range(len(NAMES)):
         r.common(page, synthetic=synthetic)
     # Tighten only Panorama’s controls; keep synchronized filters intact.
     for key in ("entity", "municipality", "modality", "status"):
@@ -726,7 +736,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             0,
             key,
             "columnChart",
-            (x, 348, 602, 116),
+            (x, 360, 602, 300),
             title,
             {
                 "Category": [projection(DETAIL, "signing_month", "Mes de firma")],
@@ -781,20 +791,13 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
                 }
             ]
         }
-    r.table(
-        0,
-        "modality-summary",
-        "Distribución de la referencia",
-        [
-            ("dim_modality", "Modality Label", "Modalidad"),
-            (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value Display", "Valor (COP)", True),
-        ],
-        (28, 496, 602, 176),
+    r.text(4, "contracts-label", "Selecciona un contrato para ver detalle", (28, 286, 700, 28), 12)
+    contracts = r.contract_table(4, (28, 324, 1224, 344))
+    contracts["visual"]["query"]["queryState"]["Values"]["projections"].insert(
+        1, projection("dim_entity", "Entity Label", "Entidad")
     )
-    r.text(0, "contracts-label", "Selecciona un contrato para ver detalle", (650, 466, 390, 24), 11)
-    r.contract_table(0, (650, 496, 602, 176))
-    r.button(0, "drill", "Ver contrato", "Drillthrough", (1050, 466, 202, 26), r.pages[3])
+    r.column_widths(contracts, [155, 220, 220, 100, 120, 175, 150])
+    r.button(4, "drill", "Ver contrato", "Drillthrough", (1020, 284, 232, 34), r.pages[3])
     for key, measure, title, x, width in (
         ("hhi", "HHI Display", "Concentración (HHI)", 28, 236),
         ("known-value", "Known Value Display", "Valor conocido (COP)", 276, 352),
@@ -1096,7 +1099,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         "missing-signatures",
         "Missing Signature Count",
         "Contratos sin firma",
-        (28, 496, 230, 78),
+        (650, 496, 230, 78),
     )
     modalities = r.table(
         0,
@@ -1105,10 +1108,11 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             ("dim_modality", "Modality Label", "Modalidad"),
             (METRICS, "Contract Count", "Contratos", True),
+            (METRICS, "Contract Value Display", "Valor (COP)", True),
         ],
-        (270, 496, 360, 176),
+        (28, 496, 602, 176),
     )
-    r.column_widths(modalities, [225, 90])
+    r.column_widths(modalities, [260, 100, 200])
     r.display_views(
         0,
         ("Gráficos", "Tablas"),

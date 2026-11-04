@@ -1,7 +1,7 @@
 # Contract analytics dashboard
 
-Native Power BI Desktop report over one validated SECOP publication. The three
-pages are **Panorama**, **Entidades y proveedores** and **Calidad**, with a hidden
+Native Power BI Desktop report over one validated SECOP publication. The four
+pages are **Panorama**, **Contratos**, **Entidades y proveedores** and **Calidad**, with a hidden
 contract drill-through page. Labels are Spanish; file and measure identifiers
 are stable English names.
 
