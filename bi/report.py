@@ -15,7 +15,14 @@ from pathlib import Path
 ROOT = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition"
 INK, BLUE, MUTED, BACKGROUND = "#183047", "#155E75", "#4B5D6B", "#F4F6F8"
 DETAIL, METRICS = "mart_contract_detail", "Indicadores"
-NAMES = ("Panorama", "Entidades y proveedores", "Calidad", "Detalle contractual", "Contratos")
+NAMES = (
+    "Panorama",
+    "Entidades y proveedores",
+    "Calidad",
+    "Detalle contractual",
+    "Contratos",
+    "Contratos del mes",
+)
 
 
 def identifier(value: str, length: int = 20) -> str:
@@ -646,8 +653,9 @@ class Report:
                 },
                 "visualInteractions": self.interactions[index],
             }
-            if index == 3:
-                f = "Filter" + identifier("detail-contract", 24)
+            if index in (3, 5):
+                target_field = "contract_key" if index == 3 else "signing_month"
+                f = "Filter" + identifier("detail-contract" if index == 3 else "detail-month", 24)
                 page.update(
                     {
                         "visibility": "HiddenInViewMode",
@@ -656,21 +664,21 @@ class Report:
                             "filters": [
                                 {
                                     "name": f,
-                                    "field": field(DETAIL, "contract_key"),
+                                    "field": field(DETAIL, target_field),
                                     "type": "Categorical",
                                     "howCreated": "Drillthrough",
                                 }
                             ]
                         },
                         "pageBinding": {
-                            "name": "ContractDetail",
+                            "name": "ContractDetail" if index == 3 else "MonthContracts",
                             "type": "Drillthrough",
                             "acceptsFilterContext": "Default",
                             "parameters": [
                                 {
                                     "name": "Param_" + f,
                                     "boundFilter": f,
-                                    "fieldExpr": field(DETAIL, "contract_key"),
+                                    "fieldExpr": field(DETAIL, target_field),
                                 }
                             ],
                         },
@@ -689,7 +697,7 @@ class Report:
             self.definition / "pages/pages.json",
             {
                 "$schema": f"{ROOT}/pagesMetadata/1.1.0/schema.json",
-                "pageOrder": [self.pages[i] for i in (0, 4, 1, 2, 3)],
+                "pageOrder": [self.pages[i] for i in (0, 4, 1, 2, 3, 5)],
                 "activePageName": self.pages[0],
             },
         )
@@ -792,12 +800,24 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             ]
         }
     r.text(4, "contracts-label", "Selecciona un contrato para ver detalle", (28, 286, 700, 28), 12)
+    r.button(
+        0, "month-drill", "Ver contratos del mes", "Drillthrough", (690, 684, 230, 28), r.pages[5]
+    )
     contracts = r.contract_table(4, (28, 324, 1224, 344))
     contracts["visual"]["query"]["queryState"]["Values"]["projections"].insert(
         1, projection("dim_entity", "Entity Label", "Entidad")
     )
     r.column_widths(contracts, [155, 220, 220, 100, 120, 175, 150])
     r.button(4, "drill", "Ver contrato", "Drillthrough", (1020, 284, 232, 34), r.pages[3])
+    r.text(5, "contracts-label", "Contratos del mes seleccionado", (205, 286, 650, 28), 12)
+    month_contracts = r.contract_table(5, (28, 324, 1224, 344))
+    month_contracts["visual"]["query"]["queryState"]["Values"]["projections"].insert(
+        1, projection("dim_entity", "Entity Label", "Entidad")
+    )
+    r.column_widths(month_contracts, [155, 220, 220, 100, 120, 175, 150])
+    r.button(5, "drill", "Ver contrato", "Drillthrough", (1020, 284, 232, 34), r.pages[3])
+    r.button(5, "back-month", "Volver", "Back", (28, 284, 160, 34))
+
     for key, measure, title, x, width in (
         ("hhi", "HHI Display", "Concentración (HHI)", 28, 236),
         ("known-value", "Known Value Display", "Valor conocido (COP)", 276, 352),
