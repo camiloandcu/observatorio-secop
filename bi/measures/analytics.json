@@ -576,7 +576,7 @@
   {
     "tableName": "Indicadores",
     "name": "Global Accepted Display",
-    "expression": "VAR _Count = [Global Accepted Observations]\nVAR _Input = [Global Input Observations]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Count ) && NOT ISBLANK ( _Input ), FORMAT ( _Count, \"#,0\", \"es-CO\" ) & \" / \" & FORMAT ( _Input, \"#,0\", \"es-CO\" ) & \" observaciones de entrada\" )",
+    "expression": "VAR _Count = [Global Accepted Observations]\nVAR _Input = [Global Input Observations]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Count ) && NOT ISBLANK ( _Input ), FORMAT ( _Count, \"#,0\", \"es-CO\" ) & \" / \" & FORMAT ( _Input, \"#,0\", \"es-CO\" ) )",
     "dataType": "String",
     "displayFolder": "Presentation",
     "description": "Snapshot-wide numerator / input-observation denominator; unavailable evidence stays blank, including legacy.",
@@ -585,7 +585,7 @@
   {
     "tableName": "Indicadores",
     "name": "Global Rejected Display",
-    "expression": "VAR _Count = [Global Rejected Observations]\nVAR _Input = [Global Input Observations]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Count ) && NOT ISBLANK ( _Input ), FORMAT ( _Count, \"#,0\", \"es-CO\" ) & \" / \" & FORMAT ( _Input, \"#,0\", \"es-CO\" ) & \" observaciones de entrada\" )",
+    "expression": "VAR _Count = [Global Rejected Observations]\nVAR _Input = [Global Input Observations]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Count ) && NOT ISBLANK ( _Input ), FORMAT ( _Count, \"#,0\", \"es-CO\" ) & \" / \" & FORMAT ( _Input, \"#,0\", \"es-CO\" ) )",
     "dataType": "String",
     "displayFolder": "Presentation",
     "description": "Snapshot-wide numerator / input-observation denominator; unavailable evidence stays blank, including legacy.",
@@ -594,7 +594,7 @@
   {
     "tableName": "Indicadores",
     "name": "Global Duplicates Display",
-    "expression": "VAR _Count = [Global Exact Duplicates]\nVAR _Input = [Global Input Observations]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Count ) && NOT ISBLANK ( _Input ), FORMAT ( _Count, \"#,0\", \"es-CO\" ) & \" / \" & FORMAT ( _Input, \"#,0\", \"es-CO\" ) & \" observaciones de entrada\" )",
+    "expression": "VAR _Count = [Global Exact Duplicates]\nVAR _Input = [Global Input Observations]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Count ) && NOT ISBLANK ( _Input ), FORMAT ( _Count, \"#,0\", \"es-CO\" ) & \" / \" & FORMAT ( _Input, \"#,0\", \"es-CO\" ) )",
     "dataType": "String",
     "displayFolder": "Presentation",
     "description": "Snapshot-wide numerator / input-observation denominator; unavailable evidence stays blank, including legacy.",
@@ -603,7 +603,7 @@
   {
     "tableName": "Indicadores",
     "name": "Global Superseded Display",
-    "expression": "VAR _Count = [Global Superseded Observations]\nVAR _Input = [Global Input Observations]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Count ) && NOT ISBLANK ( _Input ), FORMAT ( _Count, \"#,0\", \"es-CO\" ) & \" / \" & FORMAT ( _Input, \"#,0\", \"es-CO\" ) & \" observaciones de entrada\" )",
+    "expression": "VAR _Count = [Global Superseded Observations]\nVAR _Input = [Global Input Observations]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Count ) && NOT ISBLANK ( _Input ), FORMAT ( _Count, \"#,0\", \"es-CO\" ) & \" / \" & FORMAT ( _Input, \"#,0\", \"es-CO\" ) )",
     "dataType": "String",
     "displayFolder": "Presentation",
     "description": "Snapshot-wide numerator / input-observation denominator; unavailable evidence stays blank, including legacy.",
