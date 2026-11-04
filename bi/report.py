@@ -698,12 +698,26 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
     r = Report(folder)
     for page in range(4):
         r.common(page, synthetic=synthetic)
+    # Tighten only Panorama’s controls; keep synchronized filters intact.
+    for key in ("entity", "municipality", "modality", "status"):
+        r.visuals[0][key]["position"]["height"] = 66
+    for key in (
+        "date-mode",
+        "date-start",
+        "date-end",
+        "date-ALL",
+        "date-INTERVAL",
+        "date-MISSING",
+        "date-label",
+        "supplier-focus",
+    ):
+        r.visuals[0][key]["position"]["y"] -= 10
     for key, name, title, x, width in (
         ("count", "Contract Count", "Contratos observados", 28, 286),
         ("value", "Contract Value Display", "Valor contratado (COP)", 326, 450),
         ("median", "Median Value Display", "Mediana contractual (COP)", 788, 464),
     ):
-        r.metric(0, key, name, title, (x, 282, width, 70))
+        r.metric(0, key, name, title, (x, 270, width, 70))
     for key, metric, title, x in (
         ("value-month", "Contract Value COP", "Valor mensual (COP)", 28),
         ("count-month", "Contract Count", "Contratos por mes de firma", 650),
@@ -712,7 +726,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             0,
             key,
             "columnChart",
-            (x, 360, 602, 170),
+            (x, 348, 602, 116),
             title,
             {
                 "Category": [projection(DETAIL, "signing_month", "Mes de firma")],
@@ -776,11 +790,11 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             (METRICS, "Contract Count", "Contratos", True),
             (METRICS, "Contract Value Display", "Valor (COP)", True),
         ],
-        (28, 538, 602, 134),
+        (28, 496, 602, 176),
     )
-    r.text(0, "contracts-label", "Contratos disponibles", (650, 534, 390, 24), 11)
-    r.contract_table(0, (650, 564, 602, 108))
-    r.button(0, "drill", "Ver contrato", "Drillthrough", (1050, 534, 202, 26), r.pages[3])
+    r.text(0, "contracts-label", "Selecciona un contrato para ver detalle", (650, 466, 390, 24), 11)
+    r.contract_table(0, (650, 496, 602, 176))
+    r.button(0, "drill", "Ver contrato", "Drillthrough", (1050, 466, 202, 26), r.pages[3])
     for key, measure, title, x, width in (
         ("hhi", "HHI Display", "Concentración (HHI)", 28, 236),
         ("known-value", "Known Value Display", "Valor conocido (COP)", 276, 352),
@@ -1046,7 +1060,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
     primary = {
         key
         for key, visual in r.visuals[0].items()
-        if 282 <= visual["position"]["y"] < 680 and key not in shared
+        if 270 <= visual["position"]["y"] < 680 and key not in shared
     }
     monthly = r.table(
         0,
@@ -1057,7 +1071,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             (METRICS, "Contract Count", "Contratos", True),
             (METRICS, "Contract Value Display", "Valor (COP)", True),
         ],
-        (28, 282, 602, 244),
+        (28, 270, 602, 194),
     )
     r.column_widths(monthly, [160, 140, 250])
     monthly["filterConfig"] = json.loads(json.dumps(r.visuals[0]["value-month"]["filterConfig"]))
@@ -1074,7 +1088,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             (METRICS, "Contract Count", "Contratos", True),
             (METRICS, "Contract Value Display", "Valor (COP)", True),
         ],
-        (650, 282, 602, 244),
+        (650, 270, 602, 194),
     )
     r.column_widths(municipalities, [250, 100, 200])
     r.metric(
@@ -1082,7 +1096,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         "missing-signatures",
         "Missing Signature Count",
         "Contratos sin firma",
-        (28, 538, 230, 78),
+        (28, 496, 230, 78),
     )
     modalities = r.table(
         0,
@@ -1092,7 +1106,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             ("dim_modality", "Modality Label", "Modalidad"),
             (METRICS, "Contract Count", "Contratos", True),
         ],
-        (270, 538, 360, 134),
+        (270, 496, 360, 176),
     )
     r.column_widths(modalities, [225, 90])
     r.display_views(
