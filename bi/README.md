@@ -2,7 +2,7 @@
 
 Native Power BI Desktop report over one validated SECOP publication. The four
 pages are **Panorama**, **Contratos**, **Entidades y proveedores** and **Calidad**, with a hidden
-contract drill-through page. Labels are Spanish; file and measure identifiers
+contract drill-through page and a hidden month drill-through page. Labels are Spanish; file and measure identifiers
 are stable English names.
 
 The report explores observed contracts and concentration. It does not identify
@@ -55,6 +55,15 @@ procurement. Do not present fixture captures as live source evidence.
 Generated projects, credentials, caches, model data and binary workbooks stay
 local. Use an ignored output location such as `reports/`. Never commit `.pbi`,
 `.pbix`, connection files, descriptors or screenshots containing private data.
+
+## Navigating a selected month
+
+On **Panorama**, select one monthly bar and use **Ver contratos del mes** to
+open its contract list. The regular **Contratos** navigation does not carry a
+chart selection. In the tested Desktop version, returning from the month list
+also clears that selection; choose the month again or use the synchronized
+signing interval controls when a persistent date filter is needed. Preservation
+of the original selection on return remains an open verification and design issue.
 
 ## Model and filters
 
