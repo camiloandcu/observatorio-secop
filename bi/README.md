@@ -56,14 +56,21 @@ Generated projects, credentials, caches, model data and binary workbooks stay
 local. Use an ignored output location such as `reports/`. Never commit `.pbi`,
 `.pbix`, connection files, descriptors or screenshots containing private data.
 
-## Navigating a selected month
+## Selecting entity and period
 
-On **Panorama**, select one monthly bar and use **Ver contratos del mes** to
-open its contract list. The regular **Contratos** navigation does not carry a
-chart selection. In the tested Desktop version, returning from the month list
-also clears that selection; choose the month again or use the synchronized
-signing interval controls when a persistent date filter is needed. Preservation
-of the original selection on return remains an open verification and design issue.
+Use the synchronized **Entidad** and **Mes de firma** selectors for a persistent
+reference across pages. Entity rows and chart bars allow comparison; a visual
+selection is local to its page. The month selector intersects the signing mode
+and any interval: clearing the month restores the mode's ordinary behavior. A
+selected month excludes missing signatures, so combining it with **Solo sin
+firma** has no matching contracts. Clear the month to inspect missing dates.
+
+On **Panorama**, **Ver contratos del mes** can also open the list for a selected
+bar as a local exploration. Returning may clear that bar selection; use the
+month selector when the period must remain active across navigation. The month
+list retains the month received by drill-through; return to change that month.
+On the main pages, **Restablecer** clears selections and returns the report to
+its initial views and date mode without changing the publication.
 
 ## Model and filters
 

@@ -106,6 +106,7 @@ class Report:
         self.visuals: dict[int, dict[str, dict]] = {i: {} for i in range(len(NAMES))}
         self.interactions: dict[int, list[dict]] = {i: [] for i in range(len(NAMES))}
         self.date_controls: dict[int, dict] = {}
+        self.view_targets: dict[int, set[str]] = {i: set() for i in range(len(NAMES))}
         self.bookmarks: dict[str, dict] = {}
 
     def add(
@@ -478,20 +479,72 @@ class Report:
             )
             return
         for key, table, column, label, x, width in (
-            ("entity", "dim_entity", "Entity Label", "Entidad", 28, 260),
+            ("entity", "dim_entity", "Entity Label", "Entidad", 28, 200),
             (
                 "municipality",
                 "dim_municipality",
                 "Municipality Label",
                 "Municipio de registro",
-                300,
                 240,
+                190,
             ),
-            ("modality", "dim_modality", "Modality Label", "Modalidad", 552, 250),
-            ("status", DETAIL, "Status Label", "Estado observado", 814, 260),
+            ("modality", "dim_modality", "Modality Label", "Modalidad", 442, 180),
+            ("status", DETAIL, "Status Label", "Estado observado", 634, 180),
+            ("signing-month", DETAIL, "signing_month", "Mes de firma (intersecta modo)", 826, 242),
         ):
-            self.slicer(page, key, table, column, label, (x, 123, width, 76))
-        self.button(page, "reset", "Restablecer", "ClearAllSlicers", (1086, 141, 166, 36))
+            slicer = self.slicer(page, key, table, column, label, (x, 123, width, 76))
+            if key == "signing-month":
+                # Restrict offered months only. Leaving this slicer clear must
+                # still include contracts without a signing date.
+                slicer["filterConfig"] = {
+                    "filters": [
+                        {
+                            "name": "Filter" + identifier("signing-month:dated-only", 24),
+                            "field": field(DETAIL, "signing_month"),
+                            "type": "Categorical",
+                            "filter": {
+                                "Version": 2,
+                                "From": [{"Name": "s", "Entity": DETAIL, "Type": 0}],
+                                "Where": [
+                                    {
+                                        "Condition": {
+                                            "Not": {
+                                                "Expression": {
+                                                    "In": {
+                                                        "Expressions": [
+                                                            field("s", "signing_month", alias=True)
+                                                        ],
+                                                        "Values": [
+                                                            [{"Literal": {"Value": "null"}}]
+                                                        ],
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                ],
+                            },
+                        }
+                    ]
+                }
+        if page == 5:
+            self.text(
+                page,
+                "month-return-hint",
+                "Vuelve para cambiar el mes",
+                (1086, 141, 166, 36),
+                10,
+                MUTED,
+            )
+        else:
+            self.button(
+                page,
+                "reset",
+                "Restablecer",
+                "Bookmark",
+                (1086, 141, 166, 36),
+                identifier("reset:filters"),
+            )
         hidden = self.slicer(
             page, "date-mode", "DateMode", "mode", "Modo de firma", (28, 200, 260, 66), True
         )
@@ -508,7 +561,7 @@ class Report:
         start["isHidden"] = end["isHidden"] = True
         self.date_controls[page] = {"mode": hidden, "start": start, "end": end}
         for mode, title, x, width in (
-            ("ALL", "Todas", 28, 120),
+            ("ALL", "Todo rango", 28, 120),
             ("INTERVAL", "Intervalo", 158, 105),
             ("MISSING", "Solo sin firma", 273, 133),
         ):
@@ -591,11 +644,72 @@ class Report:
                 },
             }
 
+    def generate_filter_reset(self) -> None:
+        """Restore the controls' initial state without changing the current page."""
+        sections, targets = {}, []
+        for page in self.date_controls:
+            state = {}
+            for key in (
+                "entity",
+                "municipality",
+                "modality",
+                "status",
+                "signing-month",
+                "supplier-focus",
+                "date-start",
+                "date-end",
+                "date-mode",
+            ):
+                visual = self.visuals[page][key]
+                targets.append(visual["name"])
+                content = {}
+                if key in ("date-start", "date-end", "date-mode"):
+                    content["display"] = {"mode": "hidden"}
+                if key == "date-mode":
+                    content["objects"] = {
+                        "merge": {
+                            "general": entry(
+                                {"filter": {"filter": predicate("DateMode", "mode", "ALL")}}
+                            )
+                        }
+                    }
+                state[visual["name"]] = {"singleVisual": content}
+            # Restore the initial charts/tables view while clearing transient
+            # row/bar selections; an empty state makes a hidden visual visible.
+            for visual in self.visuals[page].values():
+                if (
+                    visual["visual"]["visualType"] in ("columnChart", "tableEx")
+                    or visual["name"] in self.view_targets[page]
+                ):
+                    targets.append(visual["name"])
+                    content = {"display": {"mode": "hidden"}} if visual.get("isHidden") else {}
+                    state[visual["name"]] = {"singleVisual": content}
+            sections[self.pages[page]] = {"visualContainers": state}
+        name = identifier("reset:filters")
+        self.bookmarks[name] = {
+            "$schema": f"{ROOT}/bookmark/2.1.0/schema.json",
+            "name": name,
+            "displayName": "Restablecer filtros",
+            "options": {
+                "targetVisualNames": targets,
+                "suppressData": False,
+                "suppressDisplay": False,
+                "suppressActiveSection": True,
+                "applyOnlyToTargetVisuals": True,
+            },
+            "explorationState": {
+                "version": "1.3",
+                "activeSection": self.pages[0],
+                "sections": sections,
+            },
+        }
+
     def display_views(
         self, page: int, labels: tuple[str, str], groups: tuple[set[str], set[str]]
     ) -> None:
         """Scope display-only bookmarks to body visuals; never capture filter data."""
         targets = [self.visuals[page][key]["name"] for group in groups for key in sorted(group)]
+        self.view_targets[page].update(targets)
         for selected, label in enumerate(labels):
             state = {}
             for index, group in enumerate(groups):
@@ -717,7 +831,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
     for page in range(len(NAMES)):
         r.common(page, synthetic=synthetic)
     # Tighten only Panorama’s controls; keep synchronized filters intact.
-    for key in ("entity", "municipality", "modality", "status"):
+    for key in ("entity", "municipality", "modality", "status", "signing-month"):
         r.visuals[0][key]["position"]["height"] = 66
     for key in (
         "date-mode",
@@ -1285,6 +1399,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
                 )
 
     r.generate_modes()
+    r.generate_filter_reset()
     r.write()
 
 

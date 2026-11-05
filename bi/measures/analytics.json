@@ -336,7 +336,7 @@
   {
     "tableName": "Indicadores",
     "name": "Selection Label",
-    "expression": "VAR _ImportState = [Import State]\nRETURN SWITCH ( _ImportState,\n    \"NO_VALID_IMPORT\", \"Sin Import válido; ejecuta un refresh completo para cargar la publicación.\",\n    \"INCONSISTENT_IMPORT\", \"Import inconsistente; ejecuta un refresh completo. Si persiste, reconstruye el modelo desde una publicación verificada.\",\n    VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Entity = IF ( NOT ISFILTERED ( 'dim_entity' ), \"Todas las entidades\", SELECTEDVALUE ( 'dim_entity'[entity_name], \"Varias entidades\" ) )\nVAR _Dates = SWITCH ( _Mode,\n    \"MISSING\", \"Solo sin firma\",\n    \"INTERVAL\", FORMAT ( SELECTEDVALUE ( 'DateStart'[Date] ), \"d mmm yyyy\", \"es-CO\" ) & \" ≤ firma < \" & FORMAT ( SELECTEDVALUE ( 'DateEnd'[Date] ), \"d mmm yyyy\", \"es-CO\" ),\n    \"Todas las firmas de la publicación; incluye ausentes\" )\nVAR _Focus = IF ( NOT ISFILTERED ( 'SupplierFocus' ), \"Sin proveedor destacado\", SELECTEDVALUE ( 'SupplierFocus'[supplier_label], \"Selección de proveedor inválida\" ) )\nRETURN\n    IF ( [Selection State] <> \"AVAILABLE\", \"Revise el modo y el intervalo de firma\", _Entity & \"; \" & _Dates & \"; \" & _Focus )\n)",
+    "expression": "VAR _ImportState = [Import State]\nRETURN SWITCH ( _ImportState,\n    \"NO_VALID_IMPORT\", \"Sin Import válido; ejecuta un refresh completo para cargar la publicación.\",\n    \"INCONSISTENT_IMPORT\", \"Import inconsistente; ejecuta un refresh completo. Si persiste, reconstruye el modelo desde una publicación verificada.\",\n    VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Entity = IF ( NOT ISFILTERED ( 'dim_entity' ), \"Todas las entidades\", SELECTEDVALUE ( 'dim_entity'[entity_name], \"Varias entidades\" ) )\nVAR _Dates = SWITCH ( _Mode,\n    \"MISSING\", \"Solo sin firma\",\n    \"INTERVAL\", FORMAT ( SELECTEDVALUE ( 'DateStart'[Date] ), \"d mmm yyyy\", \"es-CO\" ) & \" ≤ firma < \" & FORMAT ( SELECTEDVALUE ( 'DateEnd'[Date] ), \"d mmm yyyy\", \"es-CO\" ),\n    IF ( ISFILTERED ( 'mart_contract_detail'[signing_month] ), \"Mes seleccionado; excluye firmas ausentes\", \"Todas las firmas de la publicación; incluye ausentes\" ) )\nVAR _MonthNote = IF ( ISFILTERED ( 'mart_contract_detail'[signing_month] ) && _Mode <> \"ALL\", IF ( _Mode = \"MISSING\", \"; mes y sin firma: sin contratos\", \"; intersecta mes seleccionado\" ), \"\" )\nVAR _Focus = IF ( NOT ISFILTERED ( 'SupplierFocus' ), \"Sin proveedor destacado\", SELECTEDVALUE ( 'SupplierFocus'[supplier_label], \"Selección de proveedor inválida\" ) )\nRETURN\n    IF ( [Selection State] <> \"AVAILABLE\", \"Revise el modo y el intervalo de firma\", _Entity & \"; \" & _Dates & _MonthNote & \"; \" & _Focus )\n)",
     "dataType": "String",
     "displayFolder": "Presentation",
     "description": "Date and supplier context in Spanish; all-date mode only includes records within the already published population.",
@@ -683,10 +683,10 @@
   {
     "tableName": "Indicadores",
     "name": "Date Mode Label",
-    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nRETURN IF ( ISFILTERED ( 'DateMode' ) && NOT HASONEVALUE ( 'DateMode'[mode] ), \"Seleccione un modo de fechas\", SELECTEDVALUE ( 'DateMode'[mode_label], IF ( _Mode = \"ALL\", \"Todas las fechas\", \"Modo de fechas no disponible\" ) ) )",
+    "expression": "VAR _Mode = SELECTEDVALUE ( 'DateMode'[mode], \"ALL\" )\nVAR _Base = IF ( ISFILTERED ( 'DateMode' ) && NOT HASONEVALUE ( 'DateMode'[mode] ), \"Seleccione un modo de fechas\", SELECTEDVALUE ( 'DateMode'[mode_label], IF ( _Mode = \"ALL\", \"Todas las fechas\", \"Modo de fechas no disponible\" ) ) )\nVAR _Month = ISFILTERED ( 'mart_contract_detail'[signing_month] )\nRETURN _Base & IF ( _Month, IF ( _Mode = \"MISSING\", \" | Mes: 0 contratos\", \" | Mes activo\" ), \"\" )",
     "dataType": "String",
     "displayFolder": "Presentation",
-    "description": "Safe scalar Spanish mode label; absent selection means ALL, ambiguous selections remain explicit.",
+    "description": "Safe scalar Spanish date mode with explicit month intersection and missing-signature conflict.",
     "isHidden": false
   },
   {
