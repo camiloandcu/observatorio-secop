@@ -70,6 +70,17 @@ def test_reset_captures_slicers_and_initial_date_mode(tmp_path):
         ]
         for file in visual_path.glob("*/visual.json"):
             visual = json.loads(file.read_text(encoding="utf-8"))
+            if visual["name"] in state and visual.get("filterConfig", {}).get("filters"):
+                original = visual["filterConfig"]["filters"]
+                restored = state[visual["name"]]["filters"]["byExpr"]
+                assert len(restored) == len(original)
+                for source, target in zip(original, restored, strict=True):
+                    assert source["howCreated"] == "User"
+                    assert target["name"] == source["name"]
+                    assert target["type"] == source["type"]
+                    assert target["expression"] == source["field"]
+                    assert target["filter"] == source["filter"]
+                    assert target["howCreated"] == 1
             if visual["visual"]["visualType"] in ("columnChart", "tableEx"):
                 assert visual["name"] in bookmark["options"]["targetVisualNames"]
                 expected = {"display": {"mode": "hidden"}} if visual.get("isHidden") else {}
@@ -87,7 +98,7 @@ def test_reset_captures_slicers_and_initial_date_mode(tmp_path):
                 "visualContainers"
             ]
             for visual_id, expected in view_state.items():
-                assert state[visual_id] == expected
+                assert state[visual_id]["singleVisual"] == expected["singleVisual"]
         for key in (
             "entity",
             "municipality",

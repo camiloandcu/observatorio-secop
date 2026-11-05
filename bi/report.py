@@ -646,6 +646,29 @@ class Report:
 
     def generate_filter_reset(self) -> None:
         """Restore the controls' initial state without changing the current page."""
+
+        def visual_state(visual: dict, content: dict) -> dict:
+            result = {"singleVisual": content}
+            filters = visual.get("filterConfig", {}).get("filters", [])
+            if filters:
+                for item in filters:
+                    item.setdefault("howCreated", "User")
+                # Bookmark data replaces visual-filter state, so preserve the
+                # authored restrictions while clearing transient selections.
+                result["filters"] = {
+                    "byExpr": [
+                        {
+                            "name": item["name"],
+                            "type": item["type"],
+                            "expression": item["field"],
+                            "filter": item["filter"],
+                            "howCreated": 1,
+                        }
+                        for item in filters
+                    ]
+                }
+            return result
+
         sections, targets = {}, []
         for page in self.date_controls:
             state = {}
@@ -673,7 +696,7 @@ class Report:
                             )
                         }
                     }
-                state[visual["name"]] = {"singleVisual": content}
+                state[visual["name"]] = visual_state(visual, content)
             # Restore the initial charts/tables view while clearing transient
             # row/bar selections; an empty state makes a hidden visual visible.
             for visual in self.visuals[page].values():
@@ -683,7 +706,7 @@ class Report:
                 ):
                     targets.append(visual["name"])
                     content = {"display": {"mode": "hidden"}} if visual.get("isHidden") else {}
-                    state[visual["name"]] = {"singleVisual": content}
+                    state[visual["name"]] = visual_state(visual, content)
             sections[self.pages[page]] = {"visualContainers": state}
         name = identifier("reset:filters")
         self.bookmarks[name] = {
