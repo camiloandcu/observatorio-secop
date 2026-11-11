@@ -12,7 +12,7 @@ wrongdoing, represent all Antioquia procurement, or provide a priority score.
 
 Use the project's Python3.12 environment, Node20+ and Power BI Desktop on Windows.
 The generator pins Power BI Report Authoring CLI0.5.0. The current native test
-environment is Desktop2.159.883.0, compatibility1606; report schema versions are
+environment is Desktop2.159.1231.0, compatibility1606; report schema versions are
 recorded in the generated definitions. Other Desktop versions need verification.
 No Power BI Service account is required. Use `--name observatorio-secop-us09`
 when generating a separately named project; keep its PBIP and Report folder stems
