@@ -218,3 +218,18 @@ to inspect a visual's accessible data table. These are documented platform
 controls, not a claim that this report's keyboard journey has passed.
 See Microsoft's [accessible report navigation](https://learn.microsoft.com/en-us/power-bi/explore-reports/desktop-accessibility-consuming-tools)
 and [accessible report design](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-accessibility-creating-reports).
+
+### Real-data check and its limits
+
+A complete bounded acquisition of SECOP II contracts for entities registered in
+Antioquia, signed in [2026-01-01, 2026-04-01), read 52,047 observations with
+the scope scan complete and no truncation. With the source-calendar date policy,
+52,005 unique contracts were published and 42 observations were rejected
+because their dates were out of order. The imported dashboard matched governed
+SQL on that publication for counts, exact COP, median and combined filters.
+
+The public source is mutable and the API does not provide a snapshot: a later
+acquisition of the same scope may return different rows, values or statuses, and
+recent periods may still be revised. Every figure in the dashboard describes
+the publication it imported, identified by its observation and Import dates,
+not the current state of SECOP II.
