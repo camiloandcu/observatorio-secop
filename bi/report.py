@@ -14,7 +14,14 @@ from pathlib import Path
 
 ROOT = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition"
 INK, BLUE, MUTED, BACKGROUND = "#183047", "#155E75", "#4B5D6B", "#F4F6F8"
+AMBER, BORDER, TINT, DISABLED = "#875A10", "#DCE3E8", "#DDECF0", "#E6EAED"
 DETAIL, METRICS = "mart_contract_detail", "Indicadores"
+# Shared 1280×720 grid: header, two filter rows, an action toolbar, then the body.
+FILTER_Y, FILTER_H, DATE_Y, TOOLBAR_Y, BODY_Y, BODY_END = 100, 62, 166, 234, 274, 680
+# Evidence actions are reached after the content they act on.
+ACTIONS = ("drill", "month-drill", "open-source", "back", "back-month")
+# Desktop 2.159 gave first keyboard focus to the highest tabOrder on every page.
+TAB_DESCENDING = True
 NAMES = (
     "Panorama",
     "Entidades y proveedores",
@@ -124,12 +131,26 @@ class Report:
         x, y, w, h = bounds
         order = (len(self.visuals[page]) + 1) * 1000
         padding = 0 if kind in ("textbox", "actionButton") else 2 if kind == "slicer" else 8
+        framed = kind not in ("textbox", "actionButton")
         vco = {
             "general": entry({"altText": literal(title)}),
             "background": entry({"show": literal(not transparent), "color": color("#FFFFFF")}),
-            "border": entry({"show": literal(False)}),
+            "border": entry(
+                {
+                    "show": literal(framed),
+                    "color": color(BORDER),
+                    "radius": literal(6),
+                    "width": literal(1),
+                }
+                if framed
+                else {"show": literal(False)}
+            ),
             "padding": entry({k: literal(padding) for k in ("left", "right", "top", "bottom")}),
         }
+        if not framed:
+            # Text and buttons need no "More options" header in reading view; data
+            # visuals keep it for table access. Desktop edit mode still shows it.
+            vco["visualHeader"] = entry({"show": literal(False)})
         if kind not in ("textbox", "actionButton", "slicer", "cardVisual"):
             vco["title"] = entry(
                 {
@@ -237,7 +258,12 @@ class Report:
         action: str,
         bounds: tuple,
         target: str | dict | None = None,
+        style: str = "secondary",
     ) -> dict:
+        # Primary marks the page's evidence action; current marks the active page.
+        ink, fill = {"primary": ("#FFFFFF", BLUE), "current": ("#FFFFFF", INK)}.get(
+            style, (BLUE, TINT)
+        )
         v = self.add(
             page,
             key,
@@ -252,13 +278,15 @@ class Report:
                         "properties": {
                             "text": literal(title),
                             "fontSize": literal(11),
-                            "fontColor": color(BLUE),
+                            "fontColor": color(ink),
                         },
                     },
+                    {"selector": {"id": "disabled"}, "properties": {"fontColor": color(MUTED)}},
                 ],
                 "fill": [
                     {"properties": {"show": literal(True)}},
-                    {"selector": {"id": "default"}, "properties": {"fillColor": color("#DDECF0")}},
+                    {"selector": {"id": "default"}, "properties": {"fillColor": color(fill)}},
+                    {"selector": {"id": "disabled"}, "properties": {"fillColor": color(DISABLED)}},
                 ],
                 "outline": entry({"show": literal(False)}),
                 "shape": [
@@ -334,7 +362,7 @@ class Report:
         single: bool = False,
     ) -> dict:
         x, y, width, height = bounds
-        bounds = (x, y, width, max(height, 76))
+        bounds = (x, y, width, max(height, FILTER_H))
         v = self.add(
             page,
             key,
@@ -366,13 +394,13 @@ class Report:
                 (DETAIL, "supplier_name", "Proveedor"),
                 (DETAIL, "signing_date", "Firma"),
                 (DETAIL, "Status Label", "Estado"),
-                (METRICS, "Contract Row Value Display", "Valor (COP)", True),
+                (METRICS, "Contract Row Value Exact COP", "Valor (COP)", True),
                 (DETAIL, "contract_key", "ID"),
             ],
             bounds,
         )
         # Keep the exact key for native drillthrough without letting its SHA dominate.
-        self.column_widths(v, [125, 150, 85, 85, 105, 28])
+        self.column_widths(v, [180, 330, 120, 150, 230, 160])
         v["visual"]["visualContainerObjects"]["title"] = entry({"show": literal(False)})
         v["filterConfig"] = {
             "filters": [
@@ -387,28 +415,36 @@ class Report:
         return v
 
     def common(self, page: int, *, synthetic: bool = False) -> None:
-        self.text(page, "title", NAMES[page], (28, 16, 570, 40), 23)
-        for index, (label, x, width) in enumerate(
+        self.text(page, "brand", "Observatorio SECOP", (28, 6, 150, 20), 9, MUTED)
+        if synthetic:
+            self.text(page, "synthetic-disclosure", "Datos de prueba", (178, 4, 200, 24), 11, AMBER)
+        self.text(page, "title", NAMES[page], (28, 26, 640, 42), 20)
+        x = 712
+        for index, (label, width) in enumerate(
             (
-                ("Panorama", 600, 110),
-                ("Contratos", 720, 110),
-                ("Entidades y proveedores", 840, 240),
-                ("Calidad", 1090, 162),
+                ("Panorama", 110),
+                ("Contratos", 110),
+                ("Entidades y proveedores", 200),
+                ("Calidad", 96),
             )
         ):
-            self.button(
-                page,
-                f"nav-{index}",
-                label,
-                "PageNavigation",
-                (x, 20, width, 34),
-                self.pages[(0, 4, 1, 2)[index]],
-            )
+            target = (0, 4, 1, 2)[index]
+            if page != 3:
+                self.button(
+                    page,
+                    f"nav-{index}",
+                    label,
+                    "PageNavigation",
+                    (x, 26, width, 32),
+                    self.pages[target],
+                    style="current" if page == target else "secondary",
+                )
+            x += width + 8
         self.text(
             page,
             "scope",
             "Población publicada",
-            (28, 60, 780, 30),
+            (28, 70, 680, 22),
             10,
             expression=field(METRICS, "Scope Label", True),
         )
@@ -416,46 +452,44 @@ class Report:
             page,
             "coverage",
             "Cobertura de población",
-            (820, 60, 432, 30),
+            (716, 70, 250, 22),
             10,
-            fill="#875A10",
+            fill=AMBER,
             expression=field(METRICS, "Coverage Label", True),
         )
-        if synthetic:
-            self.text(
-                page,
-                "synthetic-disclosure",
-                "Datos de prueba",
-                (28, 91, 260, 28),
-                14,
-                "#875A10",
-            )
         self.text(
             page,
             "import",
             "Import y observación",
-            (292, 80, 960, 40) if synthetic else (28, 80, 1224, 40),
-            10,
+            (980, 60, 272, 38),
+            9,
             MUTED,
             field(METRICS, "Import Label", True),
         )
-        self.text(
+        footer = self.text(
             page,
             "footer",
             ("Datos e importes de prueba. " if synthetic else "")
             + "COP observados, sin ajuste por inflación. Municipio de registro. "
             "Los periodos pueden revisarse.",
-            (28, 686, 900, 25),
+            (28, 692, 1224, 22),
             9,
             MUTED,
         )
+        if page == 1:
+            paragraph = footer["visual"]["objects"]["general"][0]["properties"]["paragraphs"][0]
+            paragraph["textRuns"][0]["value"] = (
+                ("Datos e importes de prueba. " if synthetic else "")
+                + "Cobertura de referencia: contratos/COP con proveedor identificable. "
+                "COP sin ajuste por inflación; municipio de registro; periodos revisables."
+            )
         if page == 3:
-            self.button(page, "back", "Volver con contexto", "Back", (28, 131, 220, 38))
+            self.button(page, "back", "Volver a la lista", "Back", (28, 108, 170, 34))
             self.text(
                 page,
                 "context",
                 "Contexto de solo lectura",
-                (268, 122, 970, 18),
+                (214, 102, 760, 20),
                 9,
                 BLUE,
             )
@@ -463,7 +497,7 @@ class Report:
                 page,
                 "reference-context",
                 "Referencia recibida",
-                (268, 140, 970, 22),
+                (214, 122, 760, 20),
                 9,
                 MUTED,
                 field(METRICS, "Reference Context Label", True),
@@ -472,27 +506,27 @@ class Report:
                 page,
                 "supplier-context",
                 "Proveedor destacado",
-                (268, 162, 970, 22),
+                (214, 142, 760, 20),
                 9,
                 MUTED,
                 field(METRICS, "Supplier Context Label", True),
             )
             return
         for key, table, column, label, x, width in (
-            ("entity", "dim_entity", "Entity Label", "Entidad", 28, 200),
+            ("entity", "dim_entity", "Entity Label", "Entidad", 28, 250),
             (
                 "municipality",
                 "dim_municipality",
                 "Municipality Label",
                 "Municipio de registro",
-                240,
+                288,
                 190,
             ),
-            ("modality", "dim_modality", "Modality Label", "Modalidad", 442, 180),
-            ("status", DETAIL, "Status Label", "Estado observado", 634, 180),
-            ("signing-month", DETAIL, "signing_month", "Mes de firma (intersecta modo)", 826, 242),
+            ("modality", "dim_modality", "Modality Label", "Modalidad", 488, 200),
+            ("status", DETAIL, "Status Label", "Estado observado", 698, 170),
+            ("signing-month", DETAIL, "signing_month", "Mes de firma (intersecta modo)", 878, 208),
         ):
-            slicer = self.slicer(page, key, table, column, label, (x, 123, width, 76))
+            slicer = self.slicer(page, key, table, column, label, (x, FILTER_Y, width, FILTER_H))
             if key == "signing-month":
                 # Restrict offered months only. Leaving this slicer clear must
                 # still include contracts without a signing date.
@@ -532,7 +566,7 @@ class Report:
                 page,
                 "month-return-hint",
                 "Vuelve para cambiar el mes",
-                (1086, 141, 166, 36),
+                (1096, 108, 156, 46),
                 10,
                 MUTED,
             )
@@ -542,42 +576,48 @@ class Report:
                 "reset",
                 "Restablecer",
                 "Bookmark",
-                (1086, 141, 166, 36),
+                (1096, 114, 156, 34),
                 identifier("reset:filters"),
             )
         hidden = self.slicer(
-            page, "date-mode", "DateMode", "mode", "Modo de firma", (28, 200, 260, 66), True
+            page, "date-mode", "DateMode", "mode", "Modo de firma", (28, DATE_Y, 260, 62), True
         )
         hidden["isHidden"] = True
         hidden["visual"]["objects"]["general"] = entry(
             {"filter": {"filter": predicate("DateMode", "mode", "ALL")}}
         )
         start = self.slicer(
-            page, "date-start", "DateStart", "Date", "Inicio inclusivo", (418, 199, 178, 72), True
+            page,
+            "date-start",
+            "DateStart",
+            "Date",
+            "Inicio inclusivo",
+            (392, DATE_Y, 170, 62),
+            True,
         )
         end = self.slicer(
-            page, "date-end", "DateEnd", "Date", "Fin exclusivo", (608, 199, 178, 72), True
+            page, "date-end", "DateEnd", "Date", "Fin exclusivo", (572, DATE_Y, 170, 62), True
         )
         start["isHidden"] = end["isHidden"] = True
         self.date_controls[page] = {"mode": hidden, "start": start, "end": end}
         for mode, title, x, width in (
-            ("ALL", "Todo rango", 28, 120),
-            ("INTERVAL", "Intervalo", 158, 105),
-            ("MISSING", "Solo sin firma", 273, 133),
+            ("ALL", "Todo rango", 28, 110),
+            ("INTERVAL", "Intervalo", 146, 96),
+            ("MISSING", "Solo sin firma", 250, 130),
         ):
             self.button(
                 page,
                 "date-" + mode,
                 title,
                 "Bookmark",
-                (x, 202, width, 33),
+                (x, DATE_Y + 4, width, 30),
                 identifier("mode:" + mode),
             )
         self.text(
             page,
             "date-label",
             "Modo de firma actual",
-            (28, 243, 378, 25),
+            (28, DATE_Y + 38, 360, 22),
             10,
             MUTED,
             field(METRICS, "Date Mode Label", True),
@@ -588,7 +628,7 @@ class Report:
             "SupplierFocus",
             "supplier_label",
             "Proveedor destacado",
-            (798, 199, 454, 72),
+            (798, DATE_Y, 454, 62),
             True,
         )
         # Focus is optional: clearing it restores all reference contracts.
@@ -728,7 +768,11 @@ class Report:
         }
 
     def display_views(
-        self, page: int, labels: tuple[str, str], groups: tuple[set[str], set[str]]
+        self,
+        page: int,
+        labels: tuple[str, str],
+        groups: tuple[set[str], set[str]],
+        toolbar_y: int = TOOLBAR_Y,
     ) -> None:
         """Scope display-only bookmarks to body visuals; never capture filter data."""
         targets = [self.visuals[page][key]["name"] for group in groups for key in sorted(group)]
@@ -768,14 +812,37 @@ class Report:
                 f"view-{selected}",
                 label,
                 "Bookmark",
-                (940 + selected * 162, 684, 150, 28),
+                (996 + selected * 132, toolbar_y, 124, 30),
                 name,
             )
+
+    def keyboard_sequence(self, page: int) -> list[str]:
+        """Approved focus order: header, filters, toolbar, content, actions, footnote."""
+
+        def band(key: str) -> int:
+            y = self.visuals[page][key]["position"]["y"]
+            if key == "footer":
+                return 5
+            if key in ACTIONS:
+                return 4
+            return 0 if y < FILTER_Y else 1 if y < TOOLBAR_Y else 2 if y < BODY_Y else 3
+
+        # Within a band, creation order keeps each column's reading order.
+        return sorted(self.visuals[page], key=band)
+
+    def apply_keyboard_order(self) -> None:
+        for page in self.visuals:
+            sequence = self.keyboard_sequence(page)
+            for index, key in enumerate(sequence):
+                rank = len(sequence) - index if TAB_DESCENDING else index + 1
+                self.visuals[page][key]["position"]["tabOrder"] = rank * 1000
 
     def write(self) -> None:
         def save(path: Path, value: dict) -> None:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
+
+        self.apply_keyboard_order()
 
         for index, name in enumerate(NAMES):
             page = {
@@ -838,6 +905,10 @@ class Report:
                 "activePageName": self.pages[0],
             },
         )
+        # Bookmarks are generator-owned too; stale ones would target removed pages.
+        for stale in (self.definition / "bookmarks").glob("*.bookmark.json"):
+            if stale.name.removesuffix(".bookmark.json") not in self.bookmarks:
+                stale.unlink()
         for name, value in self.bookmarks.items():
             save(self.definition / "bookmarks" / f"{name}.bookmark.json", value)
         save(
@@ -853,26 +924,12 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
     r = Report(folder)
     for page in range(len(NAMES)):
         r.common(page, synthetic=synthetic)
-    # Tighten only Panorama’s controls; keep synchronized filters intact.
-    for key in ("entity", "municipality", "modality", "status", "signing-month"):
-        r.visuals[0][key]["position"]["height"] = 66
-    for key in (
-        "date-mode",
-        "date-start",
-        "date-end",
-        "date-ALL",
-        "date-INTERVAL",
-        "date-MISSING",
-        "date-label",
-        "supplier-focus",
-    ):
-        r.visuals[0][key]["position"]["y"] -= 10
     for key, name, title, x, width in (
         ("count", "Contract Count", "Contratos observados", 28, 286),
         ("value", "Contract Value Display", "Valor contratado (COP)", 326, 450),
         ("median", "Median Value Display", "Mediana contractual (COP)", 788, 464),
     ):
-        r.metric(0, key, name, title, (x, 270, width, 70))
+        r.metric(0, key, name, title, (x, BODY_Y, width, 70))
     for key, metric, title, x in (
         ("value-month", "Contract Value COP", "Valor mensual (COP)", 28),
         ("count-month", "Contract Count", "Contratos por mes de firma", 650),
@@ -881,7 +938,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             0,
             key,
             "columnChart",
-            (x, 360, 602, 300),
+            (x, BODY_Y + 80, 602, BODY_END - BODY_Y - 80),
             title,
             {
                 "Category": [projection(DETAIL, "signing_month", "Mes de firma")],
@@ -899,6 +956,16 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
                     }
                 ),
                 "valueAxis": entry({"showAxisTitle": literal(False), "fontSize": literal(10)}),
+                "dataPoint": entry({"defaultColor": color(BLUE)}),
+                # Exact counts are readable labels; COP values stay exact in Tablas.
+                "labels": entry(
+                    {
+                        "show": literal(key == "count-month"),
+                        "fontSize": literal(10),
+                        "color": color(INK),
+                        "labelDisplayUnits": literal("1"),
+                    }
+                ),
             }
         )
         trend["visual"]["visualContainerObjects"]["subTitle"] = entry({"show": literal(False)})
@@ -936,32 +1003,84 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
                 }
             ]
         }
-    r.text(4, "contracts-label", "Selecciona un contrato para ver detalle", (28, 286, 700, 28), 12)
-    r.button(
-        0, "month-drill", "Ver contratos del mes", "Drillthrough", (690, 684, 230, 28), r.pages[5]
+    r.text(
+        0,
+        "month-hint",
+        "Selecciona un mes para ver sus contratos.",
+        (28, TOOLBAR_Y + 4, 600, 24),
+        10,
+        MUTED,
     )
-    contracts = r.contract_table(4, (28, 324, 1224, 344))
+    r.button(
+        0,
+        "month-drill",
+        "Ver contratos del mes",
+        "Drillthrough",
+        (796, TOOLBAR_Y, 188, 30),
+        r.pages[5],
+        style="primary",
+    )
+    table_bounds = (28, BODY_Y, 1224, BODY_END - BODY_Y)
+    table_widths = [140, 290, 250, 100, 120, 180, 90]
+    r.text(
+        4,
+        "contracts-label",
+        "Selecciona un contrato para ver detalle",
+        (28, TOOLBAR_Y + 2, 700, 28),
+        12,
+    )
+    contracts = r.contract_table(4, table_bounds)
     contracts["visual"]["query"]["queryState"]["Values"]["projections"].insert(
         1, projection("dim_entity", "Entity Label", "Entidad")
     )
-    r.column_widths(contracts, [155, 220, 220, 100, 120, 175, 150])
-    r.button(4, "drill", "Ver contrato", "Drillthrough", (1020, 284, 232, 34), r.pages[3])
-    r.text(5, "contracts-label", "Contratos del mes seleccionado", (205, 286, 650, 28), 12)
-    month_contracts = r.contract_table(5, (28, 324, 1224, 344))
+    r.column_widths(contracts, table_widths)
+    r.button(
+        4,
+        "drill",
+        "Ver contrato",
+        "Drillthrough",
+        (1072, TOOLBAR_Y, 180, 32),
+        r.pages[3],
+        style="primary",
+    )
+    r.text(
+        5, "contracts-label", "Contratos del mes seleccionado", (160, TOOLBAR_Y + 2, 650, 28), 12
+    )
+    month_contracts = r.contract_table(5, table_bounds)
     month_contracts["visual"]["query"]["queryState"]["Values"]["projections"].insert(
         1, projection("dim_entity", "Entity Label", "Entidad")
     )
-    r.column_widths(month_contracts, [155, 220, 220, 100, 120, 175, 150])
-    r.button(5, "drill", "Ver contrato", "Drillthrough", (1020, 284, 232, 34), r.pages[3])
-    r.button(5, "back-month", "Volver", "Back", (28, 284, 160, 34))
+    r.column_widths(month_contracts, table_widths)
+    r.button(
+        5,
+        "drill",
+        "Ver contrato",
+        "Drillthrough",
+        (1072, TOOLBAR_Y, 180, 32),
+        r.pages[3],
+        style="primary",
+    )
+    r.button(5, "back-month", "Volver", "Back", (28, TOOLBAR_Y, 120, 32))
 
     for key, measure, title, x, width in (
         ("hhi", "HHI Display", "Concentración (HHI)", 28, 236),
-        ("known-value", "Known Value Display", "Valor conocido (COP)", 276, 352),
-        ("count-coverage", "Count Identity Coverage", "Cobertura por contratos", 640, 300),
-        ("value-coverage", "Value Identity Coverage", "Cobertura por valor", 952, 300),
+        ("known-value", "Known Value Display", "Valor con proveedor identificado (COP)", 276, 352),
+        (
+            "count-coverage",
+            "Count Identity Coverage",
+            "% contratos con proveedor conocido",
+            640,
+            300,
+        ),
+        (
+            "value-coverage",
+            "Value Identity Coverage",
+            "% valor con proveedor conocido",
+            952,
+            300,
+        ),
     ):
-        r.metric(1, key, measure, title, (x, 282, width, 70))
+        r.metric(1, key, measure, title, (x, BODY_Y, width, 70))
     rank = r.table(
         1,
         "ranking",
@@ -974,7 +1093,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             (METRICS, "Ranking Supplier Share", "% conocido", True),
             (METRICS, "Supplier Row Selected", "Destacado", True),
         ],
-        (28, 390, 756, 142),
+        (28, 354, 756, 152),
     )
     rank["filterConfig"] = {
         "filters": [
@@ -996,13 +1115,13 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         ],
         "isDefaultSort": False,
     }
-    r.column_widths(rank, [190, 75, 85, 130, 105, 110])
+    r.column_widths(rank, [200, 90, 78, 170, 88, 84])
     r.text(
         1,
         "hhi-state",
         "Estado de concentración",
-        (28, 357, 1224, 29),
-        11,
+        (28, TOOLBAR_Y + 4, 940, 24),
+        10,
         MUTED,
         field(METRICS, "HHI State Label", True),
     )
@@ -1010,7 +1129,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         1,
         "selected-supplier",
         "Proveedor destacado",
-        (796, 390, 456, 36),
+        (796, 354, 456, 24),
         11,
         MUTED,
         field(METRICS, "Selected Supplier Label", True),
@@ -1020,24 +1139,24 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         "supplier-value",
         "Supplier Focus Value Display",
         "Valor destacado (COP)",
-        (796, 430, 224, 72),
+        (796, 382, 270, 64),
     )
     r.metric(
         1,
         "supplier-share",
         "Supplier Focus Share Display",
         "% de la referencia",
-        (1032, 430, 220, 72),
+        (1076, 382, 176, 64),
     )
     for key in ("supplier-value", "supplier-share"):
         value = r.visuals[1][key]["visual"]["objects"]["value"][0]["properties"]
         value.update({"fontSize": literal(14), "showBlankAs": literal("Sin selección")})
-    r.text(1, "unknown-label", "Contratos sin identidad utilizable:", (796, 508, 350, 24), 11)
+    r.text(1, "unknown-label", "Contratos sin identidad utilizable:", (796, 454, 300, 24), 11)
     r.text(
         1,
         "unknown",
         "Sin identidad",
-        (1150, 508, 102, 24),
+        (1100, 454, 152, 24),
         11,
         MUTED,
         field(METRICS, "Unknown Supplier Count", True),
@@ -1046,19 +1165,27 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         1,
         "reference-rule",
         "Destaca un proveedor con el selector superior; el ranking conserva la referencia.",
-        (28, 536, 1008, 27),
+        (28, 516, 900, 24),
         11,
         MUTED,
     )
-    r.contract_table(1, (28, 564, 1224, 108))
-    r.button(1, "drill", "Ver contrato", "Drillthrough", (1050, 536, 202, 26), r.pages[3])
-    r.text(2, "global-label", "Observaciones de la publicación", (28, 282, 732, 28), 16)
+    r.contract_table(1, (28, 548, 1224, BODY_END - 548))
+    r.button(
+        1,
+        "drill",
+        "Ver contrato",
+        "Drillthrough",
+        (1072, 512, 180, 30),
+        r.pages[3],
+        style="primary",
+    )
+    r.text(2, "global-label", "Observaciones de la publicación", (28, BODY_Y, 732, 30), 14)
     r.text(
         2,
         "global-quality-state",
         "Evidencia y reconciliación",
-        (28, 312, 732, 32),
-        10,
+        (28, BODY_Y + 30, 732, 22),
+        9,
         MUTED,
         field(METRICS, "Global Quality Label", True),
     )
@@ -1077,15 +1204,15 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             "global-" + str(index),
             measure,
             title,
-            (28 + (index % 3) * 248, 350 + (index // 3) * 74, 236, 68),
+            (28 + (index % 3) * 248, 330 + (index // 3) * 68, 236, 60),
         )
         card["visual"]["objects"]["value"][0]["properties"]["fontSize"] = literal(12)
     r.text(
         2,
         "acquisition-label",
         "Adquisición por carril",
-        (28, 496, 732, 24),
-        14,
+        (28, 460, 732, 28),
+        13,
     )
     lanes = r.table(
         2,
@@ -1097,7 +1224,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             ("mart_data_quality", "control_state", "Estado"),
             ("mart_data_quality", "reason", "Límite o motivo"),
         ],
-        (28, 524, 732, 104),
+        (28, 490, 732, 128),
     )
     lanes["visual"]["visualContainerObjects"]["title"] = entry({"show": literal(False)})
     r.column_widths(lanes, [340, 65, 120, 170])
@@ -1115,15 +1242,15 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         2,
         "selection-label",
         "Contratos de referencia",
-        (780, 282, 472, 28),
-        15,
+        (780, BODY_Y, 472, 30),
+        14,
     )
     for index, (measure, title) in enumerate(
         (
             ("Contract Count", "Contratos de referencia"),
             ("Missing Signature Count", "Sin firma"),
             ("Missing Source Update Count", "Sin actualización fuente"),
-            ("Retained Observation Count", "Válida anterior retenida"),
+            ("Retained Observation Display", "Válida anterior retenida"),
         )
     ):
         r.metric(
@@ -1131,20 +1258,23 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             "reference-" + str(index),
             measure,
             title,
-            (780 + (index % 2) * 242, 316 + (index // 2) * 76, 230, 68),
+            (780 + (index % 2) * 242, 306 + (index // 2) * 72, 230, 66),
         )
+    r.visuals[2]["reference-3"]["visual"]["objects"]["value"][0]["properties"]["fontSize"] = (
+        literal(12)
+    )
     r.text(
         2,
         "supplier-diagnostics",
         "Proveedor destacado",
-        (780, 470, 472, 26),
+        (780, 450, 472, 30),
         14,
     )
     r.text(
         2,
         "selected-supplier",
         "Proveedor destacado",
-        (780, 502, 472, 40),
+        (780, 480, 472, 24),
         11,
         MUTED,
         field(METRICS, "Selected Supplier Label", True),
@@ -1154,14 +1284,14 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         "supplier-count",
         "Supplier Focus Count Display",
         "Contratos destacados",
-        (780, 548, 230, 78),
+        (780, 508, 200, 64),
     )
     r.metric(
         2,
         "supplier-value",
         "Supplier Focus Value Display",
         "Valor destacado (COP)",
-        (1022, 548, 230, 78),
+        (990, 508, 262, 64),
     )
     for key in ("supplier-count", "supplier-value"):
         value = r.visuals[2][key]["visual"]["objects"]["value"][0]["properties"]
@@ -1170,7 +1300,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         2,
         "coverage-summary",
         "Alcance y cobertura",
-        (28, 632, 732, 40),
+        (28, 624, 732, 44),
         9,
         MUTED,
         field(METRICS, "Coverage Summary Label", True),
@@ -1189,13 +1319,13 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             ("Source State", "Disponibilidad del proceso fuente"),
         )
     ):
-        x, y = 28 + (index % 2) * 622, 185 + (index // 2) * 88
+        x, y = 28 + (index % 2) * 622, 208 + (index // 2) * 94
         r.text(3, "detail-caption-" + name, title, (x, y, 602, 22), 11, BLUE)
         r.text(
             3,
             "detail-value-" + name,
             title,
-            (x, y + 24, 602, 60),
+            (x, y + 24, 602, 62),
             11,
             INK,
             field(METRICS, "Detail " + name + " Label", True),
@@ -1205,8 +1335,9 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         "open-source",
         "Abrir proceso en SECOP II",
         "WebUrl",
-        (910, 631, 342, 41),
+        (1012, 108, 240, 34),
         field(METRICS, "Source Process URL", True),
+        style="primary",
     )
     source["visual"]["visualContainerObjects"]["visualLink"][0]["properties"].update(
         {
@@ -1216,12 +1347,31 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             "enabledTooltip": literal("Abrir el proceso fuente publicado en SECOP II."),
         }
     )
-    shared = {"contracts", "contracts-label", "drill"}
-    primary = {
-        key
-        for key, visual in r.visuals[0].items()
-        if 270 <= visual["position"]["y"] < 680 and key not in shared
+    # A web-link button never disables itself, so a missing or disallowed URL
+    # must also change its label and colors rather than look actionable.
+    objects = source["visual"]["objects"]
+    objects["text"][1]["properties"].update(
+        {
+            "text": {"expr": field(METRICS, "Source Action Label", True)},
+            "fontColor": {
+                "solid": {"color": {"expr": field(METRICS, "Source Action Text Color", True)}}
+            },
+        }
+    )
+    objects["fill"][1]["properties"]["fillColor"] = {
+        "solid": {"color": {"expr": field(METRICS, "Source Action Fill", True)}}
     }
+    shared = {"contracts", "contracts-label", "drill"}
+
+    def body(page: int, excluded: set[str] = frozenset()) -> set[str]:
+        return {
+            key
+            for key, visual in r.visuals[page].items()
+            if BODY_Y <= visual["position"]["y"] < BODY_END and key not in shared | excluded
+        }
+
+    primary = body(0)
+    half = (BODY_END - BODY_Y - 10) // 2
     monthly = r.table(
         0,
         "monthly-table",
@@ -1229,9 +1379,9 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             (DETAIL, "signing_month", "Mes de firma"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value Display", "Valor (COP)", True),
+            (METRICS, "Contract Value Exact COP", "Valor (COP)", True),
         ],
-        (28, 270, 602, 194),
+        (28, BODY_Y, 602, half),
     )
     r.column_widths(monthly, [160, 140, 250])
     monthly["filterConfig"] = json.loads(json.dumps(r.visuals[0]["value-month"]["filterConfig"]))
@@ -1246,9 +1396,9 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             ("dim_municipality", "Municipality Label", "Municipio"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value Display", "Valor (COP)", True),
+            (METRICS, "Contract Value Exact COP", "Valor (COP)", True),
         ],
-        (650, 270, 602, 194),
+        (650, BODY_Y, 602, half),
     )
     r.column_widths(municipalities, [250, 100, 200])
     r.metric(
@@ -1256,7 +1406,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         "missing-signatures",
         "Missing Signature Count",
         "Contratos sin firma",
-        (650, 496, 230, 78),
+        (650, BODY_END - half, 230, 66),
     )
     modalities = r.table(
         0,
@@ -1265,9 +1415,9 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             ("dim_modality", "Modality Label", "Modalidad"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value Display", "Valor (COP)", True),
+            (METRICS, "Contract Value Exact COP", "Valor (COP)", True),
         ],
-        (28, 496, 602, 176),
+        (28, BODY_END - half, 602, half),
     )
     r.column_widths(modalities, [260, 100, 200])
     r.display_views(
@@ -1276,11 +1426,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         (primary, {"monthly-table", "municipality-table", "missing-signatures", "modality-table"}),
     )
 
-    primary = {
-        key
-        for key, visual in r.visuals[1].items()
-        if 282 <= visual["position"]["y"] < 680 and key not in shared | {"reference-rule"}
-    }
+    primary = body(1, {"reference-rule"})
     entities = r.table(
         1,
         "entity-summary",
@@ -1288,18 +1434,18 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             ("dim_entity", "Entity Label", "Entidad"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value Display", "Valor (COP)", True),
+            (METRICS, "Contract Value Exact COP", "Valor (COP)", True),
             (METRICS, "Count Identity Coverage", "Cobertura conocida", True),
         ],
-        (28, 282, 756, 250),
+        (28, BODY_Y, 756, 506 - BODY_Y),
     )
-    r.column_widths(entities, [270, 95, 180, 165])
+    r.column_widths(entities, [300, 95, 180, 140])
     r.metric(
         1,
         "unknown-value",
         "Unknown Supplier Value Display",
         "Valor sin identidad (COP)",
-        (796, 282, 456, 78),
+        (796, BODY_Y, 456, 66),
     )
     reasons = r.table(
         1,
@@ -1308,9 +1454,9 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             (DETAIL, "Supplier Reason Presentation", "Motivo"),
             (METRICS, "Unknown Supplier Count", "Contratos", True),
-            (METRICS, "Unknown Supplier Value Display", "Valor (COP)", True),
+            (METRICS, "Unknown Supplier Value Exact COP", "Valor (COP)", True),
         ],
-        (796, 372, 456, 160),
+        (796, BODY_Y + 76, 456, 506 - BODY_Y - 76),
     )
     r.column_widths(reasons, [210, 70, 130])
     reasons["filterConfig"] = {
@@ -1329,7 +1475,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         (primary, {"entity-summary", "unknown-value", "supplier-reasons"}),
     )
 
-    primary = {key for key, visual in r.visuals[2].items() if 282 <= visual["position"]["y"] < 680}
+    primary = body(2)
     diagnostics = set()
     for index, (measure, caption) in enumerate(
         (
@@ -1344,7 +1490,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         key = "diagnostic-" + str(index)
         diagnostics.add(key)
         r.metric(
-            2, key, measure, caption, (28 + (index % 3) * 414, 282 + (index // 3) * 86, 402, 76)
+            2, key, measure, caption, (28 + (index % 3) * 414, BODY_Y + (index // 3) * 74, 402, 66)
         )
     status = r.table(
         2,
@@ -1353,9 +1499,9 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             (DETAIL, "Status Label", "Estado fuente"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value Display", "Valor (COP)", True),
+            (METRICS, "Contract Value Exact COP", "Valor (COP)", True),
         ],
-        (28, 466, 602, 206),
+        (28, 428, 602, BODY_END - 428),
     )
     r.column_widths(status, [280, 100, 175])
     identity = r.table(
@@ -1365,9 +1511,9 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             (DETAIL, "Supplier Reason Presentation", "Motivo del proveedor"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value Display", "Valor (COP)", True),
+            (METRICS, "Contract Value Exact COP", "Valor (COP)", True),
         ],
-        (650, 466, 602, 206),
+        (650, 428, 602, BODY_END - 428),
     )
     r.column_widths(identity, [280, 100, 175])
     diagnostics.update({"status-diagnostics", "identity-diagnostics"})
@@ -1380,8 +1526,8 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         ("identity-reasons", "Detail Identity Reasons Label", "Motivos de identidad", 650),
     ):
         evidence_view.update({key + "-caption", key})
-        r.text(3, key + "-caption", title, (x, 185, 602, 22), 11, BLUE)
-        r.text(3, key, title, (x, 209, 602, 72), 10, INK, field(METRICS, measure, True))
+        r.text(3, key + "-caption", title, (x, 208, 602, 22), 11, BLUE)
+        r.text(3, key, title, (x, 232, 602, 72), 10, INK, field(METRICS, measure, True))
     context = r.table(
         3,
         "context-table",
@@ -1390,7 +1536,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             (METRICS, "Reference Context Full Label", "Referencia de contratos", True),
             (METRICS, "Supplier Context Label", "Proveedor destacado", True),
         ],
-        (28, 293, 1224, 124),
+        (28, 314, 1224, 120),
     )
     r.column_widths(context, [738, 440])
     context["visual"]["objects"]["values"][0]["properties"].update(
@@ -1398,12 +1544,17 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
     )
     evidence_view.add("context-table")
     for key, measure, title, bounds in (
-        ("evidence-table", "Detail Evidence Label", "Evidencia atribuible", (28, 429, 756, 197)),
+        (
+            "evidence-table",
+            "Detail Evidence Label",
+            "Evidencia atribuible",
+            (28, 444, 756, BODY_END - 444),
+        ),
         (
             "warnings-table",
             "Detail Warnings Label",
             "Advertencias publicadas",
-            (796, 429, 456, 197),
+            (796, 444, 456, BODY_END - 444),
         ),
     ):
         evidence_view.add(key)
@@ -1412,7 +1563,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         visual["visual"]["objects"]["values"][0]["properties"].update(
             {"wordWrap": literal(True), "fontSize": literal(10)}
         )
-    r.display_views(3, ("Contrato", "Evidencia"), (primary, evidence_view))
+    r.display_views(3, ("Contrato", "Evidencia"), (primary, evidence_view), toolbar_y=170)
     # Read-only comparison tables must not silently redefine the reference context.
     for page, comparison in ((1, rank), (1, entities), (2, status), (2, identity), (3, context)):
         for target in r.visuals[page].values():

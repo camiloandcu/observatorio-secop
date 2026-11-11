@@ -69,10 +69,28 @@ On **Panorama**, **Ver contratos del mes** can also open the list for a selected
 bar as a local exploration. Returning may clear that bar selection; use the
 month selector when the period must remain active across navigation. The month
 list retains the month received by drill-through; return to change that month.
-After returning from contract detail, synchronized entity and period filters
-remain active; select the contract row again to reopen its detail.
+Use **Volver a la lista** in contract detail to return to the calling list.
+Synchronized entity and period filters remain active; select the contract row
+again to reopen its detail.
 On the main pages, **Restablecer** clears selections and returns the report to
 its initial views and date mode without changing the publication.
+
+## Page layout
+
+Every page uses the same 1280×720 grid. The header holds the page title, the
+navigation (the current page is shown in dark fill), the publication scope,
+coverage state and Import dates. Below it are two filter rows: the synchronized
+selectors with **Restablecer**, then the signing-date mode and **Proveedor
+destacado**. A toolbar row above the content carries the page's guidance, its
+primary action (**Ver contrato**, **Ver contratos del mes** or **Abrir proceso
+en SECOP II**, in solid blue) and the alternate-view buttons. Footnotes on COP,
+geography and revisions stay at the bottom.
+
+Colors follow the approved palette: background `#F4F6F8`, white bordered
+surfaces, ink `#183047`, selection blue `#155E75` and amber `#875A10` for scope
+limits, always alongside text. `tests/bi/test_layout.py` checks that visuals stay
+on the canvas, text boxes are tall enough for their font and simultaneously
+visible visuals never overlap, including the alternate views and interval mode.
 
 ## Model and filters
 
@@ -84,7 +102,7 @@ measures and disconnected supplier/date controls. Five active single-direction
 relationships filter detail from its dimensions; global evidence and supplier
 focus remain disconnected.
 
-The analytical layer contains 82 measures. Alternate views on the same pages
+The analytical layer contains 89 measures. Alternate views on the same pages
 expose monthly tables, municipalities, entity summaries and quality diagnostics.
 The **Gráficos / Tablas**, **Proveedores / Entidades**,
 **Publicación / Diagnóstico** and **Contrato / Evidencia** buttons use scoped
@@ -113,6 +131,28 @@ COP values are nominal observed amounts. Municipality describes the entity's
 registration, not the location where spending occurred. Signing periods can be
 revised as later observations arrive. Missing, empty and valid zero values have
 different meanings. See [measure semantics](measures/README.md).
+
+## Quality control grains and filters
+
+Quality separates publication evidence (G), reference contracts selected by the
+synchronized filters (R), and contracts of the highlighted supplier within R (S).
+An unavailable historical control remains unavailable rather than becoming zero.
+
+| Visible control | Grain and numerator | Denominator or comparison | Effective filters |
+|---|---|---|---|
+| Observaciones recibidas | Acquired observations in G | Absolute input count | Fixed publication; no R/S filters |
+| Válidas / recibidas | Accepted observations in G | All input observations in G | Fixed publication; no R/S filters |
+| Rechazadas / recibidas | Rejected observations in G | All input observations in G | Fixed publication; no R/S filters |
+| Duplicadas / recibidas | Exact duplicate observations in G | All input observations in G | Fixed publication; no R/S filters |
+| Sustituidas / recibidas | Superseded observations in G | All input observations in G | Fixed publication; no R/S filters |
+| Contratos publicados | Unique retained contracts in G | Absolute output count | Fixed publication; no R/S filters |
+| Reconciliation state | Input, accepted, rejected, duplicate, superseded and output counts | Input = output + rejected + duplicate + superseded; accepted = input − rejected | Fixed publication; no R/S filters |
+| Adquisición por carril | Published ACQUISITION_LANE control and its numerator | Meaning/state/reason of that specific control; not a contract percentage | Fixed publication and lane; no R/S filters |
+| Contratos de referencia | Unique contracts in R | Absolute count | Entity, registered municipality, modality, status, signing month/date mode; no S reduction |
+| Sin firma / sin actualización fuente | Contracts in R missing the named field | Each is a count within R, not an observation rejection rate | Same R filters |
+| Válida anterior retenida | Contracts in R with an attributable retained observation | Count within R; unavailable historical evidence remains explicit | Same R filters |
+| Contratos destacados / valor destacado | Contracts and observed COP in S | Absolute count/value within R; Sin selección without an explicit single supplier | R plus highlighted supplier |
+| Selected-contract diagnostics | One selected contract and its published condition links | Contract-specific evidence; overlapping links are not extra contracts | Selected contract within its received filters |
 
 ## Refresh and recovery
 
@@ -155,6 +195,10 @@ for the current environment and keep a recoverable saved copy.
    before saving. Do not apply only the successful subset or replace errors with
    nulls. If the loaded state is uncertain, restore the saved project/workbook
    and repeat the complete operation.
+   If a retry remains blocked despite a verified fresh descriptor and intact
+   prior Import, save that verified project, close and reopen it, confirm the
+   persisted descriptor, then run the whole Refresh again. Preserve the failed
+   attempt's diagnostics; reopening is a recovery step, not a diagnosis of its cause.
 
 Run only one test Desktop project at a time and close saved diagnostic worker
 processes before another Import. On the tested8GB host, accumulated evaluation

@@ -770,5 +770,77 @@
     "displayFolder": "Presentation",
     "description": "Exact observed Currency for one contract row; blank for missing amount or ambiguous contract context.",
     "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Retained Observation Display",
+    "expression": "VAR _Retained = [Retained Observation Count]\nVAR _Unknown = [Legacy Unassessed Count] + [Indeterminate Observation Count]\nRETURN\n    SWITCH ( TRUE (),\n        [Selection State] <> \"AVAILABLE\", \"No disponible\",\n        [Contract Count] = 0, \"Sin contratos\",\n        _Unknown > 0 && _Retained = 0, \"Sin determinar\",\n        _Unknown > 0, FORMAT ( _Retained, \"#,0\", \"es-CO\" ) & \" contratos; \" & FORMAT ( _Unknown, \"#,0\", \"es-CO\" ) & \" sin determinar\",\n        FORMAT ( _Retained, \"#,0\", \"es-CO\" ) & \" contratos\"\n    )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Observed retained contracts; explicitly indeterminate if historical or temporal evidence is unavailable. Mixed references disclose both confirmed and indeterminate counts.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Contract Value Exact COP",
+    "expression": "VAR _Value = [Contract Value COP]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Value ), _Value )",
+    "dataType": "Decimal",
+    "displayFolder": "Presentation",
+    "description": "Numeric COP for table sorting; its dynamic format renders the exact backend-formatted amount, so columns sort by value rather than text.",
+    "isHidden": false,
+    "formatStringDefinition": {
+      "expression": "VAR _Value = [Contract Value Exact COP]\nRETURN IF ( NOT ISBLANK ( _Value ), UNICHAR ( 34 ) & FORMAT ( _Value, \"#,0.00\", \"es-CO\" ) & \" COP\" & UNICHAR ( 34 ), \"#,0.00\" )"
+    }
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Contract Row Value Exact COP",
+    "expression": "VAR _Value = SELECTEDVALUE ( 'mart_contract_detail'[contract_value_cop] )\nRETURN IF ( [Import State] = \"AVAILABLE\" && HASONEVALUE ( 'mart_contract_detail'[contract_key] ) && NOT ISBLANK ( _Value ), _Value )",
+    "dataType": "Decimal",
+    "displayFolder": "Presentation",
+    "description": "Numeric COP for table sorting; its dynamic format renders the exact backend-formatted amount, so columns sort by value rather than text. Blank for a missing amount or ambiguous contract context.",
+    "isHidden": false,
+    "formatStringDefinition": {
+      "expression": "VAR _Value = [Contract Row Value Exact COP]\nRETURN IF ( NOT ISBLANK ( _Value ), UNICHAR ( 34 ) & FORMAT ( _Value, \"#,0.00\", \"es-CO\" ) & \" COP\" & UNICHAR ( 34 ), \"#,0.00\" )"
+    }
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Unknown Supplier Value Exact COP",
+    "expression": "VAR _Value = [Unknown Supplier Value COP]\nRETURN IF ( [Import State] = \"AVAILABLE\" && NOT ISBLANK ( _Value ), _Value )",
+    "dataType": "Decimal",
+    "displayFolder": "Presentation",
+    "description": "Numeric COP for table sorting; its dynamic format renders the exact backend-formatted amount, so columns sort by value rather than text.",
+    "isHidden": false,
+    "formatStringDefinition": {
+      "expression": "VAR _Value = [Unknown Supplier Value Exact COP]\nRETURN IF ( NOT ISBLANK ( _Value ), UNICHAR ( 34 ) & FORMAT ( _Value, \"#,0.00\", \"es-CO\" ) & \" COP\" & UNICHAR ( 34 ), \"#,0.00\" )"
+    }
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Source Action Label",
+    "expression": "VAR _Selected = HASONEVALUE ( 'mart_contract_detail'[contract_key] )\nVAR _Url = [Source Process URL]\nRETURN\n    SWITCH ( TRUE (), NOT _Selected, \"Sin contrato seleccionado\", ISBLANK ( _Url ), \"Proceso fuente no disponible\", \"Abrir proceso en SECOP II\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Source button text; names the unavailable state instead of offering an action without an allowed URL.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Source Action Fill",
+    "expression": "VAR _Selected = HASONEVALUE ( 'mart_contract_detail'[contract_key] )\nVAR _Url = [Source Process URL]\nRETURN\n    IF ( _Selected && NOT ISBLANK ( _Url ), \"#155E75\", \"#E6EAED\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Source button fill: primary blue only when an allowed published URL exists.",
+    "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Source Action Text Color",
+    "expression": "VAR _Selected = HASONEVALUE ( 'mart_contract_detail'[contract_key] )\nVAR _Url = [Source Process URL]\nRETURN\n    IF ( _Selected && NOT ISBLANK ( _Url ), \"#FFFFFF\", \"#4B5D6B\" )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Source button text color paired with Source Action Fill; both states keep at least 4.5:1 contrast.",
+    "isHidden": false
   }
 ]
