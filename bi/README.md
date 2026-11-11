@@ -69,6 +69,8 @@ On **Panorama**, **Ver contratos del mes** can also open the list for a selected
 bar as a local exploration. Returning may clear that bar selection; use the
 month selector when the period must remain active across navigation. The month
 list retains the month received by drill-through; return to change that month.
+After returning from contract detail, synchronized entity and period filters
+remain active; select the contract row again to reopen its detail.
 On the main pages, **Restablecer** clears selections and returns the report to
 its initial views and date mode without changing the publication.
 
