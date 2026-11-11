@@ -75,6 +75,23 @@ again to reopen its detail.
 On the main pages, **Restablecer** clears selections and returns the report to
 its initial views and date mode without changing the publication.
 
+## Page layout
+
+Every page uses the same 1280×720 grid. The header holds the page title, the
+navigation (the current page is shown in dark fill), the publication scope,
+coverage state and Import dates. Below it are two filter rows: the synchronized
+selectors with **Restablecer**, then the signing-date mode and **Proveedor
+destacado**. A toolbar row above the content carries the page's guidance, its
+primary action (**Ver contrato**, **Ver contratos del mes** or **Abrir proceso
+en SECOP II**, in solid blue) and the alternate-view buttons. Footnotes on COP,
+geography and revisions stay at the bottom.
+
+Colors follow the approved palette: background `#F4F6F8`, white bordered
+surfaces, ink `#183047`, selection blue `#155E75` and amber `#875A10` for scope
+limits, always alongside text. `tests/bi/test_layout.py` checks that visuals stay
+on the canvas, text boxes are tall enough for their font and simultaneously
+visible visuals never overlap, including the alternate views and interval mode.
+
 ## Model and filters
 
 The nine imported tables are contract detail, five dimensions, global quality,
