@@ -4,12 +4,94 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from observatorio_secop.publication.build import validate_artifacts
 
 PUBLICATION = "a" * 32
+
+
+@pytest.mark.parametrize("relative", [True, False], ids=["relative-root", "absolute-root"])
+def test_dbt_and_artifact_reader_share_absolute_invocation_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, relative: bool
+) -> None:
+    from observatorio_secop.publication import build, store
+
+    class ManifestRegistered(Exception):
+        """Stop after the real reader has consumed the simulated dbt manifest."""
+
+    class FakeStore:
+        def __init__(self, config):
+            pass
+
+        def update_metadata(self, publication_id, metadata):
+            return {"metadata": metadata}
+
+        def register_expected_nodes(self, publication_id, nodes):
+            assert nodes == ["model.project.one"]
+            raise ManifestRegistered
+
+    project = tmp_path / "project"
+    models = project / "dbt/models"
+    models.mkdir(parents=True)
+    (models / "one.sql").write_text("select 1")
+    caller = tmp_path / "caller"
+    caller.mkdir()
+    monkeypatch.chdir(caller)
+    artifact_root = Path("reports/publication") if relative else tmp_path / "artifacts"
+    expected_root = artifact_root.resolve()
+    calls = []
+
+    def dbt_parse(arguments, **kwargs):
+        assert arguments[1] == "parse"
+        assert kwargs["cwd"] == project
+        paths = {
+            flag: Path(arguments[arguments.index(flag) + 1])
+            for flag in ("--target-path", "--log-path", "--profiles-dir")
+        }
+        calls.append(paths)
+        # dbt resolves a relative target against its project directory, which
+        # differs from the caller's working directory in this regression case.
+        target = paths["--target-path"]
+        if not target.is_absolute():
+            target = project / "dbt" / target
+        target.mkdir(parents=True)
+        manifest = {
+            "nodes": {
+                "model.project.one": {
+                    "resource_type": "model",
+                    "name": "one",
+                    "config": {"enabled": True},
+                }
+            }
+        }
+        (target / "manifest.json").write_text(json.dumps(manifest))
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(store, "PublicationStore", FakeStore)
+    monkeypatch.setattr(build, "reviewed_metadata", lambda _: {})
+    monkeypatch.setattr(build, "_prepare_schemas", lambda *args, **kwargs: None)
+    monkeypatch.setattr(build.subprocess, "run", dbt_parse)
+    config = SimpleNamespace(host="unused", port=1, dbname="unused", user="unused", password="")
+    with pytest.raises(ManifestRegistered):
+        build._run_candidate_build(
+            config,
+            PUBLICATION,
+            artifact_root=artifact_root,
+            timeout_seconds=30,
+            storage_budget_bytes=1024,
+            project_root=project,
+        )
+    assert len(calls) == 1
+    for path in calls[0].values():
+        assert path.is_absolute()
+        assert path.parent.parent == expected_root / PUBLICATION
+    target = calls[0]["--target-path"]
+    assert (target / "manifest.json").is_file()
+    assert (target.parent / "parse.stdout.log").is_file()
+    assert (calls[0]["--profiles-dir"] / "profiles.yml").is_file()
 
 
 def _evidence(target: Path) -> dict:
