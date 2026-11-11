@@ -1179,7 +1179,13 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         r.pages[3],
         style="primary",
     )
-    r.text(2, "global-label", "Observaciones de la publicación", (28, BODY_Y, 732, 30), 14)
+    r.text(
+        2,
+        "global-label",
+        "Observaciones de la publicación: no cambian con los filtros",
+        (28, BODY_Y, 732, 30),
+        14,
+    )
     r.text(
         2,
         "global-quality-state",
