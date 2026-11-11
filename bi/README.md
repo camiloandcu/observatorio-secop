@@ -102,7 +102,7 @@ measures and disconnected supplier/date controls. Five active single-direction
 relationships filter detail from its dimensions; global evidence and supplier
 focus remain disconnected.
 
-The analytical layer contains 86 measures. Alternate views on the same pages
+The analytical layer contains 89 measures. Alternate views on the same pages
 expose monthly tables, municipalities, entity summaries and quality diagnostics.
 The **Gráficos / Tablas**, **Proveedores / Entidades**,
 **Publicación / Diagnóstico** and **Contrato / Evidencia** buttons use scoped

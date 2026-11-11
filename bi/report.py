@@ -1347,6 +1347,20 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             "enabledTooltip": literal("Abrir el proceso fuente publicado en SECOP II."),
         }
     )
+    # A web-link button never disables itself, so a missing or disallowed URL
+    # must also change its label and colors rather than look actionable.
+    objects = source["visual"]["objects"]
+    objects["text"][1]["properties"].update(
+        {
+            "text": {"expr": field(METRICS, "Source Action Label", True)},
+            "fontColor": {
+                "solid": {"color": {"expr": field(METRICS, "Source Action Text Color", True)}}
+            },
+        }
+    )
+    objects["fill"][1]["properties"]["fillColor"] = {
+        "solid": {"color": {"expr": field(METRICS, "Source Action Fill", True)}}
+    }
     shared = {"contracts", "contracts-label", "drill"}
 
     def body(page: int, excluded: set[str] = frozenset()) -> set[str]:

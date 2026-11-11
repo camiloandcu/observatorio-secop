@@ -64,3 +64,23 @@ def test_text_and_buttons_have_no_header_trap(tmp_path):
             assert header[0]["properties"]["show"]["expr"]["Literal"]["Value"] == "false"
         else:
             assert header is None
+
+
+def test_source_button_states_come_from_the_published_url(tmp_path):
+    folder = tmp_path / "definition" / "pages"
+    folder.mkdir(parents=True)
+    (folder / "pages.json").write_text('{"pageOrder": []}', encoding="utf-8")
+    generate(tmp_path)
+    page = identifier("page:Detalle contractual")
+    path = folder / page / "visuals" / identifier("Detalle contractual:open-source") / "visual.json"
+    visual = json.loads(path.read_text())["visual"]
+    default_text = visual["objects"]["text"][1]["properties"]
+    default_fill = visual["objects"]["fill"][1]["properties"]
+    measures = {
+        default_text["text"]["expr"]["Measure"]["Property"],
+        default_text["fontColor"]["solid"]["color"]["expr"]["Measure"]["Property"],
+        default_fill["fillColor"]["solid"]["color"]["expr"]["Measure"]["Property"],
+    }
+    assert measures == {"Source Action Label", "Source Action Text Color", "Source Action Fill"}
+    link = visual["visualContainerObjects"]["visualLink"][0]["properties"]["webUrl"]
+    assert link["expr"]["Measure"]["Property"] == "Source Process URL"
