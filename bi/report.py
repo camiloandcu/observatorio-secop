@@ -396,6 +396,8 @@ class Report:
                 ("Calidad", 1090, 162),
             )
         ):
+            if page == 3:
+                continue
             self.button(
                 page,
                 f"nav-{index}",
@@ -449,8 +451,22 @@ class Report:
             9,
             MUTED,
         )
+        if page == 1:
+            self.text(
+                page,
+                "identity-help",
+                "Porcentajes de contratos y de COP de la referencia seleccionada con proveedor "
+                "identificable.\n"
+                + ("Datos e importes de prueba. " if synthetic else "")
+                + "COP: pesos colombianos observados, sin ajuste por inflación. "
+                "Municipio de registro. Los periodos pueden revisarse.",
+                (28, 682, 1224, 32),
+                9,
+                MUTED,
+            )
+            self.visuals[page].pop("footer")
         if page == 3:
-            self.button(page, "back", "Volver con contexto", "Back", (28, 131, 220, 38))
+            self.button(page, "back", "Volver a la lista", "Back", (28, 131, 220, 38))
             self.text(
                 page,
                 "context",
@@ -957,9 +973,21 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
 
     for key, measure, title, x, width in (
         ("hhi", "HHI Display", "Concentración (HHI)", 28, 236),
-        ("known-value", "Known Value Display", "Valor conocido (COP)", 276, 352),
-        ("count-coverage", "Count Identity Coverage", "Cobertura por contratos", 640, 300),
-        ("value-coverage", "Value Identity Coverage", "Cobertura por valor", 952, 300),
+        ("known-value", "Known Value Display", "Valor con proveedor identificado (COP)", 276, 352),
+        (
+            "count-coverage",
+            "Count Identity Coverage",
+            "% contratos con proveedor identificado",
+            640,
+            300,
+        ),
+        (
+            "value-coverage",
+            "Value Identity Coverage",
+            "% valor con proveedor identificado",
+            952,
+            300,
+        ),
     ):
         r.metric(1, key, measure, title, (x, 282, width, 70))
     rank = r.table(
