@@ -12,7 +12,7 @@ wrongdoing, represent all Antioquia procurement, or provide a priority score.
 
 Use the project's Python3.12 environment, Node20+ and Power BI Desktop on Windows.
 The generator pins Power BI Report Authoring CLI0.5.0. The current native test
-environment is Desktop2.159.883.0, compatibility1606; report schema versions are
+environment is Desktop2.159.1231.0, compatibility1606; report schema versions are
 recorded in the generated definitions. Other Desktop versions need verification.
 No Power BI Service account is required. Use `--name observatorio-secop-us09`
 when generating a separately named project; keep its PBIP and Report folder stems
@@ -83,7 +83,8 @@ coverage state and Import dates. Below it are two filter rows: the synchronized
 selectors with **Restablecer**, then the signing-date mode and **Proveedor
 destacado**. A toolbar row above the content carries the page's guidance, its
 primary action (**Ver contrato**, **Ver contratos del mes** or **Abrir proceso
-en SECOP II**, in solid blue) and the alternate-view buttons. Footnotes on COP,
+en SECOP II**, in solid blue; the source action turns grey and names the
+unavailable state when no allowed link exists) and the alternate-view buttons. Footnotes on COP,
 geography and revisions stay at the bottom.
 
 Colors follow the approved palette: background `#F4F6F8`, white bordered
@@ -107,7 +108,8 @@ expose monthly tables, municipalities, entity summaries and quality diagnostics.
 The **Gráficos / Tablas**, **Proveedores / Entidades**,
 **Publicación / Diagnóstico** and **Contrato / Evidencia** buttons use scoped
 display-only bookmarks; their definitions do not capture slicer data.
-Native filter preservation and keyboard behavior require separate verification.
+Synchronized selectors keep entity, period and highlighted supplier across pages
+and after returning from detail; see the keyboard notes for current limits.
 
 Contract evidence uses structured parsing of published, sanitized fields.
 The detail view retains one row per contract, lists all attributable rejection
@@ -171,7 +173,8 @@ checks its echo. This avoids changing SQL comments on every evaluation, which
 previously generated repeated native-query approvals. A new query can still
 require approval; do not disable the global security setting to hide that prompt.
 Repeated minimal native reads and a full Import verified parameter binding and
-advancing server timestamps. Deadline-crossing behavior requires separate proof.
+advancing server timestamps. When the descriptor expires during a read, Desktop
+reports the refresh error and keeps the previous Import; follow the steps below.
 
 A failed refresh is communicated by Desktop. The report's loaded timestamp
 cannot describe an unsuccessful refresh. In the native fixture, a denied read
@@ -251,14 +254,17 @@ checks is not native or human acceptance. Record unexecuted cases explicitly.
 
 Before relying on the report, a reviewer should complete Panorama → supplier
 comparison → highlighted contracts → detail → permitted source, then return and
-explain denominator, identity coverage, geography, COP and revisions. The native
-UI, accessibility and human journey still require their own evidence.
+explain denominator, identity coverage, geography, COP and revisions. Repeat this
+journey after any change to pages or measures.
 
 For a keyboard review, use **Ctrl+F6** to move between the canvas and page tabs,
-then **Tab** to follow the report's focus order. **Ctrl+Right arrow** enters a
+then **Tab** to follow the report's focus order: header, navigation, filters,
+view buttons, content, evidence actions and footnote. **Ctrl+Right arrow** enters a
 visual or slicer; **Enter** selects and **Esc** exits its navigation levels.
 On page tabs, arrows/Tab and Enter or Space change pages. Use **Alt+Shift+F11**
 to inspect a visual's accessible data table. These are documented platform
-controls, not a claim that this report's keyboard journey has passed.
+controls. In Desktop 2.159.1231.0 edit mode, forward **Tab** stops inside the
+first visual's header (**More options**); **Shift+Tab** still reaches every
+visual, in the reverse of that order.
 See Microsoft's [accessible report navigation](https://learn.microsoft.com/en-us/power-bi/explore-reports/desktop-accessibility-consuming-tools)
 and [accessible report design](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-accessibility-creating-reports).

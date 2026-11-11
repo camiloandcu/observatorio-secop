@@ -33,3 +33,12 @@ def test_table_money_columns_project_numeric_measures_with_exact_labels(tmp_path
                 assert "FORMAT ( _Value" in measure["formatStringDefinition"]["expression"]
                 checked += 1
     assert checked >= 9
+
+
+def test_identity_coverage_never_rounds_up_to_the_full_policy():
+    for name in ("Count Identity Coverage", "Value Identity Coverage"):
+        definition = MEASURES[name]
+        assert "formatString" not in definition
+        expression = definition["formatStringDefinition"]["expression"]
+        assert "_Value < 1 && _Value >= 0.99995" in expression
+        assert '">99,99%"' in expression

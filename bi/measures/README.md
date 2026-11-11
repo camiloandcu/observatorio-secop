@@ -54,6 +54,9 @@ on scale0–1. `Policy State` checks the expected version and SHA256 before appl
 its approved 100% count/value coverage minima. A different policy is unavailable
 until reviewed; the measures do not silently adopt new thresholds. Gold's null
 reason priority is preserved after explicit UI date/entity/policy checks.
+Because the minima are exactly 100%, `Count Identity Coverage` and `Value Identity
+Coverage` never display a lower value as `100,00%`: their dynamic format shows
+`>99,99%` from 99.995% up to, but excluding, 100%.
 
 Contract quality measures apply reference filters and count unique contracts.
 Global counters use only `mart_data_quality` observation controls and retain

@@ -84,7 +84,9 @@
     "displayFolder": "Concentration",
     "description": "Known-contract count divided by all reference contracts; blank when reference count is zero.",
     "isHidden": false,
-    "formatString": "0.00%"
+    "formatStringDefinition": {
+      "expression": "VAR _Value = [Count Identity Coverage]\n-- The 100 % policy must never look met by rounding.\nRETURN IF ( _Value < 1 && _Value >= 0.99995, UNICHAR ( 34 ) & \">99,99%\" & UNICHAR ( 34 ), \"0.00%\" )"
+    }
   },
   {
     "tableName": "Indicadores",
@@ -94,7 +96,9 @@
     "displayFolder": "Concentration",
     "description": "Known observed COP divided by all reference observed COP; blank when total value is zero.",
     "isHidden": false,
-    "formatString": "0.00%"
+    "formatStringDefinition": {
+      "expression": "VAR _Value = [Value Identity Coverage]\n-- The 100 % policy must never look met by rounding.\nRETURN IF ( _Value < 1 && _Value >= 0.99995, UNICHAR ( 34 ) & \">99,99%\" & UNICHAR ( 34 ), \"0.00%\" )"
+    }
   },
   {
     "tableName": "Indicadores",
