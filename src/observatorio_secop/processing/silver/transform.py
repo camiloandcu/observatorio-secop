@@ -22,6 +22,7 @@ from observatorio_secop.processing.silver.config import (
     TerritoryCatalog,
     normalize_text,
     territory_key,
+    validate_transformation_version,
 )
 from observatorio_secop.processing.silver.schemas import (
     REJECTED_SCHEMA,
@@ -46,6 +47,7 @@ def transform_bronze(
     *,
     preserve_observations: bool = False,
 ) -> TransformationResult:
+    validate_transformation_version(config.transformation_version)
     annotated = _annotate(bronze, config, catalog, silver_version_id).cache()
     input_rows = annotated.count()
     rejected = _rejected(annotated, silver_version_id).cache()
@@ -353,11 +355,19 @@ def _rejected(annotated: DataFrame, silver_version_id: str) -> DataFrame:
 
 
 def _business_date(field: str, config: SilverConfig) -> Column:
+    validate_transformation_version(config.transformation_version)
     value = F.col(field)
     parsed = _timestamp(field, config.source_datetime_format)
-    exact_midnight = value.rlike(r"^\d{4}-\d{2}-\d{2}T00:00:00\.000$")
+    if config.transformation_version == "silver-v1":
+        accepted = value.rlike(r"^\d{4}-\d{2}-\d{2}T00:00:00\.000$") & parsed.isNotNull()
+        calendar_date = F.to_date(parsed)
+    else:
+        # Validate the complete floating source clock first, then retain its
+        # written calendar date. No timezone is inferred or converted.
+        accepted = parsed.isNotNull()
+        calendar_date = F.to_date(F.substring(value, 1, 10), "yyyy-MM-dd")
     return F.when(value.isNull() | (F.trim(value) == ""), F.lit(None).cast("date")).when(
-        exact_midnight & parsed.isNotNull(), F.to_date(parsed)
+        accepted, calendar_date
     )
 
 
