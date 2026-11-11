@@ -18,6 +18,10 @@ AMBER, BORDER, TINT, DISABLED = "#875A10", "#DCE3E8", "#DDECF0", "#E6EAED"
 DETAIL, METRICS = "mart_contract_detail", "Indicadores"
 # Shared 1280×720 grid: header, two filter rows, an action toolbar, then the body.
 FILTER_Y, FILTER_H, DATE_Y, TOOLBAR_Y, BODY_Y, BODY_END = 100, 62, 166, 234, 274, 680
+# Evidence actions are reached after the content they act on.
+ACTIONS = ("drill", "month-drill", "open-source", "back", "back-month")
+# Desktop 2.159 gave first keyboard focus to the highest tabOrder on every page.
+TAB_DESCENDING = True
 NAMES = (
     "Panorama",
     "Entidades y proveedores",
@@ -143,6 +147,10 @@ class Report:
             ),
             "padding": entry({k: literal(padding) for k in ("left", "right", "top", "bottom")}),
         }
+        if not framed:
+            # Text and buttons need no "More options" header in reading view; data
+            # visuals keep it for table access. Desktop edit mode still shows it.
+            vco["visualHeader"] = entry({"show": literal(False)})
         if kind not in ("textbox", "actionButton", "slicer", "cardVisual"):
             vco["title"] = entry(
                 {
@@ -808,10 +816,33 @@ class Report:
                 name,
             )
 
+    def keyboard_sequence(self, page: int) -> list[str]:
+        """Approved focus order: header, filters, toolbar, content, actions, footnote."""
+
+        def band(key: str) -> int:
+            y = self.visuals[page][key]["position"]["y"]
+            if key == "footer":
+                return 5
+            if key in ACTIONS:
+                return 4
+            return 0 if y < FILTER_Y else 1 if y < TOOLBAR_Y else 2 if y < BODY_Y else 3
+
+        # Within a band, creation order keeps each column's reading order.
+        return sorted(self.visuals[page], key=band)
+
+    def apply_keyboard_order(self) -> None:
+        for page in self.visuals:
+            sequence = self.keyboard_sequence(page)
+            for index, key in enumerate(sequence):
+                rank = len(sequence) - index if TAB_DESCENDING else index + 1
+                self.visuals[page][key]["position"]["tabOrder"] = rank * 1000
+
     def write(self) -> None:
         def save(path: Path, value: dict) -> None:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
+
+        self.apply_keyboard_order()
 
         for index, name in enumerate(NAMES):
             page = {
