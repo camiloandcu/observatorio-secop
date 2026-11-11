@@ -386,7 +386,7 @@ class Report:
                 (DETAIL, "supplier_name", "Proveedor"),
                 (DETAIL, "signing_date", "Firma"),
                 (DETAIL, "Status Label", "Estado"),
-                (METRICS, "Contract Row Value Display", "Valor (COP)", True),
+                (METRICS, "Contract Row Value Exact COP", "Valor (COP)", True),
                 (DETAIL, "contract_key", "ID"),
             ],
             bounds,
@@ -1334,7 +1334,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             (DETAIL, "signing_month", "Mes de firma"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value Display", "Valor (COP)", True),
+            (METRICS, "Contract Value Exact COP", "Valor (COP)", True),
         ],
         (28, BODY_Y, 602, half),
     )
@@ -1351,7 +1351,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             ("dim_municipality", "Municipality Label", "Municipio"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value Display", "Valor (COP)", True),
+            (METRICS, "Contract Value Exact COP", "Valor (COP)", True),
         ],
         (650, BODY_Y, 602, half),
     )
@@ -1370,7 +1370,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             ("dim_modality", "Modality Label", "Modalidad"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value Display", "Valor (COP)", True),
+            (METRICS, "Contract Value Exact COP", "Valor (COP)", True),
         ],
         (28, BODY_END - half, 602, half),
     )
@@ -1389,7 +1389,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             ("dim_entity", "Entity Label", "Entidad"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value Display", "Valor (COP)", True),
+            (METRICS, "Contract Value Exact COP", "Valor (COP)", True),
             (METRICS, "Count Identity Coverage", "Cobertura conocida", True),
         ],
         (28, BODY_Y, 756, 506 - BODY_Y),
@@ -1409,7 +1409,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             (DETAIL, "Supplier Reason Presentation", "Motivo"),
             (METRICS, "Unknown Supplier Count", "Contratos", True),
-            (METRICS, "Unknown Supplier Value Display", "Valor (COP)", True),
+            (METRICS, "Unknown Supplier Value Exact COP", "Valor (COP)", True),
         ],
         (796, BODY_Y + 76, 456, 506 - BODY_Y - 76),
     )
@@ -1454,7 +1454,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             (DETAIL, "Status Label", "Estado fuente"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value Display", "Valor (COP)", True),
+            (METRICS, "Contract Value Exact COP", "Valor (COP)", True),
         ],
         (28, 428, 602, BODY_END - 428),
     )
@@ -1466,7 +1466,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         [
             (DETAIL, "Supplier Reason Presentation", "Motivo del proveedor"),
             (METRICS, "Contract Count", "Contratos", True),
-            (METRICS, "Contract Value Display", "Valor (COP)", True),
+            (METRICS, "Contract Value Exact COP", "Valor (COP)", True),
         ],
         (650, 428, 602, BODY_END - 428),
     )

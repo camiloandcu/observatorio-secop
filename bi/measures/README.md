@@ -5,7 +5,7 @@
 `gold-hhi-policy-v1` binding. They contain definitions, not imported data or
 credentials. Report labels are Spanish; measure names remain stable English
 identifiers for report bindings and reconciliation queries. The current layer
-contains 83 measures. When creating new measures through MCP, omit the read/type
+contains 86 measures. When creating new measures through MCP, omit the read/type
 metadata `dataType`; the server infers it from the expression.
 
 ## Required model
@@ -91,9 +91,11 @@ See [Gold analytics](../../docs/gold-analytics.md) for population and source lim
 Native application, DAX validation, SQL reconciliation and accessibility evidence
 are required separately; definitions alone establish none of those results.
 
-Money cards and ordinary tables use backend-formatted text to avoid cent loss
-when a visual serializes very large numeric values. The supplier ranking keeps
-its numeric measure projected for monetary sorting; a dynamic format expression
-provides a quoted exact COP label. Numeric expressions and denominators remain
-unchanged. Native rendering and ordering must validate this presentation layer.
+Money cards use backend-formatted text to avoid cent loss when a visual
+serializes very large numeric values. Every table column of COP instead projects
+a numeric measure (the supplier ranking value and the three `... Exact COP`
+measures) so that sorting compares amounts rather than text; a dynamic format
+expression provides the quoted exact COP label. Numeric expressions and
+denominators remain unchanged. Native rendering and ordering must validate this
+presentation layer.
 See [dynamic measure formats](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-dynamic-format-strings).
