@@ -93,6 +93,21 @@ limits, always alongside text. `tests/bi/test_layout.py` checks that visuals sta
 on the canvas, text boxes are tall enough for their font and simultaneously
 visible visuals never overlap, including the alternate views and interval mode.
 
+### Reference screens
+
+These captures use the synthetic test publication (13 contracts, invented
+entities and suppliers), so every amount is test data. They show the expected
+layout and states, not real procurement results.
+
+| Page | What to check |
+|---|---|
+| [Panorama](../docs/images/dashboard/01-panorama.png) | Scope, Import dates, reference indicators and monthly trends |
+| [Contratos](../docs/images/dashboard/02-contratos.png) | Full-width contract list with exact COP and the **Ver contrato** action |
+| [Entidades y proveedores](../docs/images/dashboard/03-entidades-y-proveedores.png) | HHI unavailable with several entities, partial identity coverage and the ranking |
+| [Calidad](../docs/images/dashboard/04-calidad.png) | Publication-level controls that ignore filters, reference contracts and acquisition lanes |
+| [Detalle contractual](../docs/images/dashboard/05-detalle-contractual.png) | Received filters and a disallowed source link shown as unavailable |
+| [Contratos del mes](../docs/images/dashboard/06-contratos-del-mes.png) | February list reached from a chart bar, with its return action |
+
 ## Model and filters
 
 The nine imported tables are contract detail, five dimensions, global quality,
