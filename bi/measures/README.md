@@ -5,7 +5,7 @@
 `gold-hhi-policy-v1` binding. They contain definitions, not imported data or
 credentials. Report labels are Spanish; measure names remain stable English
 identifiers for report bindings and reconciliation queries. The current layer
-contains 82 measures. When creating new measures through MCP, omit the read/type
+contains 83 measures. When creating new measures through MCP, omit the read/type
 metadata `dataType`; the server infers it from the expression.
 
 ## Required model

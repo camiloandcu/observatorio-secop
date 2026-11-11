@@ -770,5 +770,14 @@
     "displayFolder": "Presentation",
     "description": "Exact observed Currency for one contract row; blank for missing amount or ambiguous contract context.",
     "isHidden": false
+  },
+  {
+    "tableName": "Indicadores",
+    "name": "Retained Observation Display",
+    "expression": "VAR _Retained = [Retained Observation Count]\nVAR _Unknown = [Legacy Unassessed Count] + [Indeterminate Observation Count]\nRETURN\n    SWITCH ( TRUE (),\n        [Selection State] <> \"AVAILABLE\", \"No disponible\",\n        [Contract Count] = 0, \"Sin contratos\",\n        _Unknown > 0 && _Retained = 0, \"Sin determinar\",\n        _Unknown > 0, FORMAT ( _Retained, \"#,0\", \"es-CO\" ) & \" contratos; \" & FORMAT ( _Unknown, \"#,0\", \"es-CO\" ) & \" sin determinar\",\n        FORMAT ( _Retained, \"#,0\", \"es-CO\" ) & \" contratos\"\n    )",
+    "dataType": "String",
+    "displayFolder": "Presentation",
+    "description": "Observed retained contracts; explicitly indeterminate if historical or temporal evidence is unavailable. Mixed references disclose both confirmed and indeterminate counts.",
+    "isHidden": false
   }
 ]

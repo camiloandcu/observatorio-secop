@@ -441,7 +441,7 @@ class Report:
             MUTED,
             field(METRICS, "Import Label", True),
         )
-        self.text(
+        footer = self.text(
             page,
             "footer",
             ("Datos e importes de prueba. " if synthetic else "")
@@ -452,19 +452,12 @@ class Report:
             MUTED,
         )
         if page == 1:
-            self.text(
-                page,
-                "identity-help",
-                "Porcentajes de contratos y de COP de la referencia seleccionada con proveedor "
-                "identificable.\n"
-                + ("Datos e importes de prueba. " if synthetic else "")
-                + "COP: pesos colombianos observados, sin ajuste por inflación. "
-                "Municipio de registro. Los periodos pueden revisarse.",
-                (28, 682, 1224, 32),
-                9,
-                MUTED,
+            paragraph = footer["visual"]["objects"]["general"][0]["properties"]["paragraphs"][0]
+            paragraph["textRuns"][0]["value"] = (
+                ("Datos e importes de prueba. " if synthetic else "")
+                + "Cobertura de referencia: contratos/COP con proveedor identificable. "
+                "COP sin ajuste por inflación; municipio de registro; periodos revisables."
             )
-            self.visuals[page].pop("footer")
         if page == 3:
             self.button(page, "back", "Volver a la lista", "Back", (28, 131, 220, 38))
             self.text(
@@ -977,14 +970,14 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
         (
             "count-coverage",
             "Count Identity Coverage",
-            "% contratos con proveedor identificado",
+            "% contratos con proveedor conocido",
             640,
             300,
         ),
         (
             "value-coverage",
             "Value Identity Coverage",
-            "% valor con proveedor identificado",
+            "% valor con proveedor conocido",
             952,
             300,
         ),
@@ -1151,7 +1144,7 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             ("Contract Count", "Contratos de referencia"),
             ("Missing Signature Count", "Sin firma"),
             ("Missing Source Update Count", "Sin actualización fuente"),
-            ("Retained Observation Count", "Válida anterior retenida"),
+            ("Retained Observation Display", "Válida anterior retenida"),
         )
     ):
         r.metric(
@@ -1161,6 +1154,9 @@ def generate(folder: Path, *, synthetic: bool = False) -> None:
             title,
             (780 + (index % 2) * 242, 316 + (index // 2) * 76, 230, 68),
         )
+    r.visuals[2]["reference-3"]["visual"]["objects"]["value"][0]["properties"]["fontSize"] = (
+        literal(12)
+    )
     r.text(
         2,
         "supplier-diagnostics",
