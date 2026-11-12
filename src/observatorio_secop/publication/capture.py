@@ -143,6 +143,10 @@ def capture_inputs(
                 sql.SQL("CREATE TABLE {} AS SELECT * FROM {}{}").format(target, source, where),
                 parameters,
             )
+            # CTAS starts without planner statistics.  The downstream dbt graph
+            # reads these snapshots immediately, before autovacuum can analyze
+            # them, including one-row control tables and empty link tables.
+            cursor.execute(sql.SQL("ANALYZE {}").format(target))
             cursor.execute(sql.SQL("REVOKE ALL ON {} FROM PUBLIC").format(target))
             cursor.execute(
                 sql.SQL("GRANT SELECT ON {} TO secop_publication_builder").format(target)

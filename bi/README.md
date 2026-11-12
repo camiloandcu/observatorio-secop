@@ -1,0 +1,300 @@
+# Contract analytics dashboard
+
+Native Power BI Desktop report over one validated SECOP publication. The four
+pages are **Panorama**, **Contratos**, **Entidades y proveedores** and **Calidad**, with a hidden
+contract drill-through page and a hidden month drill-through page. Labels are Spanish; file and measure identifiers
+are stable English names.
+
+The report explores observed contracts and concentration. It does not identify
+wrongdoing, represent all Antioquia procurement, or provide a priority score.
+
+## Reconstruct a local project
+
+Use the project's Python3.12 environment, Node20+ and Power BI Desktop on Windows.
+The generator pins Power BI Report Authoring CLI0.5.0. The current native test
+environment is Desktop2.159.1231.0, compatibility1606; report schema versions are
+recorded in the generated definitions. Other Desktop versions need verification.
+No Power BI Service account is required. Use `--name observatorio-secop-us09`
+when generating a separately named project; keep its PBIP and Report folder stems
+consistent for Desktop tooling.
+
+1. Obtain an existing validated publication and credentials for `secop_bi_reader`
+   through the [publication procedure](../docs/analytical-publication.md).
+   Do not put operator credentials into Desktop.
+2. Resolve **once** using the reader environment. Keep the resulting descriptor
+   private, and build immediately; its server-defined lifetime is one hour:
+
+   ```bash
+   uv run --locked --extra warehouse secop-publication resolve \
+     > reports/publication-descriptor.json
+   python -m bi.build \
+     --descriptor reports/publication-descriptor.json \
+     --server '<Windows-reachable-host>:<port>' \
+     --database '<publication-database>' \
+     --output reports/dashboard-project
+   ```
+
+3. Copy the complete generated project to a Windows-local folder. Open its
+   `observatorio-secop.pbip` in Desktop. Keep the `.Report` and `.SemanticModel`
+   folders together. The output directory must be new or empty; the generator
+   refuses to overwrite existing Desktop state.
+4. In Desktop, enter the reader credentials at the PostgreSQL prompt. Approve
+   only the generated read-only SQL for the chosen server/database. Run native
+   **Home → Refresh** and wait for completion without pressing Cancel.
+5. Check the imported publication ID, observation UTC, Import start time,
+   coverage and contract totals. A generated project contains definitions only;
+   it is not evidence of a successful Import.
+6. Save the local project after successful validation. Keep a backup of the
+   complete project/cache or local workbook before changing its definitions.
+   Desktop may convert `model.bim` to a TMDL `definition/` folder on save.
+
+For synthetic fixtures, add `--synthetic` to the build command. Every page then
+shows **Datos de prueba**; these are test records, not actual
+procurement. Do not present fixture captures as live source evidence.
+
+Generated projects, credentials, caches, model data and binary workbooks stay
+local. Use an ignored output location such as `reports/`. Never commit `.pbi`,
+`.pbix`, connection files, descriptors or screenshots containing private data.
+
+## Selecting entity and period
+
+Use the synchronized **Entidad** and **Mes de firma** selectors for a persistent
+reference across pages. Entity rows and chart bars allow comparison; a visual
+selection is local to its page. The month selector intersects the signing mode
+and any interval: clearing the month restores the mode's ordinary behavior. A
+selected month excludes missing signatures, so combining it with **Solo sin
+firma** has no matching contracts. Clear the month to inspect missing dates.
+
+On **Panorama**, **Ver contratos del mes** can also open the list for a selected
+bar as a local exploration. Returning may clear that bar selection; use the
+month selector when the period must remain active across navigation. The month
+list retains the month received by drill-through; return to change that month.
+Use **Volver a la lista** in contract detail to return to the calling list.
+Synchronized entity and period filters remain active; select the contract row
+again to reopen its detail.
+On the main pages, **Restablecer** clears selections and returns the report to
+its initial views and date mode without changing the publication.
+
+## Page layout
+
+Every page uses the same 1280×720 grid. The header holds the page title, the
+navigation (the current page is shown in dark fill), the publication scope,
+coverage state and Import dates. Below it are two filter rows: the synchronized
+selectors with **Restablecer**, then the signing-date mode and **Proveedor
+destacado**. A toolbar row above the content carries the page's guidance, its
+primary action (**Ver contrato**, **Ver contratos del mes** or **Abrir proceso
+en SECOP II**, in solid blue; the source action turns grey and names the
+unavailable state when no allowed link exists) and the alternate-view buttons. Footnotes on COP,
+geography and revisions stay at the bottom.
+
+Colors follow the approved palette: background `#F4F6F8`, white bordered
+surfaces, ink `#183047`, selection blue `#155E75` and amber `#875A10` for scope
+limits, always alongside text. `tests/bi/test_layout.py` checks that visuals stay
+on the canvas, text boxes are tall enough for their font and simultaneously
+visible visuals never overlap, including the alternate views and interval mode.
+
+### Reference screens
+
+These captures use the synthetic test publication (13 contracts, invented
+entities and suppliers), so every amount is test data. They show the expected
+layout and states, not real procurement results.
+
+| Page | What to check |
+|---|---|
+| [Panorama](../docs/images/dashboard/01-panorama.png) | Scope, Import dates, reference indicators and monthly trends |
+| [Contratos](../docs/images/dashboard/02-contratos.png) | Full-width contract list with exact COP and the **Ver contrato** action |
+| [Entidades y proveedores](../docs/images/dashboard/03-entidades-y-proveedores.png) | HHI unavailable with several entities, partial identity coverage and the ranking |
+| [Calidad](../docs/images/dashboard/04-calidad.png) | Publication-level controls that ignore filters, reference contracts and acquisition lanes |
+| [Detalle contractual](../docs/images/dashboard/05-detalle-contractual.png) | Received filters and a disallowed source link shown as unavailable |
+| [Contratos del mes](../docs/images/dashboard/06-contratos-del-mes.png) | February list reached from a chart bar, with its return action |
+
+## Model and filters
+
+The nine imported tables are contract detail, five dimensions, global quality,
+publication metadata and ImportContext. Metadata derives scope dates and extracts
+publication-level acquisition coverage once from a bounded one-row detail read.
+Five additional calculated tables supply
+measures and disconnected supplier/date controls. Five active single-direction
+relationships filter detail from its dimensions; global evidence and supplier
+focus remain disconnected.
+
+The analytical layer contains 89 measures. Alternate views on the same pages
+expose monthly tables, municipalities, entity summaries and quality diagnostics.
+The **Gráficos / Tablas**, **Proveedores / Entidades**,
+**Publicación / Diagnóstico** and **Contrato / Evidencia** buttons use scoped
+display-only bookmarks; their definitions do not capture slicer data.
+Synchronized selectors keep entity, period and highlighted supplier across pages
+and after returning from detail; see the keyboard notes for current limits.
+
+Contract evidence uses structured parsing of published, sanitized fields.
+The detail view retains one row per contract, lists all attributable rejection
+links, and provides wrapped tables for full filter context and warnings.
+Identity reasons remain explicit. Legacy unassessed conditions show unavailable
+counts rather than treating their structural zeros as evaluated evidence.
+
+- Reference **R** is entity, registered municipality, modality, contractual
+  status, calendar and explicit signing mode. All observed valid statuses remain
+  eligible; the report does not silently reinterpret them as awards.
+- Supplier focus **S** is set by the synchronized **Proveedor destacado**
+  selector. It changes highlighted contracts and supplier measures, while the
+  full comparison ranking, reference HHI and identity coverage remain R.
+- Global evidence **G** describes the imported publication. Contract filters do
+  not acquire attribution for global rejects or acquisition lanes.
+- Signing modes are all dates, interval `[start,end)` and missing only. A finite
+  interval excludes missing signatures; inactive endpoints are ignored. Filters
+  cannot recover records excluded from the publication's scope.
+
+COP values are nominal observed amounts. Municipality describes the entity's
+registration, not the location where spending occurred. Signing periods can be
+revised as later observations arrive. Missing, empty and valid zero values have
+different meanings. See [measure semantics](measures/README.md).
+
+## Quality control grains and filters
+
+Quality separates publication evidence (G), reference contracts selected by the
+synchronized filters (R), and contracts of the highlighted supplier within R (S).
+An unavailable historical control remains unavailable rather than becoming zero.
+
+| Visible control | Grain and numerator | Denominator or comparison | Effective filters |
+|---|---|---|---|
+| Observaciones recibidas | Acquired observations in G | Absolute input count | Fixed publication; no R/S filters |
+| Válidas / recibidas | Accepted observations in G | All input observations in G | Fixed publication; no R/S filters |
+| Rechazadas / recibidas | Rejected observations in G | All input observations in G | Fixed publication; no R/S filters |
+| Duplicadas / recibidas | Exact duplicate observations in G | All input observations in G | Fixed publication; no R/S filters |
+| Sustituidas / recibidas | Superseded observations in G | All input observations in G | Fixed publication; no R/S filters |
+| Contratos publicados | Unique retained contracts in G | Absolute output count | Fixed publication; no R/S filters |
+| Reconciliation state | Input, accepted, rejected, duplicate, superseded and output counts | Input = output + rejected + duplicate + superseded; accepted = input − rejected | Fixed publication; no R/S filters |
+| Adquisición por carril | Published ACQUISITION_LANE control and its numerator | Meaning/state/reason of that specific control; not a contract percentage | Fixed publication and lane; no R/S filters |
+| Contratos de referencia | Unique contracts in R | Absolute count | Entity, registered municipality, modality, status, signing month/date mode; no S reduction |
+| Sin firma / sin actualización fuente | Contracts in R missing the named field | Each is a count within R, not an observation rejection rate | Same R filters |
+| Válida anterior retenida | Contracts in R with an attributable retained observation | Count within R; unavailable historical evidence remains explicit | Same R filters |
+| Contratos destacados / valor destacado | Contracts and observed COP in S | Absolute count/value within R; Sin selección without an explicit single supplier | R plus highlighted supplier |
+| Selected-contract diagnostics | One selected contract and its published condition links | Contract-specific evidence; overlapping links are not extra contracts | Selected contract within its received filters |
+
+## Refresh and recovery
+
+Each imported query embeds the same frozen descriptor and a local copy of the
+[shared reader source](../docs/examples/publication-import.pq). There is no
+per-table resolution of latest. SQL arrays/JSON serialize to text; timezone-aware
+instants serialize explicitly as UTC; COP travels as exact text before fixed
+four-decimal conversion. A server-side sum-of-absolute-values bound rejects
+amounts or possible totals outside the fixed-decimal domain.
+
+The reader checks availability/server time before reading and obtains a fresh,
+relation-specific server clock after buffering all rows. Expired completion and
+cell-conversion errors fail the query, including empty-result operations.
+The completion query uses constant SQL with a bound per-evaluation nonce and
+checks its echo. This avoids changing SQL comments on every evaluation, which
+previously generated repeated native-query approvals. A new query can still
+require approval; do not disable the global security setting to hide that prompt.
+Repeated minimal native reads and a full Import verified parameter binding and
+advancing server timestamps. When the descriptor expires during a read, Desktop
+reports the refresh error and keeps the previous Import; follow the steps below.
+
+A failed refresh is communicated by Desktop. The report's loaded timestamp
+cannot describe an unsuccessful refresh. In the native fixture, a denied read
+preserved every previously imported table and its timestamp; always verify this
+for the current environment and keep a recoverable saved copy.
+
+1. Record the native error and close its summary. Avoid **View errors**, which
+   creates diagnostic queries and may leave a pending Power Query draft.
+2. For permission errors, have the operator restore the required publication
+   read privileges. For expiry/unavailable errors, explicitly choose a retained
+   publication and resolve a new descriptor. Never extend the old deadline.
+   A generic Desktop message such as “The change you were making failed to
+   apply” does not identify its cause. Inspect available error details and verify
+   the descriptor, server availability and reader privileges before retrying.
+   Preserve the saved Import while diagnosing; the message alone is not proof
+   that expiry occurred.
+3. Update the shared `PublicationDescriptor` literal in the existing model;
+   keep it fixed for the entire next native Refresh. Retain the reader/server
+   constants unless the intended connection actually changes.
+4. Retry the **whole** refresh. Confirm all table counts, IDs, times and totals
+   before saving. Do not apply only the successful subset or replace errors with
+   nulls. If the loaded state is uncertain, restore the saved project/workbook
+   and repeat the complete operation.
+   If a retry remains blocked despite a verified fresh descriptor and intact
+   prior Import, save that verified project, close and reopen it, confirm the
+   persisted descriptor, then run the whole Refresh again. Preserve the failed
+   attempt's diagnostics; reopening is a recovery step, not a diagnosis of its cause.
+
+Run only one test Desktop project at a time and close saved diagnostic worker
+processes before another Import. On the tested8GB host, accumulated evaluation
+workers exhausted Windows commit memory; closing them recovered enough headroom
+for a successful native refresh. Microsoft documents lower evaluation/concurrent
+job limits under Options → Data Load for machines under resource pressure.
+
+Updating on-disk definitions can discard the live Import. To reconstruct from a
+new descriptor, generate a separate project and retain the last valid one.
+Supported definition reload and model processing are distinct from native data
+refresh. XMLA processing alone does not prove Desktop Refresh behavior.
+
+## Reconciliation and review
+
+Use the same descriptor and installed compatible governed SQL code for both
+sides. For example, `secop-publication query --descriptor <file> --metric overview`
+returns the reference count, total and recomputed median. `--filters <json>`
+selects entity/date/status/modality; concentration uses the full reference even
+when a supplier is highlighted. See the publication guide for supported filters.
+
+In DAX Query view, compare exact monetary **text**, especially for large amounts:
+
+```dax
+EVALUATE
+ROW (
+    "Contracts", [Contract Count],
+    "COP", FORMAT ( [Contract Value COP], "0.00", "en-US" ),
+    "Median COP", FORMAT ( [Median Value COP], "0.0000", "en-US" ),
+    "HHI", [HHI],
+    "HHI state", [HHI State]
+)
+```
+
+Apply equivalent `TREATAS` entity/date/focus filters for each scenario. Compare
+money exactly; compare HHI/ratios with absolute tolerance1e-12. Do not compare
+large currency through a JSON client's floating-point number representation.
+
+Native synthetic-publication checks retained a large value of
+`90071992547409.93 COP`, a total of `90071992547639.96 COP` and an even-population
+median of `15.0150 COP`, exactly matching PostgreSQL. Separate native controls
+accepted individual/aggregate fixed-decimal boundaries and rejected overflows,
+including cancellation between positive and negative amounts. These checks
+establish measured numerical behavior, not real procurement values or capacity.
+
+Native verification includes publication activation during refresh, failure and
+retry, expiry, large cent-bearing values, half-cent median, empty/zero/missing
+states, reference/focus invariance, global-quality grains, safe source links,
+drill-through return, keyboard order and actual rendering. Passing source/schema
+checks is not native or human acceptance. Record unexecuted cases explicitly.
+
+Before relying on the report, a reviewer should complete Panorama → supplier
+comparison → highlighted contracts → detail → permitted source, then return and
+explain denominator, identity coverage, geography, COP and revisions. Repeat this
+journey after any change to pages or measures.
+
+For a keyboard review, use **Ctrl+F6** to move between the canvas and page tabs,
+then **Tab** to follow the report's focus order: header, navigation, filters,
+view buttons, content, evidence actions and footnote. **Ctrl+Right arrow** enters a
+visual or slicer; **Enter** selects and **Esc** exits its navigation levels.
+On page tabs, arrows/Tab and Enter or Space change pages. Use **Alt+Shift+F11**
+to inspect a visual's accessible data table. These are documented platform
+controls. In Desktop 2.159.1231.0 edit mode, forward **Tab** stops inside the
+first visual's header (**More options**); **Shift+Tab** still reaches every
+visual, in the reverse of that order.
+See Microsoft's [accessible report navigation](https://learn.microsoft.com/en-us/power-bi/explore-reports/desktop-accessibility-consuming-tools)
+and [accessible report design](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-accessibility-creating-reports).
+
+### Real-data check and its limits
+
+A complete bounded acquisition of SECOP II contracts for entities registered in
+Antioquia, signed in [2026-01-01, 2026-04-01), read 52,047 observations with
+the scope scan complete and no truncation. With the source-calendar date policy,
+52,005 unique contracts were published and 42 observations were rejected
+because their dates were out of order. The imported dashboard matched governed
+SQL on that publication for counts, exact COP, median and combined filters.
+
+The public source is mutable and the API does not provide a snapshot: a later
+acquisition of the same scope may return different rows, values or statuses, and
+recent periods may still be revised. Every figure in the dashboard describes
+the publication it imported, identified by its observation and Import dates,
+not the current state of SECOP II.

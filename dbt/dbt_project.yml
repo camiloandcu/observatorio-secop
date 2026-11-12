@@ -30,6 +30,7 @@ models:
       +incremental_strategy: delete+insert
       +on_schema_change: fail
       +schema: analytics
+      +post-hook: "ANALYZE {{ this }}"
     marts:
       +materialized: table
       +schema: analytics
@@ -38,6 +39,7 @@ models:
       +incremental_strategy: delete+insert
       +on_schema_change: fail
       +schema: analytics
+      +post-hook: "ANALYZE {{ this }}"
 
 vars:
   star_key_version: star_key_v1

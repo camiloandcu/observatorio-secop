@@ -57,7 +57,7 @@ El esquema completo está definido en `src/observatorio_secop/processing/silver/
 - trazabilidad: hash del payload, run, página, lane, secuencia, ordinal y fecha de observación Bronze;
 - calidad: advertencias y `signing_year` como partición.
 
-Las fechas aceptan exactamente `yyyy-MM-dd'T'HH:mm:ss.SSS`. Las fechas de negocio deben representar medianoche antes de convertirse a `date`. La fuente no declara zona horaria para `ultima_actualizacion`: se usa UTC como contexto reproducible de cálculo, pero el valor crudo y esa limitación permanecen en el manifiesto.
+Las fechas aceptan exactamente `yyyy-MM-dd'T'HH:mm:ss.SSS`. La política histórica `silver-v1` exige medianoche para las fechas de negocio. La política `silver-v2-calendar-date` valida el timestamp completo y conserva como `date` el día escrito por la fuente, independientemente de su hora, sin conversión de zona. En ambas políticas se conserva el valor crudo y se rechazan fechas imposibles o formatos no admitidos. La fuente no declara zona horaria para `ultima_actualizacion`: se usa UTC como contexto reproducible de cálculo, pero el valor crudo y esa limitación permanecen en el manifiesto.
 
 El escritor usa Parquet `TIMESTAMP_MICROS` para datos válidos y rechazados. `source_updated_at` conserva el valor de reloj fuente sin afirmar una zona conocida; `bronze_fetched_at_utc` representa un instante UTC. La anotación UTC que Spark puede incluir en Parquet no cambia esa distinción ni desplaza los valores a hora local.
 

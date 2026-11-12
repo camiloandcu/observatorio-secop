@@ -253,7 +253,7 @@ def _run_candidate_build(
     started = time.monotonic()
     deadline = started + timeout_seconds
     _prepare_schemas(config, publication_id, storage_budget_bytes, deadline=deadline)
-    directory = artifact_root / publication_id / uuid.uuid4().hex
+    directory = artifact_root.resolve() / publication_id / uuid.uuid4().hex
     target, logs, profiles = directory / "target", directory / "logs", directory / "profiles"
     profiles.mkdir(parents=True)
     _write_profile(profiles / "profiles.yml", publication_id)
