@@ -23,6 +23,7 @@ from observatorio_secop.processing.silver.config import (
     SilverConfig,
     TerritoryCatalog,
     load_territory_catalog,
+    validate_transformation_version,
 )
 from observatorio_secop.processing.silver.errors import PublicationError
 from observatorio_secop.processing.silver.models import WRITER_FORMAT_VERSION, SilverManifest
@@ -49,6 +50,7 @@ class SilverPipeline:
         clock: Clock = lambda: datetime.now(UTC),
         logger: EventLogger | None = None,
     ) -> None:
+        validate_transformation_version(config.transformation_version)
         self.config = config
         self.config_path = config_path
         self.catalog: TerritoryCatalog = load_territory_catalog(config.territory_catalog_path)

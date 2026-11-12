@@ -16,6 +16,13 @@ import yaml
 
 from observatorio_secop.processing.silver.errors import SilverConfigurationError
 
+TRANSFORMATION_VERSIONS = ("silver-v1", "silver-v2-calendar-date")
+
+
+def validate_transformation_version(version: str) -> None:
+    if version not in TRANSFORMATION_VERSIONS:
+        raise SilverConfigurationError(f"Unsupported Silver transformation_version: {version}")
+
 
 @dataclass(frozen=True)
 class TerritoryCatalog:
@@ -54,6 +61,9 @@ class SilverConfig:
     allow_empty_output: bool
     local_threads: int
     output_partitions: int
+
+    def __post_init__(self) -> None:
+        validate_transformation_version(self.transformation_version)
 
 
 def load_silver_config(path: Path, *, environment: Mapping[str, str] | None = None) -> SilverConfig:

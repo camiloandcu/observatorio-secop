@@ -105,18 +105,13 @@ def identity_coverage(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 entry = reasons.setdefault(reason, {"count": 0, "value_cop": Decimal("0.00")})
                 entry["count"] += 1
                 entry["value_cop"] += Decimal(str(row["contract_value_cop"]))
+        labels_by_code: dict[str | None, set[str]] = {}
+        for row in known:
+            name = row.get(f"{role}_name")
+            if name:
+                labels_by_code.setdefault(row.get(f"{role}_code"), set()).add(name)
         result[role] = {
-            "label_variant_groups": sum(
-                len(
-                    {
-                        row.get(f"{role}_name")
-                        for row in known
-                        if row.get(f"{role}_code") == code and row.get(f"{role}_name")
-                    }
-                )
-                > 1
-                for code in {row.get(f"{role}_code") for row in known}
-            ),
+            "label_variant_groups": sum(len(names) > 1 for names in labels_by_code.values()),
             "denominator": "accepted_deduplicated_contracts",
             "total_count": len(rows),
             "total_value_cop": str(total_value),

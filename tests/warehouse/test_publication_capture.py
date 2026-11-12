@@ -6,6 +6,7 @@ import os
 from argparse import Namespace
 from pathlib import Path
 
+import psycopg
 import pytest
 from psycopg import sql
 
@@ -22,7 +23,7 @@ from observatorio_secop.warehouse.loader import WarehouseLoader
 
 from .conftest import identity_row, population_row, write_identity_bundle, write_population_bundle
 from .snapshot_helpers import seed_registered
-from .test_publication_acceptance import BUDGET, _activate
+from .test_publication_acceptance import BUDGET, _activate, _candidate
 from .test_publication_acceptance import publication_database as _publication_database
 
 
@@ -44,6 +45,13 @@ def test_captured_graph_survives_warehouse_a_b_a_and_builds_only_a(capture_publi
     loader.load(a)
     value = store.reserve({})["publication_id"]
     metadata = capture.capture_inputs(config, a, value, storage_budget_bytes=BUDGET)
+    with capture._connect(config) as database:
+        estimate = database.execute(
+            "SELECT c.reltuples FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
+            "WHERE n.nspname=%s AND c.relname='contract_current'",
+            (f"candidate_{value}_input",),
+        ).fetchone()
+        assert estimate is not None and estimate[0] == 1
 
     def copied_rows():
         suffixes = (
@@ -127,6 +135,81 @@ def test_manifest_changed_after_verification_fails_before_database(
     )
     with pytest.raises(SilverBundleError, match="differs"):
         capture.capture_inputs(config, bundle, "b" * 32, storage_budget_bytes=100_000_000)
+
+
+@pytest.mark.skipif(
+    not os.environ.get("WAREHOUSE_TEST_DSN"), reason="Disposable PostgreSQL required"
+)
+def test_analyze_server_failure_rolls_back_capture_and_preserves_active_publication(
+    capture_publication_database, monkeypatch
+) -> None:
+    config, store, _ = capture_publication_database
+    previous, _, _ = _candidate(capture_publication_database, "analyze-prior", "100.00")
+    _activate(store, previous)
+    bundle = verify_current_bundle(config.silver_root)
+    descriptor = resolve(config)
+    prior_detail = read_publication(config, descriptor, "mart_contract_detail")
+    prior_metadata = store.inspect(previous)["metadata"]
+    active = store.inspect()["active"]
+
+    def warehouse_rows():
+        with capture._connect(config) as database:
+            return database.execute(
+                sql.SQL("SELECT to_jsonb(r) FROM {} r ORDER BY to_jsonb(r)::text").format(
+                    sql.Identifier(config.schema, config.contract_table)
+                )
+            ).fetchall()
+
+    original_rows = warehouse_rows()
+    failed = store.reserve({})["publication_id"]
+    original_metadata = store.inspect(failed)["metadata"]
+    namespace = f"candidate_{failed}_input"
+    analyze_calls = []
+    partial_tables = []
+    original_connect = capture._connect
+
+    class FailThirdAnalyze(psycopg.Cursor):
+        def execute(self, query, params=None, **kwargs):
+            text = query.as_string(self.connection) if isinstance(query, sql.Composable) else query
+            if isinstance(text, str) and text.startswith(f'ANALYZE "{namespace}".'):
+                analyze_calls.append(text)
+                if len(analyze_calls) == 3:
+                    # Observe real uncommitted CTAS copies, then make PostgreSQL
+                    # abort this transaction on ANALYZE of an absent relation.
+                    super().execute(
+                        "SELECT count(*) FROM pg_class c JOIN pg_namespace n "
+                        "ON n.oid=c.relnamespace WHERE n.nspname=%s AND c.relkind='r'",
+                        (namespace,),
+                    )
+                    partial_tables.append(self.fetchone()[0])
+                    query = sql.SQL("ANALYZE {}").format(
+                        sql.Identifier(namespace, "injected_absent_relation")
+                    )
+            return super().execute(query, params, **kwargs)
+
+    def fail_analyze_connect(*args, **kwargs):
+        connection = original_connect(*args, **kwargs)
+        connection.cursor_factory = FailThirdAnalyze
+        return connection
+
+    with monkeypatch.context() as fault:
+        fault.setattr(capture, "_connect", fail_analyze_connect)
+        with pytest.raises(psycopg.errors.UndefinedTable) as error:
+            capture.capture_inputs(config, bundle, failed, storage_budget_bytes=BUDGET)
+        assert error.value.sqlstate == "42P01"
+    assert len(analyze_calls) == 3
+    assert partial_tables == [3]
+    with capture._connect(config) as database:
+        assert (
+            database.execute("SELECT 1 FROM pg_namespace WHERE nspname=%s", (namespace,)).fetchone()
+            is None
+        )
+    assert store.inspect(failed)["metadata"] == original_metadata
+    assert store.inspect(failed)["state"] == "building"
+    assert warehouse_rows() == original_rows
+    assert store.inspect()["active"] == active
+    assert store.inspect(previous)["metadata"] == prior_metadata
+    assert read_publication(config, descriptor, "mart_contract_detail") == prior_detail
 
 
 @pytest.mark.skipif(

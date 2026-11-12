@@ -1,4 +1,10 @@
-with source as (
+with link_evidence as materialized (
+select silver_version_id, silver_manifest_sha256, contract_key,
+    jsonb_agg(evidence - 'winner_page_path' - 'rejected_page_path' order by link_id)
+        as attributable_rejection_evidence
+from {{ ref('stg_contract_observation_link') }}
+group by silver_version_id, silver_manifest_sha256, contract_key
+), source as (
 select f.*, s.contract_reference, s.quality_warning_codes,
     e.entity_name, e.entity_code, u.supplier_name, u.supplier_code,
     p.scope_id, p.coverage_state, p.coverage_known, p.receipt as coverage_receipt,
@@ -37,10 +43,8 @@ select contract_sk, contract_key, contract_id, contract_reference, process_id,
     bronze_run_id, bronze_row_ordinal, payload_sha256,
     condition_state,
     {{ gold_sanitized_condition('condition') }} as observation_condition,
-    (select coalesce(jsonb_agg(l.evidence - 'winner_page_path' - 'rejected_page_path' order by l.link_id),'[]'::jsonb)
-     from {{ ref('stg_contract_observation_link') }} l
-     where l.silver_version_id=source.silver_version_id and l.silver_manifest_sha256=source.silver_manifest_sha256
-       and l.contract_key=source.contract_key) as attributable_rejection_evidence,
+    coalesce(link_evidence.attributable_rejection_evidence,'[]'::jsonb)
+        as attributable_rejection_evidence,
     quality_warning_codes, quality_evidence_sha256,
     silver_version_id, silver_manifest_sha256, scope_id, coverage_state, coverage_known,
     jsonb_build_object('state',coverage_receipt->'state','basis',coverage_receipt->'basis',
@@ -55,3 +59,4 @@ select contract_sk, contract_key, contract_id, contract_reference, process_id,
     'COP_NOMINAL_OBSERVED'::text as value_unit,
     'SOURCE_CALENDAR_ZONE_UNDECLARED'::text as source_time_basis
 from source
+left join link_evidence using (silver_version_id, silver_manifest_sha256, contract_key)
