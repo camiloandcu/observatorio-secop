@@ -9,6 +9,7 @@ Elige una tarea. Ejecuta los comandos desde la raíz del repositorio; los datos,
 | Diagnosticar servicios y recuperar su estado | [Operación](guias/03_operacion.md) |
 | Ejecutar, reintentar o restaurar el flujo Airflow | [Pipeline](guias/04_pipeline.md) |
 | Explorar contratos y entender indicadores | [Dashboard](guias/05_dashboard.md) |
+| Exportar una publicación a un paquete privado verificable | [Exportación local](guias/09_exportacion_local.md) |
 
 ## Arquitectura implementada
 

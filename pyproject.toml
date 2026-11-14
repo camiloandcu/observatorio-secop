@@ -14,6 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
+secop-cloud-export = "observatorio_secop.cloud_export.cli:main"
 secop-source-profile = "observatorio_secop.source_profile.cli:main"
 secop-ingest = "observatorio_secop.ingestion.cli:main"
 secop-silver = "observatorio_secop.processing.silver.cli:main"
