@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -123,6 +124,7 @@ def verify_manifest_bundle(
     *,
     expected_hash: str | None = None,
     verify_refresh: bool = True,
+    spill_directory: Path | None = None,
     _seen: frozenset[Path] = frozenset(),
 ) -> VerifiedSilverBundle:
     resolved = manifest_path.resolve()
@@ -157,7 +159,11 @@ def verify_manifest_bundle(
         _mapping(manifest.get("counts"), "counts").get("output_rows"), "output_rows"
     )
     finished_at = _timestamp(manifest.get("finished_at_utc"), "finished_at_utc")
-    table = _read_table(manifest_path.parent / "data", data_files)
+    table = (
+        _read_table(manifest_path.parent / "data", data_files)
+        if spill_directory is None
+        else _read_table(manifest_path.parent / "data", data_files, spill_directory)
+    )
     _verify_table(
         table,
         version_id,
@@ -189,13 +195,15 @@ def verify_manifest_bundle(
         from observatorio_secop.warehouse.population_bundle import verify_population_bundle
 
         def verify_related(path: Path, checksum: str) -> VerifiedSilverBundle:
-            return verify_manifest_bundle(path, expected_hash=checksum, _seen=ancestors)
+            return verify_manifest_bundle(
+                path, expected_hash=checksum, _seen=ancestors, spill_directory=spill_directory
+            )
 
         coverage, reconciliation, summaries, links = verify_population_bundle(
             table, manifest, manifest_path, verify_related
         )
     elif verify_refresh:
-        _verify_refresh(table, manifest, manifest_path)
+        _verify_refresh(table, manifest, manifest_path, spill_directory)
     from observatorio_secop.warehouse.quality import verify_quality_summary
 
     quality_summary = verify_quality_summary(manifest, manifest_path.parent)
@@ -216,7 +224,9 @@ def verify_manifest_bundle(
     )
 
 
-def _read_table(data_path: Path, files: tuple[Path, ...]) -> pa.Table:
+def _read_table(
+    data_path: Path, files: tuple[Path, ...], spill_directory: Path | None = None
+) -> pa.Table:
     try:
         partitioning = ds.partitioning(
             pa.schema([pa.field("signing_year", pa.string())]), flavor="hive"
@@ -225,12 +235,12 @@ def _read_table(data_path: Path, files: tuple[Path, ...]) -> pa.Table:
         for path in files:
             # Read each physical schema before combining: a dataset-wide target can
             # silently coerce later fragments to the first fragment's precision.
-            table = ds.dataset(
+            dataset = ds.dataset(
                 [str(path)],
                 format="parquet",
                 partitioning=partitioning,
                 partition_base_dir=str(data_path),
-            ).to_table()
+            )
             parquet = pq.ParquetFile(path)
             legacy_names = [
                 parquet.schema.column(i).path
@@ -243,8 +253,43 @@ def _read_table(data_path: Path, files: tuple[Path, ...]) -> pa.Table:
                 if legacy_names
                 else None
             )
-            tables.append(normalize_timestamps(table, reference))
-        return pa.concat_tables(tables)
+            if spill_directory is None:
+                tables.append(normalize_timestamps(dataset.to_table(), reference))
+                continue
+            # Private caller-owned scratch stays outside export packages. Arrow IPC
+            # keeps verified values on disk; mapping avoids materializing all columns.
+            with tempfile.NamedTemporaryFile(
+                dir=spill_directory, suffix=".arrow", delete=False
+            ) as f:
+                scratch = Path(f.name)
+            offset = 0
+            writer = None
+            try:
+                with pa.OSFile(str(scratch), "wb") as sink:
+                    for batch in dataset.to_batches(batch_size=1000, use_threads=False):
+                        table = pa.Table.from_batches([batch])
+                        ref = (
+                            reference.slice(offset, batch.num_rows)
+                            if reference is not None
+                            else None
+                        )
+                        table = normalize_timestamps(table, ref)
+                        if writer is None:
+                            writer = pa.ipc.new_file(sink, table.schema)
+                        writer.write_table(table)
+                        offset += batch.num_rows
+                    if writer is None:
+                        table = normalize_timestamps(dataset.head(0), reference)
+                        writer = pa.ipc.new_file(sink, table.schema)
+                    writer.close()
+                tables.append(pa.ipc.open_file(pa.memory_map(str(scratch), "r")).read_all())
+            except BaseException:
+                scratch.unlink(missing_ok=True)
+                raise
+        result = pa.concat_tables(tables)
+        if spill_directory is not None:
+            pa.default_memory_pool().release_unused()
+        return result
     except (OSError, pa.ArrowException) as error:
         raise SilverBundleError(f"Could not read published Silver Parquet: {error}") from error
 
@@ -306,20 +351,30 @@ def _verify_identity(table: pa.Table, manifest: dict[str, Any]) -> None:
             )
         ):
             raise ValueError("Silver identity refresh input-purpose evidence is missing or invalid")
-        for row in table.select(
+        identity_columns = table.select(
             [*IDENTITY_TEXT_FIELDS, "source_dataset_id", "bronze_run_id"]
-        ).to_pylist():
-            if row["source_dataset_id"] != "jbjy-vk9h" or row["bronze_run_id"] not in purposes:
-                raise ValueError("Silver identity dataset or winning Bronze lineage differs")
-            if not identity_record_valid(row, rules):
-                raise ValueError("Silver identity code/status/reason is inconsistent")
-            if (row["source_contract_sha256"], row["source_projection_version"]) not in profiles:
-                raise ValueError("Silver source profile is not registered")
+        )
+        for batch in identity_columns.to_batches(max_chunksize=1000):
+            for row in batch.to_pylist():
+                if row["source_dataset_id"] != "jbjy-vk9h" or row["bronze_run_id"] not in purposes:
+                    raise ValueError("Silver identity dataset or winning Bronze lineage differs")
+                if not identity_record_valid(row, rules):
+                    raise ValueError("Silver identity code/status/reason is inconsistent")
+                if (
+                    row["source_contract_sha256"],
+                    row["source_projection_version"],
+                ) not in profiles:
+                    raise ValueError("Silver source profile is not registered")
     except (OSError, ValueError, KeyError, TypeError, SourceContractError) as error:
         raise SilverBundleError(str(error)) from error
 
 
-def _verify_refresh(table: pa.Table, manifest: dict[str, Any], manifest_path: Path) -> None:
+def _verify_refresh(
+    table: pa.Table,
+    manifest: dict[str, Any],
+    manifest_path: Path,
+    spill_directory: Path | None = None,
+) -> None:
     refresh = manifest.get("refresh")
     if refresh is None:
         return
@@ -338,6 +393,7 @@ def _verify_refresh(table: pa.Table, manifest: dict[str, Any], manifest_path: Pa
             refresh.get("baseline_manifest_sha256"), "refresh baseline hash"
         ),
         verify_refresh=False,
+        spill_directory=spill_directory,
     )
     actual = key_set_digest(table.column("contract_key").to_pylist())
     expected = key_set_digest(baseline.table.column("contract_key").to_pylist())
