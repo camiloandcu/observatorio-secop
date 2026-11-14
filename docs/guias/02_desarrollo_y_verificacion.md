@@ -1,11 +1,143 @@
-# Integración continua y seguridad
+# Desarrollo y verificación
+
+Instala, comprueba y prepara cambios desde la raíz del repositorio. La receta de integración usa una base dedicada y desechable.
+
+## Desarrollo
+
+### Entorno Python reproducible
+
+`uv` 0.12.x es la única herramienta soportada para administrar Python y dependencias. `uv.lock` fija la resolución; los extras `dev`, `data` y `warehouse` instalan las herramientas de calidad, PySpark, Pandera, dbt y el cliente PostgreSQL con sus dependencias reproducibles.
+
+```bash
+make install
+```
+
+`make install` equivale a:
+
+```bash
+uv sync --locked --python 3.12 --extra dev --extra data --extra warehouse
+```
+
+### Calidad local
+
+```bash
+make format          # aplica formato
+make format-check    # comprueba formato sin editar
+make lint
+make typecheck
+make test
+make check-tracked   # falla si Git rastrea rutas prohibidas
+make quality         # controles locales; sin DSN puede omitir integración
+make ci              # integración estricta: requiere base desechable y Java 17
+make security        # escaneos de secretos e inventario de dependencias
+```
+
+Los equivalentes sin Make son:
+
+```bash
+uv run --locked --extra dev --extra data --extra warehouse ruff format --check .
+uv run --locked --extra dev --extra data --extra warehouse ruff check .
+uv run --locked --extra dev --extra data --extra warehouse mypy src/observatorio_secop/warehouse src/observatorio_secop/publication
+uv run --locked --extra dev --extra data --extra warehouse pytest
+uv run --locked --extra dev --extra data --extra warehouse python scripts/check_tracked_files.py
+```
+
+No es necesario activar `.venv`. GitHub Actions instala los runtimes y ejecuta `make ci` sobre PostgreSQL desechable, además de escaneos independientes. Consulta [integración continua y seguridad](#integración-continua-y-seguridad) para reproducir todos los controles, revisar omisiones críticas y entender los límites medidos.
+
+### Integración Silver real → PostgreSQL
+
+Las pruebas offline incluyen publicación real con Spark y verificación de su Parquet. Las pruebas relacionales requieren `WAREHOUSE_TEST_DSN` y se omiten si no está definido; esa omisión no prueba la carga PostgreSQL.
+
+Usa la receta única de [integración estricta](#reproducir-integración-estricta) de esta guía. Algunas pruebas eliminan schemas: nunca uses una base de trabajo. Para una comprobación focalizada, conserva el mismo DSN desechable y selecciona `tests/processing_silver/test_warehouse_boundary.py` y `tests/warehouse`. La suite incluye restauración A → B → A, conflictos, concurrencia y preservación transaccional.
+
+La suite de [identidad de plataforma](../referencia/04_identidad.md) usa datos sintéticos y el mismo
+DSN desechable. `tests/processing_silver/test_identity_pipeline.py` atraviesa Spark,
+PostgreSQL y dbt para perfiles Bronze antiguos/nuevos, nombres cambiantes/ausentes,
+códigos distintos con la misma etiqueta, recarga parcial, observaciones antiguas que
+pierden la selección y restauración. `tests/warehouse/test_identity_refresh.py` verifica
+límites, reanudación, IDs ausentes y checkpoint; los casos de migración comprueban DDL
+antes de un no-op y rollback conjunto de esquema/filas/metadatos. Ejecuta esos casos sin
+skips al aceptar una migración. El reporte agregado de la fuente está versionado; los
+tests no consultan Socrata. El `pythonpath` de pytest incluye `tests` para reutilizar
+los helpers de integración también al seleccionar un solo archivo.
+
+La cobertura de inventario reproduce un Parquet adicional con conteo total coherente y comprueba su rechazo antes de decodificar/conectar, incluso en particiones nuevas y rutas ocultas. Verifica rutas canónicas, enlaces simbólicos, tamaño/hash, duplicados y las reglas explícitas de `_SUCCESS`/CRC. Observa las rutas que recibe Arrow y las lecturas de referencia INT96 para demostrar que solo se decodifica el conjunto verificado. La variante PostgreSQL compara exactamente filas, registro, historial y estado activo antes/después de cada carga inválida. La salida Spark real incluye años 2025/2026 y `unknown`, marcadores y sidecars, y conserva carga/repetición sin cambios en ambos formatos soportados. Estos casos se incluyen en los comandos anteriores; omitir la base deja sin verificar la preservación relacional.
+
+### Actualizar dependencias
+
+Consulta [actualización compatible de dependencias](../referencia/06_dependencias.md) para
+verificar el grafo conjunto, las imágenes opcionales y migraciones de estado antes
+de actualizar servicios existentes. Los hallazgos de los escáneres siguen bloqueando CI. La migración Airflow 3 exige
+el [ensayo de copia y restauración](03_operacion.md#actualizar-o-recuperar-metadatos-airflow)
+antes de actualizar una base existente.
+
+### Contrato de la fuente SECOP II
+
+La validación habitual es completamente offline y utiliza una fixture pequeña:
+
+```bash
+make validate-source
+make test
+```
+
+La observación de la fuente es una operación manual separada de CI:
+
+```bash
+make check-source-live  # verifica columnas críticas con una muestra de 10 filas
+make profile-source     # vuelve a generar contrato, fixture y reporte para revisión
+```
+
+`make profile-source` consulta únicamente metadatos, agregaciones y muestras con límites configurados en `config/secop_source.yaml`. No necesita token, no descarga el histórico nacional y conserva los artefactos vigentes si la fuente falla.
+
+Después de regenerar, revisa juntos:
+
+- `contracts/secop_source.yaml`, consumible por código;
+- `tests/fixtures/secop_contracts.json`, con una fila segura por municipio del Valle de Aburrá;
+- `docs/data-source-profile.md`, resumen de la evidencia y sus limitaciones.
+
+### Estructura del repositorio
+
+```text
+src/observatorio_secop/  límites de ingesta, procesamiento, scoring y API
+dags/                    DAG de adquisición y publicación analítica
+dbt/                     modelo estrella, pruebas y catálogo analítico
+tests/                   pruebas y controles de plataforma
+infra/                   imágenes locales e infraestructura futura
+scripts/                 comandos operativos y de seguridad
+docs/                    documentación pública
+bi/                      constructor y medidas Power BI; nunca archivos .pbix
+.github/workflows/       integración continua
+```
+
+Los datos, modelos, `mlruns/`, `.env`, cachés y archivos `.pbix` no se versionan. El control `make check-tracked` falla si una ruta prohibida llegó al índice de Git.
+
+### Evidencia antes de un commit
+
+Registra los resultados, nunca credenciales ni el contenido completo de `.env`:
+
+```bash
+make quality
+make compose-config
+make up
+make health
+make up-airflow
+make up-mlflow
+make ps
+git status --short
+git diff --check
+git check-ignore -v .env data/example.parquet models/example.bin mlruns/example report.pbix
+```
+
+Los controles automatizados también cubren formato inválido, lint inválido, una prueba fallida, Docker no disponible, variables obligatorias ausentes y archivos prohibidos ya rastreados.
+
+## Integración continua y seguridad
 
 El workflow ejecuta calidad e integración real, dos controles de seguridad
 independientes y un job de runtimes opcionales. Un resultado aprobado exige todos: las pruebas offline sin PostgreSQL
 no acreditan integración. El tipado actual cubre únicamente
-`src/observatorio_secop/warehouse`; formato, lint y pruebas tienen alcance más amplio.
+`src/observatorio_secop/warehouse` y `src/observatorio_secop/publication`; formato, lint y pruebas tienen alcance más amplio.
 
-## Reproducir integración estricta
+### Reproducir integración estricta
 
 Instala uv 0.12.0, Python 3.12 y Java 17. `make install` usa el lock y los extras
 `dev`, `data` y `warehouse`. El workflow usa Ubuntu 24.04 y PostgreSQL 16.4, con
@@ -62,7 +194,7 @@ docker stop secop-ci-test-postgres
 `make quality` sigue siendo útil sin base para desarrollo offline; sus skips se
 muestran, pero no sustituyen `make ci` para verificar integración.
 
-## Inventario y evidencia de ejecución
+### Inventario y evidencia de ejecución
 
 `config/ci_integration.json` fija los casos críticos revisados y las familias cuya
 colección actual también es obligatoria. Cuando cambia un identificador, revisa el
@@ -91,7 +223,7 @@ uv run --locked --extra dev --extra data --extra warehouse \
   python scripts/ci_integration.py gate --report reports/ci/outcomes.json
 ```
 
-## Escaneos de seguridad
+### Escaneos de seguridad
 
 Los controles requieren acceso a las descargas de herramientas y al servicio público
 de advisories, sin una cuenta nueva ni tokens cloud. Los datos de prueba permanecen
@@ -131,7 +263,7 @@ rotación en su ámbito correspondiente. No se crea una baseline automática ni 
 actualizan dependencias como efecto del escaneo. Una migración incompatible requiere
 revisar su alcance antes de ejecutarla.
 
-## Permisos y privacidad
+### Permisos y privacidad
 
 Los jobs usan `contents: read`, checkout sin persistencia de credenciales, runners
 efímeros y acciones inmutables. No se usa ejecución privilegiada de código de PR,
@@ -143,7 +275,7 @@ perfiles, datos, Parquet, rechazos, dumps, salidas completas de dbt, workspace y
 planificación privada. Los controles del índice también rechazan archivos privados
 forzados mediante `git add -f`; `.gitignore` no basta por sí solo.
 
-## Presupuesto y diagnóstico
+### Presupuesto y diagnóstico
 
 Los límites iniciales son 30 minutos para calidad/integración y 10 minutos por
 escáner. Se contrastan con una ejecución completa real; un límite configurado no
@@ -170,7 +302,7 @@ No amplíes límites ni agregues excepciones silenciosamente.
 El build y smoke test de imagen API se incorporarán con el servicio API; este
 workflow no presenta los marcadores de ese servicio como una API funcional.
 
-## Compatibilidad de runtimes opcionales
+### Compatibilidad de runtimes opcionales
 
 El job `optional-runtimes` instala los seis extras del lock y verifica APIs mixtas,
 migración/restauración Airflow con metadatos sintéticos, tarea por API de ejecución,
@@ -178,11 +310,11 @@ autenticación y el lifecycle del Compose real con PostgreSQL MLflow. Usa única
 proyectos, bases y contenedores desechables; los reportes saneados se conservan siete
 días. La política de 25 minutos cubre instalación y descargas sin caché; revisar
 duración real y margen con cada migración. Consulta comandos, alcance y límites en
-[mantenimiento de dependencias](dependency-maintenance.md). No se publican backups,
+[mantenimiento de dependencias](../referencia/06_dependencias.md). No se publican backups,
 logs de servicios, credenciales ni archivos de configuración privados.
 
 
-## Replay real del pipeline
+### Replay real del pipeline
 
 `make pipeline-e2e` construye la imagen y ejecuta el gate sobre un proyecto Compose,
 metadata Airflow y warehouse desechables propios. El job `pipeline-e2e` espera los
@@ -204,4 +336,4 @@ duraciones, resultados conocidos, alcance de la medición y cleanup. Los snapsho
 de recursos observados no se presentan como picos garantizados. Diagnósticos, logs,
 configuración, credenciales y artefactos detallados permanecen privados. Revisa el
 resultado real y sus limitaciones; tener el gate configurado no prueba su ejecución.
-El [runbook](pipeline-orchestration.md) explica la operación manual y recuperación.
+El [runbook](04_pipeline.md) explica la operación manual y recuperación.

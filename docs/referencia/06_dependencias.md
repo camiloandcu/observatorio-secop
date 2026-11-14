@@ -92,7 +92,7 @@ JWT, DSN o backups. Una falla de cleanup impide declarar éxito.
 
 Estas pruebas no cubren todo estado histórico posible ni el pipeline orquestado de
 negocio. Después ejecuta `make ci` con Java 17 y PostgreSQL dedicado según la
-[guía de integración](continuous-integration.md): debe conservar precisión temporal,
+[guía de integración](../guias/02_desarrollo_y_verificacion.md): debe conservar precisión temporal,
 inventario, dinero decimal, identidad, población y restauración A → B → A. Los
 smokes no sustituyen esa integración ni los escaneos reales.
 
@@ -105,7 +105,7 @@ cambio en tu servicio. Las sondas automatizadas no migran la base de trabajo.
 
 Volver a una etiqueta o lock anterior no revierte esquemas: el rollback requiere
 restaurar el estado correspondiente. El Compose conserva contraseñas y JWT en un
-volumen local; sigue la [guía operativa](operations.md) para acceso y recuperación.
+volumen local; sigue la [guía operativa](../guias/03_operacion.md) para acceso y recuperación.
 No copies credenciales de fixture ni archivos de prueba a servidores compartidos.
 
 Registra versiones, hashes, plataforma, comandos y límites. Ejecuta `make security`

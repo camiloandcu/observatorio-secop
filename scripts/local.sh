@@ -130,7 +130,7 @@ case "${command_name}" in
   up-airflow)
     validate_env
     if ! grep -Eq '^AIRFLOW_IMAGE=apache/airflow:3\.3\.2-python3\.12$' "${ENV_FILE}"; then
-      echo "Airflow requires the reviewed 3.3.2-python3.12 image. Follow docs/operations.md migration/backup steps before updating AIRFLOW_IMAGE; do not overwrite your .env." >&2
+      echo "Airflow requires the reviewed 3.3.2-python3.12 image. Follow docs/guias/03_operacion.md migration/backup steps before updating AIRFLOW_IMAGE; do not overwrite your .env." >&2
       exit 1
     fi
     preflight

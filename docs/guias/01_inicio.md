@@ -47,7 +47,7 @@ make down
 
 `.env.example` contiene valores exclusivos para desarrollo local. No reutilices esas contraseñas fuera de este checkout ni agregues `.env` a Git.
 
-Para construir Silver y cargar el warehouse, ambos usan `data/silver/secop_contracts` por defecto. Los comandos Python no importan `.env` automáticamente: exporta sus variables en la shell que ejecutará el flujo, como muestra la [guía Silver](silver-quality.md#raíz-y-configuración-compartidas). Si ya tienes `.env`, revisa su `SILVER_ROOT` sin sobrescribir credenciales ni mover datos.
+Para construir Silver y cargar el warehouse, ambos usan `data/silver/secop_contracts` por defecto. Los comandos Python no importan `.env` automáticamente: exporta sus variables en la shell que ejecutará el flujo, como muestra la [guía Silver](../referencia/01_adquisicion_y_transformacion.md#raíz-y-configuración-compartidas). Si ya tienes `.env`, revisa su `SILVER_ROOT` sin sobrescribir credenciales ni mover datos.
 
 ## Servicios optativos
 
@@ -59,9 +59,9 @@ make up-mlflow
 make ps
 ```
 
-- Airflow queda disponible en `http://localhost:8080` y usa su propia base PostgreSQL. Usa Airflow 3 con LocalExecutor y procesos separados de API, scheduler y DAG processor; no contiene DAGs de negocio. La cuenta local `admin` requiere la contraseña generada descrita en [operación](operations.md#airflow-3-acceso-y-estado-local).
+- Airflow queda disponible en `http://localhost:8080` y usa su propia base PostgreSQL. Usa Airflow 3 con LocalExecutor y procesos separados de API, scheduler y DAG processor; el entorno aislado del pipeline de negocio se describe en la [guía del pipeline](04_pipeline.md). La cuenta local `admin` requiere la contraseña generada descrita en [operación](03_operacion.md#airflow-3-acceso-y-estado-local).
 - MLflow queda disponible en `http://localhost:5000`, usa PostgreSQL como backend y escribe artefactos locales en `mlruns/`, que Git ignora.
 
-Los puertos se pueden cambiar en `.env` si ya están ocupados. Continúa con la [guía de desarrollo](development.md) o consulta la [guía de operación](operations.md).
+Los puertos se pueden cambiar en `.env` si ya están ocupados. Continúa con la [guía de desarrollo](02_desarrollo_y_verificacion.md) o consulta la [guía de operación](03_operacion.md).
 
-Si conservas una instalación Airflow 2, sigue el [ensayo y recuperación de metadatos](operations.md#actualizar-o-recuperar-metadatos-airflow) antes de iniciar la nueva imagen. No sobrescribas tu `.env` ni migres la base de trabajo para probar compatibilidad.
+Si conservas una instalación Airflow 2, sigue el [ensayo y recuperación de metadatos](03_operacion.md#actualizar-o-recuperar-metadatos-airflow) antes de iniciar la nueva imagen. No sobrescribas tu `.env` ni migres la base de trabajo para probar compatibilidad.

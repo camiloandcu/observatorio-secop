@@ -95,7 +95,7 @@ modality, status and date values in a wrapped read-only table.
 
 Authoritative executable definitions: [metric catalog](../../contracts/gold_metrics.yaml),
 [policy](../../config/gold_policy.yaml), [governed SQL](../../dbt/macros/gold_queries.sql).
-See [Gold analytics](../../docs/gold-analytics.md) for population and source limits.
+See [Gold analytics](../../docs/referencia/02_warehouse_y_metricas.md) for population and source limits.
 Native application, DAX validation, SQL reconciliation and accessibility evidence
 are required separately; definitions alone establish none of those results.
 

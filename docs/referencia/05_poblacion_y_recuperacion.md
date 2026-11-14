@@ -68,7 +68,7 @@ uv run secop-warehouse restore --version TARGET --manifest-sha256 TARGET_HASH \
 
 Los valores `CURRENT` pueden diferir entre almacenes. Si otro escritor cambió la selección, inspecciona el estado antes de repetir; no sustituyas automáticamente la identidad esperada. Una restauración no modifica el alcance persistente ni convierte una ausencia de fuente en eliminación.
 
-Los consumidores dbt disponen de `staging.stg_population_coverage`, `staging.stg_contract_observation_condition` y `staging.stg_contract_observation_link`. Los dos últimos mantienen separados el resumen 1:1 y la evidencia 1:N. Consulta [el modelo estrella](star-schema.md) para configurar PostgreSQL y dbt.
+Los consumidores dbt disponen de `staging.stg_population_coverage`, `staging.stg_contract_observation_condition` y `staging.stg_contract_observation_link`. Los dos últimos mantienen separados el resumen 1:1 y la evidencia 1:N. Consulta [el modelo estrella](02_warehouse_y_metricas.md) para configurar PostgreSQL y dbt.
 
 ## Reservas estables para orquestación
 

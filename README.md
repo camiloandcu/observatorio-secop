@@ -1,90 +1,39 @@
 # Observatorio SECOP
 
-El Observatorio SECOP transforma registros públicos de contratos SECOP II de entidades registradas en Antioquia en información comprensible sobre contratación y prioridades de revisión humana. El valor analizado es el total contractual nominal observado en COP; la ubicación corresponde al registro de la entidad y no identifica necesariamente el lugar de ejecución o gasto.
+Pipeline de ingeniería de datos para convertir contratos electrónicos SECOP II de entidades registradas en Antioquia en analítica trazable. Permite explorar contratos, proveedores y concentración en Power BI Desktop, desde una publicación validada y versionada.
 
-## El problema
+Desarrollado por **Camilo Cuellar** como proyecto de portafolio de ingeniería de datos. Contacto: [LinkedIn](https://www.linkedin.com/in/camiloandcu/).
 
-La información contractual está disponible, pero su volumen, variabilidad y dispersión dificultan responder preguntas básicas de manera consistente: cuánto se contrata, con quién, bajo qué modalidades, cómo cambia el comportamiento en el tiempo y dónde aparecen patrones atípicos.
+## Qué puedes evaluar
 
-Esa dificultad limita el seguimiento ciudadano y obliga a invertir demasiado tiempo en reunir, limpiar y reconciliar datos antes de poder analizarlos.
+- **Adquisición acotada:** páginas fuente y manifiestos inmutables, presupuestos de filas/solicitudes, checkpoints y reanudación explícita.
+- **Calidad e identidad:** PySpark tipifica y deduplica, conserva códigos de entidad/proveedor y separa rechazos sin sustituir la última publicación válida por una candidata fallida.
+- **Analítica reproducible:** PostgreSQL y dbt construyen estrella y cinco marts con fórmulas gobernadas, dinero decimal y linaje hasta la observación fuente.
+- **Publicación coherente:** validación antes de activar, lectores de solo lectura fijados a una versión y restauración A → B → A.
+- **Orquestación y BI:** Airflow ejecuta los comandos del pipeline; Power BI Desktop importa una publicación identificada y permite explorar contratos, proveedores, calidad y evidencia.
 
-El flujo objetivo es el siguiente; las capacidades disponibles se detallan en el alcance actual:
+La [arquitectura implementada](docs/README.md#arquitectura-implementada) muestra cómo se conectan las capas. Los procedimientos y controles están en las [guías públicas](docs/README.md).
 
-```mermaid
-flowchart TD
-    A["<b>Problema de negocio</b><br/>'Hay demasiados contratos para revisar manualmente'"]
-    B["<b>SECOP II</b><br/>Datos públicos disponibles en Socrata"]
-    C["<b>Ingesta incremental acotada</b><br/>Adquirir observaciones según ventanas y límites explícitos"]
-    D["<b>BRONZE</b><br/>Copia cruda y trazable que sirve como evidencia"]
-    E["<b>PySpark</b><br/>Limpiar, tipificar, validar y deduplicar"]
-    F["<b>SILVER</b><br/>Datos limpios, tipificados, validados y deduplicados"]
-    G["<b>dbt + PostgreSQL</b><br/>Modelo de negocio"]
-    H["<b>Priorización / MLflow</b><br/>Evaluar y versionar señales de revisión"]
-    I["<b>Publicación analítica validada</b><br/>Estrella, indicadores y calidad"]
-    J["<b>Power BI</b><br/>Análisis visual de los datos"]
-    K["<b>FastAPI</b><br/>Consulta técnica de los datos"]
-    L["<b>Features retrospectivas</b><br/>Referencias y elegibilidad versionadas"]
-    M["<b>Scores y razones</b><br/>Compatibles con la publicación analítica"]
-    N["<b>S3 / Glue / Athena</b><br/>Exportación acotada validada"]
+## Ver el reporte y su evidencia
 
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    E --> F
-    F --> G
-    G --> I
-    I --> J
-    I --> K
-    I --> L
-    L --> H
-    H --> M
-    M --> J
-    M --> K
-    I --> N
-```
+La [guía del dashboard](docs/guias/05_dashboard.md) explica el recorrido: elegir entidad y periodo, comparar proveedores, interpretar HHI y abrir la evidencia de un contrato.
 
-Airflow orquestará los mismos comandos del pipeline. La analítica base seguirá disponible cuando no haya un modelo o scores compatibles. La etapa AWS será acotada y requiere autorización de acceso, recursos y costos.
+Las [capturas actuales](bi/README.md#reference-screens) usan **datos sintéticos**: 13 contratos con entidades y proveedores inventados. Muestran diseño e interacciones; sus cifras no describen contratación real.
 
-## La solución
+La [validación con datos reales de 2026Q1](bi/README.md#real-data-check-and-its-limits) documenta 52.005 contratos publicados a partir de una adquisición acotada por firma en `[2026-01-01, 2026-04-01)`, y la conciliación del Import con SQL de esa publicación. La fuente es mutable: otra adquisición puede producir resultados distintos. Capturas reales y video de presentación están en preparación. El reporte se usa en Desktop; no hay acceso interactivo público.
 
-El proyecto construye una ruta reproducible que transforma datos de SECOP II en:
+## Ejecutar y verificar
 
-- información contractual depurada y trazable;
-- indicadores comparables sobre valor nominal COP, volumen y concentración;
-- vistas para explorar entidades, proveedores, modalidades, municipios de registro y periodos de firma;
-- señales explicables que ayuden a priorizar contratos para revisión humana;
-- medios de consulta mediante productos analíticos y una API documentada.
+Empieza con la [preparación local](docs/guias/01_inicio.md). Para reconstruir el flujo aislado y observar sus tareas, sigue la [guía del pipeline](docs/guias/04_pipeline.md). La [construcción BI](bi/README.md) explica cómo generar el proyecto y validar el Import.
 
-La priorización es una ayuda para ordenar la revisión. Una señal alta NO demuestra fraude, corrupción, incumplimiento ni responsabilidad legal.
+La [guía de desarrollo y verificación](docs/guias/02_desarrollo_y_verificacion.md) reúne instalación, calidad, CI y seguridad. `make quality` puede omitir integración sin DSN; `make ci` requiere Java 17 y una base PostgreSQL dedicada y desechable. Los comandos de recuperación están en [operación](docs/guias/03_operacion.md) y las referencias por capa.
 
-## Alcance actual
+## Alcance y límites
 
-El repositorio cuenta con una base local reproducible, ingesta Bronze incremental acotada, una capa Silver tipificada con PySpark, carga y restauración de snapshots en PostgreSQL y un modelo estrella con dbt. La identidad de entidades y proveedores se conserva entre estas capas, con estados desconocidos explícitos y trazabilidad.
+Los montos son totales contractuales observados en **COP nominales**, no pagos ni gasto ejecutado. La geografía corresponde al **registro de la entidad**, no necesariamente al lugar de ejecución. Los periodos por firma describen el último estado observado y pueden revisarse.
 
-Los cinco [marts e indicadores Gold](docs/gold-analytics.md) están implementados como candidatos verificables, con catálogo de métricas, filtros gobernados y evidencia de calidad. Su construcción local no activa acceso de consumidores.
+La priorización con ML, la API FastAPI y la exportación acotada S3/Glue/Athena siguen pendientes. MLflow dispone de un entorno opcional; eso no acredita un modelo de priorización. No se presenta operación cloud permanente ni entrega integral del MVP.
 
-La [publicación analítica](docs/analytical-publication.md) construye en aislamiento, valida antes de activar y ofrece lecturas fijadas a una versión, permisos restringidos y recuperación.
+Una señal de revisión no establece fraude, corrupción ni responsabilidad. Tampoco se han validado adopción ni ahorro de tiempo con usuarios.
 
-El [dashboard Power BI](bi/README.md) dispone de definiciones textuales reproducibles para contratación, proveedores, calidad y evidencia contractual. Su validación final en Desktop y el recorrido humano siguen pendientes; las pruebas sintéticas no representan contratación real. La orquestación de negocio con Airflow, la priorización con MLflow, la API FastAPI y la exportación acotada a AWS están pendientes. Su avance puede seguirse en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).
-
-## Principios
-
-- Trazabilidad desde el dato publicado hasta el resultado presentado.
-- Criterios y fórmulas explícitos, reproducibles y verificables.
-- Separación clara entre hechos observados, indicadores y señales de priorización.
-- Uso responsable: las anomalías orientan preguntas, no producen acusaciones.
-- Protección de secretos, datos innecesarios y artefactos internos.
-- Costos y límites operativos visibles.
-
-## Documentación
-
-La [página de documentación](docs/README.md) organiza las guías según la necesidad:
-
-- [Primeros pasos](docs/getting-started.md) para preparar y levantar el entorno local.
-- [Guía de desarrollo](docs/development.md) para calidad, CI y estructura del repositorio.
-- [Guía de operación](docs/operations.md) para salud, logs, recuperación y limpieza.
-- [Transformación y calidad Silver](docs/silver-quality.md) para el esquema, reglas, rechazos y publicación local.
-- [Modelo estrella con dbt](docs/star-schema.md) para la carga relacional, dimensiones, hecho, pruebas y catálogo.
-
-Las historias y su avance se consultan en [GitHub Issues](https://github.com/camiloandcu/observatorio-secop/issues) y en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).
+El avance se consulta en [Issues](https://github.com/camiloandcu/observatorio-secop/issues) y en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).

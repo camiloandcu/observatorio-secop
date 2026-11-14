@@ -1,22 +1,43 @@
 # Documentación
 
-Este directorio reúne las guías públicas del Observatorio SECOP. Elige el punto de entrada según lo que necesites hacer.
+Elige una tarea. Ejecuta los comandos desde la raíz del repositorio; los datos, credenciales y proyectos Power BI permanecen locales.
 
-## Empezar
+| Necesito… | Guía |
+|---|---|
+| Preparar el entorno y comprobar servicios | [Inicio](guias/01_inicio.md) |
+| Cambiar código o reproducir CI | [Desarrollo y verificación](guias/02_desarrollo_y_verificacion.md) |
+| Diagnosticar servicios y recuperar su estado | [Operación](guias/03_operacion.md) |
+| Ejecutar, reintentar o restaurar el flujo Airflow | [Pipeline](guias/04_pipeline.md) |
+| Explorar contratos y entender indicadores | [Dashboard](guias/05_dashboard.md) |
 
-- [Primeros pasos](getting-started.md): requisitos para WSL2, instalación de herramientas e inicio rápido.
-- [Desarrollo](development.md): flujo con `uv`, comandos de calidad, CI, estructura y dependencias.
-- [Operación local](operations.md): servicios, health checks, logs, diagnóstico, recuperación y limpieza.
+## Arquitectura implementada
 
-## Verificación
+```mermaid
+flowchart LR
+    source[SECOP II / Socrata] --> bronze[Bronze: páginas y manifiestos]
+    bronze --> silver[PySpark: Silver Parquet y controles]
+    silver --> warehouse[PostgreSQL + dbt: estrella y marts]
+    warehouse --> publication[Publicación validada y versionada]
+    publication --> bi[Power BI Desktop: Import de solo lectura]
+    airflow[Airflow: comandos del pipeline] -.-> bronze
+    airflow -.-> silver
+    airflow -.-> publication
+```
 
-- [Perfil de la fuente SECOP II](data-source-profile.md): esquema observado, cobertura territorial, llave, watermark y limitaciones verificadas.
-- [Identidad de plataforma](platform-identity.md): códigos y cobertura de entidad/proveedor, compatibilidad versionada, migración y recarga acotada.
-- [Ingesta incremental Bronze](bronze-ingestion.md): extracción limitada, estado, manifiestos, reanudación y diagnóstico.
-- [Cobertura y recuperación acotada](population-recovery.md): población por firma, presupuestos, evidencia, adopción y restauración.
-- [Transformación y calidad Silver](silver-quality.md): esquema tipado, deduplicación, rechazos, controles y publicación atómica.
-- [Modelo estrella con dbt](star-schema.md): carga Silver en PostgreSQL, dimensiones, hecho, pruebas, reconstrucción y catálogo.
-- [Indicadores y marts Gold](gold-analytics.md): granos, fórmulas, filtros, calidad y linaje analítico.
-- [Publicación analítica](analytical-publication.md): aislamiento, activación, lectores fijados, permisos, retención y recuperación.
+Bronze conserva la evidencia recibida. Silver verifica tipos, identidad, población y calidad; el warehouse verifica el bundle antes de conectar. La publicación se construye y valida en aislamiento antes de activarse. Un lector fija una publicación para evitar mezclar versiones entre consultas. La recuperación conserva versiones e identidades explícitas.
 
-La documentación sobre priorización, API y dashboard se añadirá con las historias que implementen esas capacidades.
+Priorización/ML, API y exportación AWS siguen pendientes; los servicios opcionales y sus dependencias instaladas no demuestran esas capacidades. El reporte funciona en Desktop; no se ofrece un enlace interactivo público.
+
+## Referencias por frontera
+
+| Referencia | Contenido |
+|---|---|
+| [Adquisición y transformación](referencia/01_adquisicion_y_transformacion.md) | Bronze, checkpoints, Silver, rechazos y recuperación |
+| [Warehouse y métricas](referencia/02_warehouse_y_metricas.md) | Inventario, carga transaccional, dbt, granos y filtros |
+| [Publicación](referencia/03_publicacion.md) | Construcción, activación, lectores fijados, retención y permisos |
+| [Identidad](referencia/04_identidad.md) | Códigos, desconocidos, migración y recarga acotada |
+| [Población y recuperación](referencia/05_poblacion_y_recuperacion.md) | Cobertura por firma, presupuestos, adopción y restauración |
+| [Dependencias](referencia/06_dependencias.md) | Compatibilidad, ensayos y recuperación de servicios |
+| [Perfil de la fuente](data-source-profile.md) | Observación fechada, esquema y limitaciones; reporte generado |
+
+La [construcción BI](../bi/README.md), las [medidas](../bi/measures/README.md) y el [proyecto dbt](../dbt/README.md) conservan sus instrucciones junto al código.

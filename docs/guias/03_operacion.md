@@ -19,16 +19,16 @@ make down            # detiene servicios y conserva volúmenes
 
 Para seleccionar otro archivo de configuración local usa `ENV_FILE=/ruta/archivo`. El script no ejecuta `source` sobre ese archivo y nunca imprime sus valores.
 
-Esa selección es para los servicios locales. Silver y warehouse leen `SILVER_ROOT` exportado o su propio YAML; ninguno importa `.env` automáticamente. Si no encuentran `current.json`, revisa la raíz efectiva en la misma shell; no copies el puntero ni adivines otra carpeta. La [guía de configuración y compatibilidad](star-schema.md#configuración-local) explica la precedencia y el consumo de bundles existentes.
+Esa selección es para los servicios locales. Silver y warehouse leen `SILVER_ROOT` exportado o su propio YAML; ninguno importa `.env` automáticamente. Si no encuentran `current.json`, revisa la raíz efectiva en la misma shell; no copies el puntero ni adivines otra carpeta. La [guía de configuración y compatibilidad](../referencia/02_warehouse_y_metricas.md#configuración-local) explica la precedencia y el consumo de bundles existentes.
 
-Para recuperar un snapshot anterior sigue la [secuencia A → B → A](star-schema.md#volver-a-una-versión-silver-anterior): seleccionar el puntero Silver, verificar el bundle y cargar PostgreSQL son pasos separados. El no-op exige que versión y hash ya estén activos. Antes de actualizar un warehouse existente, revisa la [migración de auditoría](star-schema.md#migrar-una-auditoría-existente), detén escritores anteriores y conserva respaldos.
+Para recuperar un snapshot anterior sigue la [secuencia A → B → A](../referencia/02_warehouse_y_metricas.md#volver-a-una-versión-silver-anterior): seleccionar el puntero Silver, verificar el bundle y cargar PostgreSQL son pasos separados. El no-op exige que versión y hash ya estén activos. Antes de actualizar un warehouse existente, revisa la [migración de auditoría](../referencia/02_warehouse_y_metricas.md#migrar-una-auditoría-existente), detén escritores anteriores y conserva respaldos.
 
-La [publicación analítica](analytical-publication.md) tiene activación y rollback
+La [publicación analítica](../referencia/03_publicacion.md) tiene activación y rollback
 propios: construye sobre copias verificadas, valida, sella y cambia las vistas
 juntas. BI/API fijan un descriptor durante toda la operación; la guía explica
 roles, límites, expiración, reintento y limpieza segura de versiones retenidas.
 
-La [migración de identidad de plataforma](platform-identity.md#compatibilidad-y-migración)
+La [migración de identidad de plataforma](../referencia/04_identidad.md#compatibilidad-y-migración)
 agrega columnas dentro de la transacción de carga y requiere un primer rebuild dbt con
 `--full-refresh`. Conserva bundles anteriores y verifica contratos, llaves y valores antes
 de reanudar consumidores. `refresh-identity` usa IDs de un baseline fijado y progreso
@@ -59,9 +59,9 @@ make clean
 
 ### Silver rechaza archivos o inventario
 
-Ejecuta `uv run --locked --extra warehouse secop-warehouse verify` con la misma raíz y configuración que usarás para cargar. Revisa la ruta relativa indicada en el error y las [reglas de inventario y auxiliares](star-schema.md#archivos-verificados-y-auxiliares). Un Parquet extra se rechaza incluso si los conteos coinciden; las rutas ocultas y particiones no están exentas.
+Ejecuta `uv run --locked --extra warehouse secop-warehouse verify` con la misma raíz y configuración que usarás para cargar. Revisa la ruta relativa indicada en el error y las [reglas de inventario y auxiliares](../referencia/02_warehouse_y_metricas.md#archivos-verificados-y-auxiliares). Un Parquet extra se rechaza incluso si los conteos coinciden; las rutas ocultas y particiones no están exentas.
 
-Conserva la evidencia; no edites hashes, manifiestos ni archivos para forzar aceptación. Selecciona un bundle íntegro retenido y sigue la [recuperación A → B → A](star-schema.md#volver-a-una-versión-silver-anterior), o reconstruye desde Bronze en otra raíz. El rechazo ocurre antes de conectar a PostgreSQL y conserva el snapshot y su auditoría. Cambiar el puntero Silver, verificar y cargar son operaciones separadas.
+Conserva la evidencia; no edites hashes, manifiestos ni archivos para forzar aceptación. Selecciona un bundle íntegro retenido y sigue la [recuperación A → B → A](../referencia/02_warehouse_y_metricas.md#volver-a-una-versión-silver-anterior), o reconstruye desde Bronze en otra raíz. El rechazo ocurre antes de conectar a PostgreSQL y conserva el snapshot y su auditoría. Cambiar el puntero Silver, verificar y cargar son operaciones separadas.
 
 ### Docker no responde
 
@@ -151,9 +151,10 @@ la migración: `airflow-init` ejecuta `airflow db migrate`. Actualiza el pin
    escritores. Si falla, mantén los escritores detenidos y recupera el respaldo
    previo con la versión anterior; conserva la copia fallida para diagnóstico.
 
-La guía de [dependencias](dependency-maintenance.md) registra el alcance de los
-ensayos automatizados. Ningún ensayo desechable actualiza la base de trabajo ni
-prueba DAGs de negocio futuros. No ejecutes `make clean` como mecanismo de rollback.
+La guía de [dependencias](../referencia/06_dependencias.md) registra el alcance de los
+ensayos automatizados. Los ensayos de compatibilidad de dependencias no actualizan
+la base de trabajo ni verifican el DAG de negocio; el replay del pipeline tiene su
+[gate propio](02_desarrollo_y_verificacion.md#replay-real-del-pipeline). No ejecutes `make clean` como mecanismo de rollback.
 
 ## Runtime del pipeline Airflow
 
@@ -227,5 +228,5 @@ con el procedimiento anterior si su esquema cambió. No confundas detener el DAG
 con restaurar Silver, warehouse o publicación: cada capa conserva su mecanismo
 de recuperación y su identidad propia.
 
-El [runbook del pipeline](pipeline-orchestration.md) detalla trigger, seguimiento,
+El [runbook del pipeline](04_pipeline.md) detalla trigger, seguimiento,
 reintento con insumos fijados, grants y restauración por capa.
