@@ -1,90 +1,96 @@
 # Observatorio SECOP
 
-El Observatorio SECOP transforma registros públicos de contratos SECOP II de entidades registradas en Antioquia en información comprensible sobre contratación y prioridades de revisión humana. El valor analizado es el total contractual nominal observado en COP; la ubicación corresponde al registro de la entidad y no identifica necesariamente el lugar de ejecución o gasto.
+[![CI](https://github.com/camiloandcu/observatorio-secop/actions/workflows/ci.yml/badge.svg)](https://github.com/camiloandcu/observatorio-secop/actions/workflows/ci.yml)
+![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB)
+![PySpark](https://img.shields.io/badge/PySpark-3.5-E25A1C)
+![dbt + PostgreSQL](https://img.shields.io/badge/dbt%20%2B%20PostgreSQL-16-336791)
+![Airflow](https://img.shields.io/badge/Airflow-3-017CEE)
+![Power BI](https://img.shields.io/badge/Power%20BI-Desktop-F2C811)
 
-## El problema
+Pipeline de ingeniería de datos que convierte los contratos públicos de SECOP II en analítica confiable: **quién contrata con quién, por cuánto y con qué concentración**, con cada cifra trazable hasta el registro fuente.
 
-La información contractual está disponible, pero su volumen, variabilidad y dispersión dificultan responder preguntas básicas de manera consistente: cuánto se contrata, con quién, bajo qué modalidades, cómo cambia el comportamiento en el tiempo y dónde aparecen patrones atípicos.
+Vídeo de un minuto con recorrido por todo el Observatorio SECOP:
 
-Esa dificultad limita el seguimiento ciudadano y obliga a invertir demasiado tiempo en reunir, limpiar y reconciliar datos antes de poder analizarlos.
+[![Vídeo de un minuto: recorrido por el Observatorio SECOP](docs/images/video-poster.jpg)](https://www.youtube.com/watch?v=ckV1dTVN3xw)
 
-El flujo objetivo es el siguiente; las capacidades disponibles se detallan en el alcance actual:
+> **In English:** An end-to-end data engineering pipeline over Colombia's public procurement records (SECOP II). PySpark ingests and validates 52,047 source observations, PostgreSQL + dbt model a star schema and five governed marts, Airflow orchestrates, and Power BI explores versioned, validated publications. The dashboard reconciles exactly with SQL; failed loads never replace the last good publication. Built by **Camilo Cuellar**, [LinkedIn](https://www.linkedin.com/in/camiloandcu/).
+
+## Lo que muestran los datos
+
+Primer trimestre de 2026, entidades registradas en Antioquia: **52.005 contratos, 5,7 billones de COP**. El 94 % se firmó en enero.
+
+| Modalidad | Enero | Febrero | Marzo |
+|---|---:|---:|---:|
+| Contratación directa | 45.839 | 173 | 178 |
+| Mínima cuantía | 150 | 526 | 762 |
+| Total | 48.929 | 1.353 | 1.723 |
+
+La caída no es un error del pipeline. La [Ley de Garantías](https://www.vanguardia.com/politica/2026/01/27/ley-de-garantias-electorales-estas-son-las-restricciones-que-empiezan-a-regir-desde-el-31-de-enero/) prohíbe la contratación directa desde el 31 de enero de 2026, cuatro meses antes de la elección presidencial. Los datos muestran la carrera: **4.767 contratos directos firmados el 30 de enero y 3 el 1 de febrero**, mientras las modalidades competitivas crecen.
+
+## Qué demuestra este producto
+
+| Problema | Cómo se resuelve | Evidencia |
+|---|---|---|
+| La API pública cambia y no ofrece snapshots | Cada página descargada se guarda con manifiesto y hash; la adquisición tiene límites de filas y solicitudes, checkpoints y reanudación | 52.047 observaciones, escaneo completo, sin truncar |
+| Los datos fuente traen duplicados y fechas incoherentes | PySpark tipifica, deduplica y separa rechazos con su motivo | 0 duplicados, 42 rechazos por fechas fuera de orden |
+| Un cálculo de dinero mal hecho invalida todo | dbt construye un modelo estrella y cinco marts con dinero decimal y linaje hasta la observación fuente | 17 modelos dbt, 11 tests singulares además de los de esquema |
+| Una carga fallida no debe romper el dashboard | Cada publicación se construye y valida aislada antes de activarse; los lectores quedan fijados a una versión | Restaurar una versión anterior es un comando |
+| El dashboard debe decir lo mismo que la base | Power BI importa una publicación identificada y se concilia contra SQL | Conteos, COP exactos, mediana y filtros combinados coinciden |
+| Saber que todo sigue funcionando | CI con PostgreSQL desechable y Java 17, controles de seguridad y de dependencias | 506 tests en 96 archivos |
+
+También se desplegó una prueba en **AWS (S3 + Glue + Athena)**: Parquet particionado por mes, catálogo en Glue y consulta en Athena que solo lee la partición pedida (13.748 bytes en 787 ms) y concilia conteo y suma con el warehouse. El bucket, los datos y el workgroup se eliminaron después para no generar costos; la prueba aparece en el vídeo.
+
+## Arquitectura
 
 ```mermaid
-flowchart TD
-    A["<b>Problema de negocio</b><br/>'Hay demasiados contratos para revisar manualmente'"]
-    B["<b>SECOP II</b><br/>Datos públicos disponibles en Socrata"]
-    C["<b>Ingesta incremental acotada</b><br/>Adquirir observaciones según ventanas y límites explícitos"]
-    D["<b>BRONZE</b><br/>Copia cruda y trazable que sirve como evidencia"]
-    E["<b>PySpark</b><br/>Limpiar, tipificar, validar y deduplicar"]
-    F["<b>SILVER</b><br/>Datos limpios, tipificados, validados y deduplicados"]
-    G["<b>dbt + PostgreSQL</b><br/>Modelo de negocio"]
-    H["<b>Priorización / MLflow</b><br/>Evaluar y versionar señales de revisión"]
-    I["<b>Publicación analítica validada</b><br/>Estrella, indicadores y calidad"]
-    J["<b>Power BI</b><br/>Análisis visual de los datos"]
-    K["<b>FastAPI</b><br/>Consulta técnica de los datos"]
-    L["<b>Features retrospectivas</b><br/>Referencias y elegibilidad versionadas"]
-    M["<b>Scores y razones</b><br/>Compatibles con la publicación analítica"]
-    N["<b>S3 / Glue / Athena</b><br/>Exportación acotada validada"]
-
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    E --> F
-    F --> G
-    G --> I
-    I --> J
-    I --> K
-    I --> L
-    L --> H
-    H --> M
-    M --> J
-    M --> K
-    I --> N
+flowchart LR
+    source[SECOP II / Socrata] --> bronze[Bronze: páginas y manifiestos]
+    bronze --> silver[PySpark: Silver Parquet y controles]
+    silver --> warehouse[PostgreSQL + dbt: estrella y marts]
+    warehouse --> publication[Publicación validada y versionada]
+    publication --> bi[Power BI Desktop]
+    airflow[Airflow] -.-> bronze
+    airflow -.-> silver
+    airflow -.-> publication
 ```
 
-Airflow orquestará los mismos comandos del pipeline. La analítica base seguirá disponible cuando no haya un modelo o scores compatibles. La etapa AWS será acotada y requiere autorización de acceso, recursos y costos.
+| Ejecución en Airflow | Lineage dbt con tests de conciliación |
+|---|---|
+| [![DAG secop_pipeline con sus 7 etapas completadas](docs/images/airflow-run.png)](docs/images/airflow-run.png) | [![Grafo de lineage de dbt](docs/images/dbt-lineage.png)](docs/images/dbt-lineage.png) |
 
-## La solución
+La ejecución de la captura usa el fixture sintético de la [guía del pipeline](docs/guias/04_pipeline.md); el lineage corresponde al proyecto dbt del repositorio.
 
-El proyecto construye una ruta reproducible que transforma datos de SECOP II en:
+## Decisiones y trade-offs
 
-- información contractual depurada y trazable;
-- indicadores comparables sobre valor nominal COP, volumen y concentración;
-- vistas para explorar entidades, proveedores, modalidades, municipios de registro y periodos de firma;
-- señales explicables que ayuden a priorizar contratos para revisión humana;
-- medios de consulta mediante productos analíticos y una API documentada.
+- **¿PySpark para 52 mil filas?** Para un trimestre de Antioquia bastarían pandas o DuckDB. Spark se eligió porque la misma transformación debe escalar a SECOP nacional, con millones de registros, sin reescribirse. Corre en local para mantener el costo en cero.
+- **PostgreSQL + dbt en vez de un warehouse cloud.** Reproducible en cualquier máquina con Docker y sin cuenta de pago; la prueba en AWS muestra el camino hacia un lago de datos consultable con SQL.
+- **Publicaciones versionadas en vez de escribir sobre las tablas que lee el dashboard.** Cuesta gestionar versiones, retención y compatibilidad, pero ningún consumidor ve un resultado que todavía no pasó sus tests.
+- **Power BI Desktop sin servicio publicado.** Evita licencias y datos expuestos; a cambio, el reporte se comparte como capturas, PDF y vídeo.
 
-La priorización es una ayuda para ordenar la revisión. Una señal alta NO demuestra fraude, corrupción, incumplimiento ni responsabilidad legal.
+## Ver el reporte
 
-## Alcance actual
+| Panorama | Concentración por entidad | Calidad |
+|---|---|---|
+| [![Panorama](docs/images/dashboard/real/01-panorama.png)](docs/images/dashboard/real/01-panorama.png) | [![Entidades y proveedores](docs/images/dashboard/real/02-entidad-concentracion.png)](docs/images/dashboard/real/02-entidad-concentracion.png) | [![Calidad](docs/images/dashboard/real/03-calidad.png)](docs/images/dashboard/real/03-calidad.png) |
 
-El repositorio cuenta con una base local reproducible, ingesta Bronze incremental acotada, una capa Silver tipificada con PySpark, carga y restauración de snapshots en PostgreSQL y un modelo estrella con dbt. La identidad de entidades y proveedores se conserva entre estas capas, con estados desconocidos explícitos y trazabilidad.
+Capturas con datos reales de SECOP II (observados el 30 de octubre de 2026). **[Descarga el reporte completo en PDF](docs/report/observatorio-secop-antioquia-2026q1.pdf)** (4 páginas: panorama, contratos, entidades y proveedores, calidad). La [guía del dashboard](docs/guias/05_dashboard.md) explica cómo leer HHI, cobertura y evidencia de cada contrato.
 
-Los cinco [marts e indicadores Gold](docs/gold-analytics.md) están implementados como candidatos verificables, con catálogo de métricas, filtros gobernados y evidencia de calidad. Su construcción local no activa acceso de consumidores.
+## Ejecutar y verificar
 
-La [publicación analítica](docs/analytical-publication.md) construye en aislamiento, valida antes de activar y ofrece lecturas fijadas a una versión, permisos restringidos y recuperación.
+```bash
+make install    # dependencias con uv
+make quality    # lint, tipos y tests (omite integración sin base de datos)
+make ci         # suite estricta: PostgreSQL desechable y Java 17
+```
 
-El [dashboard Power BI](bi/README.md) dispone de definiciones textuales reproducibles para contratación, proveedores, calidad y evidencia contractual. Su validación final en Desktop y el recorrido humano siguen pendientes; las pruebas sintéticas no representan contratación real. La orquestación de negocio con Airflow, la priorización con MLflow, la API FastAPI y la exportación acotada a AWS están pendientes. Su avance puede seguirse en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).
+Empieza con la [preparación local](docs/guias/01_inicio.md) y sigue la [guía del pipeline](docs/guias/04_pipeline.md) para ejecutar el flujo en Airflow. La [documentación](docs/README.md) reúne operación, recuperación y referencias por capa.
 
-## Principios
+## Estado
 
-- Trazabilidad desde el dato publicado hasta el resultado presentado.
-- Criterios y fórmulas explícitos, reproducibles y verificables.
-- Separación clara entre hechos observados, indicadores y señales de priorización.
-- Uso responsable: las anomalías orientan preguntas, no producen acusaciones.
-- Protección de secretos, datos innecesarios y artefactos internos.
-- Costos y límites operativos visibles.
+Hecho: adquisición, Silver, warehouse, publicación versionada, orquestación y dashboard. En desarrollo: modelo de priorización con ML y API FastAPI. Los montos son valores contractuales en COP nominales, no pagos, y una señal de revisión no implica irregularidad. Detalle en [alcance y límites](docs/README.md#alcance-y-límites).
 
-## Documentación
+Avance en [Issues](https://github.com/camiloandcu/observatorio-secop/issues) y en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).
 
-La [página de documentación](docs/README.md) organiza las guías según la necesidad:
+---
 
-- [Primeros pasos](docs/getting-started.md) para preparar y levantar el entorno local.
-- [Guía de desarrollo](docs/development.md) para calidad, CI y estructura del repositorio.
-- [Guía de operación](docs/operations.md) para salud, logs, recuperación y limpieza.
-- [Transformación y calidad Silver](docs/silver-quality.md) para el esquema, reglas, rechazos y publicación local.
-- [Modelo estrella con dbt](docs/star-schema.md) para la carga relacional, dimensiones, hecho, pruebas y catálogo.
-
-Las historias y su avance se consultan en [GitHub Issues](https://github.com/camiloandcu/observatorio-secop/issues) y en el [tablero del proyecto](https://github.com/users/camiloandcu/projects/1).
+**Camilo Cuellar**, ingeniero de datos. ¿Hablamos? [LinkedIn](https://www.linkedin.com/in/camiloandcu/)

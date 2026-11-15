@@ -1,0 +1,427 @@
+version: export-v2
+allow_new_columns: false
+max_json_depth: 8
+json_scalar_max_bytes: 4096
+url_hosts:
+- community.secop.gov.co
+- www.community.secop.gov.co
+json_policies:
+  observation_condition:
+    keys:
+    - schema_version
+    - scope_id
+    - silver_version_id
+    - contract_key
+    - state
+    - winner_payload_sha256
+    - winner_run_id
+    - winner_page_sha256
+    - winner_row_ordinal
+    - winner_observed_at_utc
+    - winner_profile_sha256
+    - winner_projection_version
+    - validation_version
+    - later_invalid_count
+    - equal_invalid_count
+  attributable_rejection_evidence:
+    array:
+      keys:
+      - schema_version
+      - scope_id
+      - silver_version_id
+      - contract_key
+      - link_id
+      - temporal_relation
+      - winner_payload_sha256
+      - winner_run_id
+      - winner_page_sha256
+      - winner_row_ordinal
+      - winner_observed_at_utc
+      - winner_profile_sha256
+      - winner_projection_version
+      - rejected_payload_sha256
+      - rejected_run_id
+      - rejected_page_sha256
+      - rejected_row_ordinal
+      - rejected_observed_at_utc
+      - rejected_profile_sha256
+      - rejected_projection_version
+      - validation_version
+      - rejection_codes
+  selection_metadata:
+    keys:
+    - entity_keys
+    - municipality_keys
+    - modality_keys
+    - statuses
+    - exclude_statuses
+    - start_date
+    - end_date
+    - missing_signatures
+    - selected_supplier
+  reference_metadata:
+    keys:
+    - entity_keys
+    - municipality_keys
+    - modality_keys
+    - statuses
+    - exclude_statuses
+    - start_date
+    - end_date
+    - missing_signatures
+  status_distribution:
+    integer_map: true
+  scope:
+    keys:
+    - schema_version
+    - dataset_id
+    - department_field
+    - department_value
+    - basis
+    - signing_field
+    - missing_signing
+    - source_clock
+    - signing_from
+    - signing_to
+  coverage_metadata:
+    keys:
+    - state
+    - basis
+    - coverage_known
+    - scope_id
+    - limitations
+    - acquisitions
+    children:
+      acquisitions:
+        array:
+          keys:
+          - schema_version
+          - campaign_id
+          - plan_id
+          - scope_id
+          - state
+          - limits
+          - consumed
+          - scope_scan_complete
+          - baseline_check_complete
+          - unconfirmed_ids
+          - observed_from_utc
+          - observed_to_utc
+          - truncated
+          - limitations
+          - baseline
+          children:
+            limits:
+              keys:
+              - rows
+              - attempts
+            consumed:
+              keys:
+              - rows
+              - attempts
+            baseline:
+              keys:
+              - silver_version_id
+              - manifest_sha256
+              - keys_sha256
+relations:
+  silver_valid:
+    partition_by_signing: true
+    columns:
+      - {name: silver_version_id, source_type: string, codec: text}
+      - {name: contract_key, source_type: string, codec: text}
+      - {name: source_dataset_id, source_type: string, codec: text}
+      - {name: source_contract_id, source_type: string, codec: text}
+      - {name: contract_reference, source_type: string, codec: text}
+      - {name: procurement_process_id, source_type: string, codec: text}
+      - {name: department_key, source_type: string, codec: text}
+      - {name: municipality_key, source_type: string, codec: text}
+      - {name: municipality_status, source_type: string, codec: text}
+      - {name: is_medellin, source_type: bool, codec: bool}
+      - {name: is_valle_de_aburra, source_type: bool, codec: bool}
+      - {name: contract_status, source_type: string, codec: text}
+      - {name: main_category_code, source_type: string, codec: text}
+      - {name: contract_type, source_type: string, codec: text}
+      - {name: procurement_method, source_type: string, codec: text}
+      - {name: signing_date, source_type: 'date32[day]', codec: date}
+      - {name: start_date, source_type: 'date32[day]', codec: date}
+      - {name: end_date, source_type: 'date32[day]', codec: date}
+      - {name: contract_value_cop, source_type: 'decimal128(20, 2)', codec: decimal, precision: 20, scale: 2}
+      - {name: source_updated_at, source_type: 'timestamp[us]', codec: wall-clock-us-v1}
+      - {name: quality_warning_codes, source_type: 'list<item: string>', codec: array-json-v1}
+      - {name: payload_sha256, source_type: string, codec: text}
+      - {name: bronze_run_id, source_type: string, codec: text}
+      - {name: bronze_row_ordinal, source_type: int64, codec: int64}
+      - {name: bronze_fetched_at_utc, source_type: 'timestamp[us]', codec: utc-instant-us-v1}
+      - {name: entity_code, source_type: string, codec: text}
+      - {name: entity_identity_status, source_type: string, codec: text}
+      - {name: entity_identity_reason, source_type: string, codec: text}
+      - {name: supplier_code, source_type: string, codec: text}
+      - {name: supplier_identity_status, source_type: string, codec: text}
+      - {name: supplier_identity_reason, source_type: string, codec: text}
+      - {name: identity_rule_version, source_type: string, codec: text}
+      - {name: source_contract_sha256, source_type: string, codec: text}
+      - {name: source_projection_version, source_type: string, codec: text}
+  dim_date:
+    partition_by_signing: false
+    columns:
+      - {name: publication_id, source_type: text, codec: text}
+      - {name: date_sk, source_type: integer, codec: int32}
+      - {name: calendar_date, source_type: date, codec: date}
+      - {name: year, source_type: smallint, codec: int16}
+      - {name: quarter, source_type: smallint, codec: int16}
+      - {name: month, source_type: smallint, codec: int16}
+      - {name: month_name, source_type: text, codec: text}
+      - {name: day_of_month, source_type: smallint, codec: int16}
+      - {name: day_of_week, source_type: smallint, codec: int16}
+      - {name: day_name, source_type: text, codec: text}
+      - {name: member_status, source_type: text, codec: text}
+  dim_entity:
+    partition_by_signing: false
+    columns:
+      - {name: publication_id, source_type: text, codec: text}
+      - {name: entity_sk, source_type: text, codec: text}
+      - {name: entity_natural_key, source_type: text, codec: text}
+      - {name: source_dataset_id, source_type: text, codec: text}
+      - {name: entity_code, source_type: text, codec: text}
+      - {name: entity_name, source_type: text, codec: text}
+      - {name: member_status, source_type: text, codec: text}
+  dim_modality:
+    partition_by_signing: false
+    columns:
+      - {name: publication_id, source_type: text, codec: text}
+      - {name: modality_sk, source_type: text, codec: text}
+      - {name: modality_natural_key, source_type: text, codec: text}
+      - {name: modality_name, source_type: text, codec: text}
+      - {name: member_status, source_type: text, codec: text}
+  dim_municipality:
+    partition_by_signing: false
+    columns:
+      - {name: publication_id, source_type: text, codec: text}
+      - {name: municipality_sk, source_type: text, codec: text}
+      - {name: municipality_natural_key, source_type: text, codec: text}
+      - {name: municipality_name, source_type: text, codec: text}
+      - {name: member_status, source_type: text, codec: text}
+  dim_supplier:
+    partition_by_signing: false
+    columns:
+      - {name: publication_id, source_type: text, codec: text}
+      - {name: supplier_sk, source_type: text, codec: text}
+      - {name: supplier_natural_key, source_type: text, codec: text}
+      - {name: source_dataset_id, source_type: text, codec: text}
+      - {name: supplier_code, source_type: text, codec: text}
+      - {name: supplier_name, source_type: text, codec: text, minimization_policy: supplier-name-null-v1}
+      - {name: member_status, source_type: text, codec: text}
+  fact_contract:
+    partition_by_signing: true
+    columns:
+      - {name: publication_id, source_type: text, codec: text}
+      - {name: contract_sk, source_type: text, codec: text}
+      - {name: contract_key, source_type: text, codec: text}
+      - {name: contract_id, source_type: text, codec: text}
+      - {name: process_id, source_type: text, codec: text}
+      - {name: entity_identity_status, source_type: text, codec: text}
+      - {name: entity_identity_reason, source_type: text, codec: text}
+      - {name: supplier_identity_status, source_type: text, codec: text}
+      - {name: supplier_identity_reason, source_type: text, codec: text}
+      - {name: identity_rule_version, source_type: text, codec: text}
+      - {name: source_contract_sha256, source_type: text, codec: text}
+      - {name: source_projection_version, source_type: text, codec: text}
+      - {name: bronze_run_id, source_type: text, codec: text}
+      - {name: bronze_row_ordinal, source_type: bigint, codec: int64}
+      - {name: entity_sk, source_type: text, codec: text}
+      - {name: supplier_sk, source_type: text, codec: text}
+      - {name: municipality_sk, source_type: text, codec: text}
+      - {name: modality_sk, source_type: text, codec: text}
+      - {name: signing_date_sk, source_type: integer, codec: int32}
+      - {name: start_date_sk, source_type: integer, codec: int32}
+      - {name: end_date_sk, source_type: integer, codec: int32}
+      - {name: signing_date, source_type: date, codec: date}
+      - {name: start_date, source_type: date, codec: date}
+      - {name: end_date, source_type: date, codec: date}
+      - {name: contract_value_cop, source_type: numeric, codec: decimal, precision: 20, scale: 2}
+      - {name: duration_days, source_type: integer, codec: int32}
+      - {name: status, source_type: text, codec: text}
+      - {name: source_url, source_type: text, codec: text}
+      - {name: source_updated_at, source_type: timestamp without time zone, codec: wall-clock-us-v1}
+      - {name: bronze_fetched_at_utc, source_type: timestamp without time zone, codec: utc-instant-us-v1}
+      - {name: silver_version_id, source_type: text, codec: text}
+      - {name: silver_manifest_sha256, source_type: text, codec: text}
+      - {name: payload_sha256, source_type: text, codec: text}
+      - {name: loaded_at, source_type: timestamp with time zone, codec: utc-instant-us-v1}
+  mart_contract_detail:
+    partition_by_signing: true
+    columns:
+      - {name: publication_id, source_type: text, codec: text}
+      - {name: contract_sk, source_type: text, codec: text}
+      - {name: contract_key, source_type: text, codec: text}
+      - {name: contract_id, source_type: text, codec: text}
+      - {name: contract_reference, source_type: text, codec: text}
+      - {name: process_id, source_type: text, codec: text}
+      - {name: entity_sk, source_type: text, codec: text}
+      - {name: entity_name, source_type: text, codec: text}
+      - {name: entity_code, source_type: text, codec: text}
+      - {name: entity_identity_status, source_type: text, codec: text}
+      - {name: entity_identity_reason, source_type: text, codec: text}
+      - {name: supplier_sk, source_type: text, codec: text}
+      - {name: supplier_name, source_type: text, codec: text, minimization_policy: supplier-name-null-v1}
+      - {name: supplier_code, source_type: text, codec: text}
+      - {name: supplier_identity_status, source_type: text, codec: text}
+      - {name: supplier_identity_reason, source_type: text, codec: text}
+      - {name: municipality_sk, source_type: text, codec: text}
+      - {name: modality_sk, source_type: text, codec: text}
+      - {name: signing_date_sk, source_type: integer, codec: int32}
+      - {name: start_date_sk, source_type: integer, codec: int32}
+      - {name: end_date_sk, source_type: integer, codec: int32}
+      - {name: signing_date, source_type: date, codec: date}
+      - {name: start_date, source_type: date, codec: date}
+      - {name: end_date, source_type: date, codec: date}
+      - {name: signing_month, source_type: date, codec: date}
+      - {name: contract_value_cop, source_type: numeric, codec: decimal, precision: 20, scale: 2}
+      - {name: duration_days, source_type: integer, codec: int32}
+      - {name: status_raw, source_type: text, codec: text}
+      - {name: status_bucket, source_type: text, codec: text}
+      - {name: status_profile_state, source_type: text, codec: text}
+      - {name: base_cohort, source_type: text, codec: text}
+      - {name: source_process_url, source_type: text, codec: text}
+      - {name: source_link_state, source_type: text, codec: text}
+      - {name: source_updated_at, source_type: timestamp without time zone, codec: wall-clock-us-v1}
+      - {name: acquisition_observed_at_utc, source_type: timestamp without time zone, codec: utc-instant-us-v1}
+      - {name: pipeline_completed_at_utc, source_type: timestamp with time zone, codec: utc-instant-us-v1}
+      - {name: bronze_run_id, source_type: text, codec: text}
+      - {name: bronze_row_ordinal, source_type: bigint, codec: int64}
+      - {name: payload_sha256, source_type: text, codec: text}
+      - {name: condition_state, source_type: text, codec: text}
+      - {name: observation_condition, source_type: jsonb, codec: json-text-v1, json_policy: observation_condition}
+      - {name: attributable_rejection_evidence, source_type: jsonb, codec: json-text-v1, json_policy: attributable_rejection_evidence}
+      - {name: quality_warning_codes, source_type: 'text[]', codec: array-json-v1}
+      - {name: quality_evidence_sha256, source_type: text, codec: text}
+      - {name: silver_version_id, source_type: text, codec: text}
+      - {name: silver_manifest_sha256, source_type: text, codec: text}
+      - {name: scope_id, source_type: text, codec: text}
+      - {name: coverage_state, source_type: text, codec: text}
+      - {name: coverage_known, source_type: boolean, codec: bool}
+      - {name: coverage_metadata, source_type: jsonb, codec: json-text-v1, json_policy: coverage_metadata}
+      - {name: catalog_sha256, source_type: text, codec: text}
+      - {name: policy_sha256, source_type: text, codec: text}
+      - {name: policy_version, source_type: text, codec: text}
+      - {name: candidate_built_at_utc, source_type: timestamp with time zone, codec: utc-instant-us-v1}
+      - {name: temporal_basis, source_type: text, codec: text}
+      - {name: value_unit, source_type: text, codec: text}
+      - {name: source_time_basis, source_type: text, codec: text}
+  mart_contract_overview:
+    partition_by_signing: false
+    columns:
+      - {name: publication_id, source_type: text, codec: text}
+      - {name: silver_version_id, source_type: text, codec: text}
+      - {name: silver_manifest_sha256, source_type: text, codec: text}
+      - {name: scope_id, source_type: text, codec: text}
+      - {name: signing_month, source_type: date, codec: date}
+      - {name: municipality_sk, source_type: text, codec: text}
+      - {name: modality_sk, source_type: text, codec: text}
+      - {name: status_bucket, source_type: text, codec: text}
+      - {name: catalog_sha256, source_type: text, codec: text}
+      - {name: policy_sha256, source_type: text, codec: text}
+      - {name: contract_count, source_type: bigint, codec: int64}
+      - {name: contract_value_cop, source_type: numeric, codec: decimal-text-v1}
+      - {name: missing_value_count, source_type: bigint, codec: int64}
+      - {name: missing_signing_date_count, source_type: bigint, codec: int64}
+      - {name: value_p25_cop, source_type: numeric, codec: decimal-text-v1}
+      - {name: value_median_cop, source_type: numeric, codec: decimal-text-v1}
+      - {name: value_p75_cop, source_type: numeric, codec: decimal-text-v1}
+      - {name: distribution_state, source_type: text, codec: text}
+      - {name: selection_metadata, source_type: jsonb, codec: json-text-v1, json_policy: selection_metadata}
+      - {name: denominator_basis, source_type: text, codec: text}
+      - {name: contract_count_share, source_type: numeric, codec: decimal-text-v1}
+      - {name: contract_value_share, source_type: numeric, codec: decimal-text-v1}
+      - {name: count_share_state, source_type: text, codec: text}
+      - {name: value_share_state, source_type: text, codec: text}
+  mart_data_quality:
+    partition_by_signing: false
+    columns:
+      - {name: publication_id, source_type: text, codec: text}
+      - {name: silver_version_id, source_type: text, codec: text}
+      - {name: silver_manifest_sha256, source_type: text, codec: text}
+      - {name: scope_id, source_type: text, codec: text}
+      - {name: control_id, source_type: text, codec: text}
+      - {name: numerator, source_type: bigint, codec: int64}
+      - {name: denominator, source_type: bigint, codec: int64}
+      - {name: evaluation_grain, source_type: text, codec: text}
+      - {name: filter_applicability, source_type: text, codec: text}
+      - {name: control_state, source_type: text, codec: text}
+      - {name: reason, source_type: text, codec: text}
+      - {name: pipeline_completed_at_utc, source_type: text, codec: text}
+      - {name: evidence_sha256, source_type: text, codec: text}
+      - {name: catalog_sha256, source_type: text, codec: text}
+      - {name: policy_sha256, source_type: text, codec: text}
+  mart_entity_monthly:
+    partition_by_signing: false
+    columns:
+      - {name: publication_id, source_type: text, codec: text}
+      - {name: silver_version_id, source_type: text, codec: text}
+      - {name: silver_manifest_sha256, source_type: text, codec: text}
+      - {name: scope_id, source_type: text, codec: text}
+      - {name: entity_sk, source_type: text, codec: text}
+      - {name: signing_month, source_type: date, codec: date}
+      - {name: catalog_sha256, source_type: text, codec: text}
+      - {name: policy_sha256, source_type: text, codec: text}
+      - {name: contract_count, source_type: bigint, codec: int64}
+      - {name: contract_value_cop, source_type: numeric, codec: decimal-text-v1}
+      - {name: missing_value_count, source_type: bigint, codec: int64}
+      - {name: status_distribution, source_type: jsonb, codec: json-text-v1, json_policy: status_distribution}
+      - {name: value_p25_cop, source_type: numeric, codec: decimal-text-v1}
+      - {name: value_median_cop, source_type: numeric, codec: decimal-text-v1}
+      - {name: value_p75_cop, source_type: numeric, codec: decimal-text-v1}
+      - {name: distribution_state, source_type: text, codec: text}
+  mart_supplier_concentration:
+    partition_by_signing: false
+    columns:
+      - {name: publication_id, source_type: text, codec: text}
+      - {name: silver_version_id, source_type: text, codec: text}
+      - {name: silver_manifest_sha256, source_type: text, codec: text}
+      - {name: scope_id, source_type: text, codec: text}
+      - {name: entity_sk, source_type: text, codec: text}
+      - {name: signing_month, source_type: date, codec: date}
+      - {name: catalog_sha256, source_type: text, codec: text}
+      - {name: policy_sha256, source_type: text, codec: text}
+      - {name: total_contract_count, source_type: bigint, codec: int64}
+      - {name: known_contract_count, source_type: bigint, codec: int64}
+      - {name: total_value_cop, source_type: numeric, codec: decimal-text-v1}
+      - {name: known_value_cop, source_type: numeric, codec: decimal-text-v1}
+      - {name: count_identity_coverage, source_type: numeric, codec: decimal-text-v1}
+      - {name: value_identity_coverage, source_type: numeric, codec: decimal-text-v1}
+      - {name: selected_supplier_reference_share, source_type: numeric, codec: decimal-text-v1}
+      - {name: selected_contract_count, source_type: bigint, codec: int64}
+      - {name: hhi_state, source_type: text, codec: text}
+      - {name: selected_supplier_reference_share_state, source_type: text, codec: text}
+      - {name: hhi, source_type: numeric, codec: decimal-text-v1}
+      - {name: count_coverage_state, source_type: text, codec: text}
+      - {name: value_coverage_state, source_type: text, codec: text}
+      - {name: base_cohort, source_type: text, codec: text}
+      - {name: hhi_denominator, source_type: text, codec: text}
+      - {name: selection_metadata, source_type: jsonb, codec: json-text-v1, json_policy: selection_metadata}
+      - {name: reference_metadata, source_type: jsonb, codec: json-text-v1, json_policy: reference_metadata}
+  publication_metadata:
+    partition_by_signing: false
+    columns:
+      - {name: publication_id, source_type: text, codec: text}
+      - {name: read_namespace, source_type: text, codec: text}
+      - {name: metadata_schema_version, source_type: text, codec: text}
+      - {name: silver_version_id, source_type: text, codec: text}
+      - {name: silver_manifest_sha256, source_type: text, codec: text}
+      - {name: scope_id, source_type: text, codec: text}
+      - {name: scope, source_type: jsonb, codec: json-text-v1, json_policy: scope}
+      - {name: built_at, source_type: timestamp with time zone, codec: utc-instant-us-v1}
+      - {name: observed_at_utc, source_type: timestamp with time zone, codec: utc-instant-us-v1}
+      - {name: pipeline_completed_at_utc, source_type: timestamp with time zone, codec: utc-instant-us-v1}
+      - {name: coverage_state, source_type: text, codec: text}
+      - {name: coverage_known, source_type: boolean, codec: bool}
+      - {name: source_dataset_id, source_type: text, codec: text}
+      - {name: catalog_sha256, source_type: text, codec: text}
+      - {name: dbt_graph_sha256, source_type: text, codec: text}
+      - {name: policy_sha256, source_type: text, codec: text}
+      - {name: policy_version, source_type: text, codec: text}
+      - {name: identity_rule_version, source_type: text, codec: text}
+      - {name: source_schema_version, source_type: integer, codec: int32}
+      - {name: code_revision, source_type: text, codec: text}
+      - {name: scoring_state, source_type: text, codec: text}

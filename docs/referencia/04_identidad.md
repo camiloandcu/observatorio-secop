@@ -17,9 +17,9 @@ muestra sumó exactamente **3.220.726.505,00 COP**.
 Es una muestra ordenada, no una estimación representativa del universo ni una prueba
 de estabilidad longitudinal. No se conservaron filas fuente en Git. Las consultas,
 límites, fecha, tipos declarados, métricas y digest de la muestra están en el
-[reporte agregado](../contracts/evidence/identity_profile_2026-10-19.json).
+[reporte agregado](../../contracts/evidence/identity_profile_2026-10-19.json).
 
-Las [reglas versionadas](../contracts/identity_rules.yaml) aceptan `[0-9]+`, recortan
+Las [reglas versionadas](../../contracts/identity_rules.yaml) aceptan `[0-9]+`, recortan
 solo espacios exteriores y conservan ceros iniciales. No convierten códigos a enteros,
 no eliminan sufijos decimales y no sustituyen nombres o documentos por códigos.
 Los tokens `0`, `-1`, `N/A`, `NA`, `NULL`, `NO DEFINIDO` y `NO APLICA` se tratan como
@@ -66,7 +66,7 @@ observaciones del perfilado.
 
 ## Compatibilidad y migración
 
-El [registro de compatibilidad](../contracts/secop_compatibility.yaml) enumera las
+El [registro de compatibilidad](../../contracts/secop_compatibility.yaml) enumera las
 combinaciones exactas de dataset, bytes/hash del contrato y proyección. Las revisiones
 anteriores se conservan en `contracts/revisions/`; no se acepta un hash distinto por
 parecer compatible ni se editan manifiestos históricos.
@@ -98,7 +98,7 @@ exactamente un miembro por identidad. No es SCD2.
 En la primera actualización, detén consumidores/escritores anteriores, conserva un
 respaldo y los bundles previos, verifica/carga una candidata autoritativa con alcance
 o reintenta la versión histórica ya activa, y reconstruye dbt explícitamente. Las nuevas
-construcciones sin alcance son vistas previas; consulta [cobertura y recuperación](population-recovery.md).
+construcciones sin alcance son vistas previas; consulta [cobertura y recuperación](05_poblacion_y_recuperacion.md).
 
 ```bash
 uv run --locked --extra dev --extra data --extra warehouse secop-warehouse verify

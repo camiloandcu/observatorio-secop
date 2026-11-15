@@ -19,7 +19,7 @@ when generating a separately named project; keep its PBIP and Report folder stem
 consistent for Desktop tooling.
 
 1. Obtain an existing validated publication and credentials for `secop_bi_reader`
-   through the [publication procedure](../docs/analytical-publication.md).
+   through the [publication procedure](../docs/referencia/03_publicacion.md).
    Do not put operator credentials into Desktop.
 2. Resolve **once** using the reader environment. Keep the resulting descriptor
    private, and build immediately; its server-defined lifetime is one hour:
@@ -58,22 +58,7 @@ local. Use an ignored output location such as `reports/`. Never commit `.pbi`,
 
 ## Selecting entity and period
 
-Use the synchronized **Entidad** and **Mes de firma** selectors for a persistent
-reference across pages. Entity rows and chart bars allow comparison; a visual
-selection is local to its page. The month selector intersects the signing mode
-and any interval: clearing the month restores the mode's ordinary behavior. A
-selected month excludes missing signatures, so combining it with **Solo sin
-firma** has no matching contracts. Clear the month to inspect missing dates.
-
-On **Panorama**, **Ver contratos del mes** can also open the list for a selected
-bar as a local exploration. Returning may clear that bar selection; use the
-month selector when the period must remain active across navigation. The month
-list retains the month received by drill-through; return to change that month.
-Use **Volver a la lista** in contract detail to return to the calling list.
-Synchronized entity and period filters remain active; select the contract row
-again to reopen its detail.
-On the main pages, **Restablecer** clears selections and returns the report to
-its initial views and date mode without changing the publication.
+Use the Spanish [dashboard guide](../docs/guias/05_dashboard.md#elegir-entidad-y-periodo) for navigation, persistent selectors, drill-through, supplier focus and interpretation. Construction, model contracts, Import recovery and reconciliation remain below.
 
 ## Page layout
 

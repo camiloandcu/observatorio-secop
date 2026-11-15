@@ -2,7 +2,7 @@
 
 Este documento resume una observación controlada del conjunto público `SECOP II - Contratos Electrónicos` (`jbjy-vk9h`). No es una descarga del histórico nacional ni una garantía sobre datos futuros.
 
-El [perfil enfocado de identidad](platform-identity.md) agrega evidencia acotada para códigos de entidad y proveedor y explica sus reglas versionadas; no sustituye las métricas de esta observación.
+El [perfil enfocado de identidad](referencia/04_identidad.md) agrega evidencia acotada para códigos de entidad y proveedor y explica sus reglas versionadas; no sustituye las métricas de esta observación.
 
 ## Alcance observado
 

@@ -15,4 +15,4 @@ make dbt-build
 make dbt-docs
 ```
 
-Consulta [la guía del modelo estrella](../docs/star-schema.md) antes de cargar o reconstruir datos y el [contrato de indicadores Gold](../docs/gold-analytics.md) para métricas, filtros, calidad y recuperación. Los comandos `make dbt-*` verifican los hashes del catálogo y la política antes de ejecutar dbt.
+Consulta [la guía del modelo estrella](../docs/referencia/02_warehouse_y_metricas.md) antes de cargar o reconstruir datos y el [contrato de indicadores Gold](../docs/referencia/02_warehouse_y_metricas.md) para métricas, filtros, calidad y recuperación. Los comandos `make dbt-*` verifican los hashes del catálogo y la política antes de ejecutar dbt.

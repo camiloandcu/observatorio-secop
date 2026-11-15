@@ -4,7 +4,8 @@
     "tests/warehouse/",
     "tests/processing_silver/",
     "tests/test_silver_root.py::",
-    "tests/test_publication_"
+    "tests/test_publication_",
+    "tests/cloud_export/"
   ],
   "required_nodeids": [
     "tests/processing_silver/test_config_bronze.py::test_config_and_catalog_are_explicit",
@@ -397,7 +398,9 @@
     "tests/warehouse/test_quality_bundle.py::test_current_quality_fails_closed[partial_legacy]",
     "tests/warehouse/test_quality_bundle.py::test_current_quality_fails_closed[unknown_writer]",
     "tests/warehouse/test_quality_bundle.py::test_legacy_absent_evidence_is_not_zero",
-    "tests/warehouse/test_quality_bundle.py::test_observations_are_not_unique_contracts_and_payload_is_sanitized"
+    "tests/warehouse/test_quality_bundle.py::test_observations_are_not_unique_contracts_and_payload_is_sanitized",
+    "tests/cloud_export/test_postgres.py::test_real_reader_two_builds_noop_and_conflict",
+    "tests/cloud_export/test_postgres.py::test_cursor_keeps_pin_across_activation_and_expiry_rejects"
   ],
   "contracts": [
     "real Spark \u2192 PostgreSQL \u2192 dbt",

@@ -7,7 +7,7 @@ desarrollo sigue disponible, pero sus tablas mutables no son una publicación.
 
 ## Preparar y construir
 
-Instala los extras fijados según [desarrollo](development.md). Configura el acceso
+Instala los extras fijados según [desarrollo](../guias/02_desarrollo_y_verificacion.md). Configura el acceso
 operador con `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER` y
 `POSTGRES_PASSWORD`, fuera del repositorio. Reutiliza `config/warehouse.yaml` y la
 misma raíz Silver del cargador. Los comandos requieren el extra `warehouse`.
@@ -89,7 +89,7 @@ nuevo evento. Tras perder una confirmación, inspecciona y reintenta el mismo ID
 no inventes otro para ocultar la incertidumbre. Una publicación eliminada se
 reporta no disponible: reconstruir desde un bundle retenido exige nuevo ID y
 validación. El rollback completo Silver/warehouse conserva su procedimiento
-independiente en [recuperación](population-recovery.md).
+independiente en [recuperación](05_poblacion_y_recuperacion.md).
 
 ## Consumo fijado entre consultas
 
@@ -104,7 +104,7 @@ observación de adquisición y finalización del pipeline, cobertura y revisione
 catálogo/política. La estrella conserva llaves seguras; las proyecciones excluyen
 rutas Bronze/locales y enlaces de proceso no admitidos. Los miembros desconocidos,
 motivos nulos, condiciones retenidas y denominadores mantienen su significado.
-Consulta [Gold](gold-analytics.md) para granos, relaciones y filtros.
+Consulta [Gold](02_warehouse_y_metricas.md) para granos, relaciones y filtros.
 
 Resuelve **una vez al iniciar** una operación:
 
@@ -150,7 +150,7 @@ requiere descartar el candidato privado y construir otro ID, también tras fallo
 
 Para Power BI Import, convierte los valores del descriptor en un **parámetro
 literal compartido** antes de Refresh All, sin leer un archivo o resolver latest
-independientemente en cada consulta. [La función M de conexión](examples/publication-import.pq)
+independientemente en cada consulta. [La función M de conexión](../examples/publication-import.pq)
 valida ID, reloj y disponibilidad y sirve a todas las relaciones y metadatos.
 Mantén el parámetro inmóvil durante el refresh; ante error, conserva el último
 Import válido y reintenta todo el refresh con otro descriptor. La verificación

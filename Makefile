@@ -29,7 +29,7 @@ lint:
 	$(UV_RUN) ruff check .
 
 typecheck:
-	$(UV_RUN) mypy src/observatorio_secop/warehouse src/observatorio_secop/publication
+	$(UV_RUN) mypy src/observatorio_secop/warehouse src/observatorio_secop/publication src/observatorio_secop/cloud_export
 
 test:
 	$(UV_RUN) pytest

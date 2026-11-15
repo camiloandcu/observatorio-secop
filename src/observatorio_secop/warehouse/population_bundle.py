@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -82,7 +82,23 @@ def _verify(
         or boolean(metadata["scope_drift"], "scope_drift") != bool(reconciliation["scope_drift"])
     ):
         raise SilverBundleError("Population manifest, receipt and reconciliation disagree")
-    rows = table.to_pylist()
+    # Winner checks stream only the required fields instead of duplicating the
+    # entire population (including descriptions and raw values) as Python objects.
+    winner_columns = [
+        "contract_key",
+        "payload_sha256",
+        "bronze_run_id",
+        "bronze_page_path",
+        "bronze_row_ordinal",
+        "source_contract_sha256",
+        "source_projection_version",
+        "bronze_fetched_at_utc",
+    ]
+    rows = (
+        row
+        for batch in table.select(winner_columns).to_batches(max_chunksize=1000)
+        for row in batch.to_pylist()
+    )
     keys = set(table["contract_key"].to_pylist())
     if (
         set(reconciliation["candidate_keys"]) != keys
@@ -137,7 +153,13 @@ def _verify(
         coverage["state"] != "complete"
         or reconciliation["scope_drift"]
         or not set(reconciliation["baseline_keys"]) <= keys
-        or any(not scope.contains(row["signing_date"], row["department_name"]) for row in rows)
+        or any(
+            not scope.contains(row["signing_date"], row["department_name"])
+            for batch in table.select(["signing_date", "department_name"]).to_batches(
+                max_chunksize=1000
+            )
+            for row in batch.to_pylist()
+        )
     ):
         raise SilverBundleError("Authoritative population has drift or loses baseline membership")
     return coverage, reconciliation, summaries, links
@@ -183,23 +205,32 @@ def _json(path: Path) -> dict[str, Any]:
 
 
 def _parquet(path: Path, schema: pa.Schema, count: object) -> list[dict[str, Any]]:
-    table = pq.ParquetFile(path).read()
-    if not table.schema.equals(schema, check_metadata=False):
+    parquet = pq.ParquetFile(path)
+    if not parquet.schema_arrow.equals(schema, check_metadata=False):
         raise SilverBundleError("Population condition Parquet schema differs")
-    if table.num_rows != integer(count, "condition row count"):
+    if parquet.metadata.num_rows != integer(count, "condition row count"):
         raise SilverBundleError("Population condition Parquet count differs")
-    if any(table[field.name].null_count for field in schema):
-        raise SilverBundleError("Population condition required fields contain nulls")
-    return list(table.to_pylist())
+    # Repeated identifiers/paths are immutable strings. Share their objects within
+    # this read only; never intern private source values into a process-global pool.
+    cache: dict[str, str] = {}
+    result = []
+    for batch in parquet.iter_batches(batch_size=1000, use_threads=False):
+        if any(batch.column(i).null_count for i in range(batch.num_columns)):
+            raise SilverBundleError("Population condition required fields contain nulls")
+        for row in batch.to_pylist():
+            result.append(
+                {k: cache.setdefault(v, v) if isinstance(v, str) else v for k, v in row.items()}
+            )
+    return result
 
 
 def _winners(
-    rows: list[dict[str, Any]],
+    rows: Iterable[dict[str, Any]],
     summaries: list[dict[str, Any]],
     links: list[dict[str, Any]],
     purposes: dict[str, str],
 ) -> None:
-    by_key = {row["contract_key"]: row for row in rows}
+    by_key = {row["contract_key"]: row for row in summaries}
     columns = {
         "winner_payload_sha256": "payload_sha256",
         "winner_run_id": "bronze_run_id",
@@ -208,8 +239,8 @@ def _winners(
         "winner_profile_sha256": "source_contract_sha256",
         "winner_projection_version": "source_projection_version",
     }
-    for summary in summaries:
-        row = by_key[summary["contract_key"]]
+    for row in rows:
+        summary = by_key[row["contract_key"]]
         observed = row["bronze_fetched_at_utc"]
         # Canonical contract TimestampType represents acquisition UTC without a
         # zone marker; never apply this conversion to a source-calendar field.
@@ -269,7 +300,8 @@ def _baseline(
     document = _json(target)
     keys = baseline.table["contract_key"].to_pylist()
     baseline_ids = {
-        row["contract_key"]: row["source_contract_id"] for row in baseline.table.to_pylist()
+        row["contract_key"]: row["source_contract_id"]
+        for row in baseline.table.select(["contract_key", "source_contract_id"]).to_pylist()
     }
     if any(
         baseline_ids.get(row["contract_key"]) != row["source_contract_id"]

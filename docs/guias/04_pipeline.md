@@ -9,7 +9,7 @@ DAG no demuestran que esas etapas hayan ejecutado.
 ## Preparar una demo aislada
 
 Trabaja desde el checkout Linux de WSL2, con Docker Desktop integrado y `uv` según
-[primeros pasos](getting-started.md). Conserva el entorno de trabajo existente.
+[primeros pasos](01_inicio.md). Conserva el entorno de trabajo existente.
 Crea un archivo privado a partir de `.env.example` y edítalo localmente:
 
 ```bash
@@ -33,7 +33,7 @@ ENV_FILE=.env.pipeline-demo make up-airflow
 La construcción inicial puede descargar imagen y dependencias. Después, las
 tareas usan la instalación fijada; el replay sintético no consulta Socrata ni AWS.
 La distribución de recursos, permisos y secretos está en
-[operaciones](operations.md#runtime-del-pipeline-airflow).
+[operaciones](03_operacion.md#runtime-del-pipeline-airflow).
 
 Define un helper en esta terminal para conservar la selección del entorno:
 
@@ -53,7 +53,7 @@ programa sus tareas hasta que se libere el slot. Los locks de los productores y 
 generación de publicación siguen siendo necesarios frente a comandos manuales. No
 ejecutes simultáneamente otro escritor sobre las mismas raíces/base. Para acceder a
 la UI autenticada local, sigue
-[la sección de acceso Airflow](operations.md); no copies su contraseña a capturas.
+[la sección de acceso Airflow](03_operacion.md); no copies su contraseña a capturas.
 
 ## Disparar y observar
 
@@ -83,7 +83,7 @@ Todos los campos son obligatorios. No se admiten conexiones, SQL, comandos,
 endpoints ni rutas arbitrarias en el trigger. Las fechas tienen límite inferior
 incluido y superior excluido. Los techos cuentan solicitudes, reintentos y probes
 según el productor; terminar sin excepción no demuestra cobertura completa.
-Consulta [población y recuperación](population-recovery.md) para su significado.
+Consulta [población y recuperación](../referencia/05_poblacion_y_recuperacion.md) para su significado.
 
 `demo-a` contiene dos contratos sintéticos y COP 300,00. `demo-b` contiene tres y
 COP 400,00; `demo-rejected` provoca rechazo de calidad Silver. Estas fixtures no
@@ -207,7 +207,7 @@ pipeline_compose exec -T airflow-api-server secop-publication discard \
 ```
 
 El descarte no es un reintento ni restaura capas raw. Para un retry manual del
-productor fuera del DAG consulta [publicación analítica](analytical-publication.md);
+productor fuera del DAG consulta [publicación analítica](../referencia/03_publicacion.md);
 no alternes ese camino con el DAG activo. La limpieza siempre empieza con
 `secop-publication cleanup-preview` y selecciona IDs explícitos elegibles.
 
@@ -247,8 +247,8 @@ identidad, no reutilizar la antigua.
 Verifica después versión/hash de Silver y raw, publicación activa/generación,
 conteos, llaves, valor decimal COP y evidencia de calidad contra el registro de A.
 Repetir la versión ya activa debe ser no-op. Los contratos y verificaciones de
-capa están en [recuperación de población](population-recovery.md),
-[modelo estrella](star-schema.md) y [publicación](analytical-publication.md).
+capa están en [recuperación de población](../referencia/05_poblacion_y_recuperacion.md),
+[modelo estrella](../referencia/02_warehouse_y_metricas.md) y [publicación](../referencia/03_publicacion.md).
 Conserva los resultados reales del ensayo; esta secuencia documentada no demuestra
 por sí sola una restauración exitosa.
 
