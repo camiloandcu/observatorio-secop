@@ -27,7 +27,15 @@ flowchart LR
 
 Bronze conserva la evidencia recibida. Silver verifica tipos, identidad, población y calidad; el warehouse verifica el bundle antes de conectar. La publicación se construye y valida en aislamiento antes de activarse. Un lector fija una publicación para evitar mezclar versiones entre consultas. La recuperación conserva versiones e identidades explícitas.
 
-Priorización/ML, API y exportación AWS siguen pendientes; los servicios opcionales y sus dependencias instaladas no demuestran esas capacidades. El reporte funciona en Desktop; no se ofrece un enlace interactivo público.
+## Alcance y límites
+
+- Los montos son totales contractuales observados en **COP nominales**, no pagos ni gasto ejecutado.
+- La geografía corresponde al **registro de la entidad**, no necesariamente al lugar de ejecución.
+- Los periodos por firma describen el último estado observado; la fuente es mutable y otra adquisición puede producir cifras distintas.
+- Priorización con ML y API siguen en desarrollo; los servicios opcionales y sus dependencias instaladas no demuestran esas capacidades.
+- La exportación a AWS (S3, Glue y Athena) se demostró con una prueba temporal sobre la partición de febrero de 2026 (conteo y suma conciliados). La carga completa no se registró en Glue; bucket, datos y workgroup se eliminaron después y no hay operación cloud permanente.
+- El reporte funciona en Power BI Desktop; no se ofrece un enlace interactivo público.
+- Una señal de revisión no establece fraude, corrupción ni responsabilidad.
 
 ## Referencias por frontera
 

@@ -36,4 +36,4 @@ Si falla **Home → Refresh**, conserva el último Import válido y lee su fecha
 
 ## Evidencia disponible
 
-Las [capturas de referencia](../../bi/README.md#reference-screens) muestran datos sintéticos: 13 contratos con entidades y proveedores inventados. Sirven para conocer el diseño, no para describir contratación real. La [validación 2026Q1](../../bi/README.md#real-data-check-and-its-limits) documenta por separado un Import con datos reales y sus límites. Las capturas y el video real de presentación siguen en preparación.
+Las [capturas con datos reales](../images/dashboard/real/) corresponden a la publicación 2026Q1 descrita en la [validación con datos reales](../../bi/README.md#real-data-check-and-its-limits). Las [capturas de referencia](../../bi/README.md#reference-screens) usan datos sintéticos (13 contratos inventados) y sirven para conocer el diseño de todas las páginas. El vídeo de presentación está enlazado en el [README](../../README.md).
